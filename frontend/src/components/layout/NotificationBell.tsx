@@ -106,6 +106,11 @@ export default function NotificationBell({ token }: NotificationBellProps) {
       setOpen(false);
       navigate(notification.type === 'shift_declined' ? '/shifts' : '/shifts/mine');
     }
+    // Timesheets: a week to approve opens Approvals; your own week's news opens your timesheet.
+    if (notification.entityType === 'timesheet') {
+      setOpen(false);
+      navigate(notification.type === 'timesheet_submitted' ? '/shifts/approvals' : '/shifts/timesheet');
+    }
     if (notification.read) return;
     try {
       await api.markNotificationRead(token, notification.id);

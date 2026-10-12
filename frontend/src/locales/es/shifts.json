@@ -103,7 +103,9 @@
     "section": "Turnos",
     "schedule": "Cronograma",
     "mine": "Mis turnos",
-    "settings": "Configuración"
+    "settings": "Configuración",
+    "timesheet": "Timesheet",
+    "approvals": "Aprobaciones"
   },
   "status": {
     "draft": "Borrador",
@@ -298,5 +300,144 @@
     "changeAnswer": "Cambiar mi respuesta",
     "cancelled": "Este turno fue cancelado. No hace falta que vayas.",
     "failed": "No se pudo guardar tu respuesta: {{message}}"
+  },
+  "timesheet": {
+    "title": "Mi timesheet",
+    "titleOf": "Timesheet de {{name}}",
+    "subtitle": "Confirmá las horas que sugiere Northstack, agregá lo que falte y enviá la semana.",
+    "subtitleOf": "Solo lectura. Aprobala, o devolvela con un comentario.",
+    "prevWeek": "Semana anterior",
+    "nextWeek": "Semana siguiente",
+    "thisWeek": "Esta semana",
+    "logged": "Cargado",
+    "planned": "Planificado (turnos)",
+    "billable": "Facturable",
+    "statusLabel": "Estado",
+    "status": {
+      "open": "Abierta",
+      "submitted": "Enviada",
+      "approved": "Aprobada",
+      "returned": "Devuelta"
+    },
+    "banner": {
+      "submitted": "Enviada. Espera aprobación; mientras tanto no se puede editar.",
+      "approved": "Aprobada por {{name}}. Esta semana está cerrada: para corregirla, pedí un ajuste.",
+      "returned": "{{name}} la devolvió: “{{note}}”. Corregila y volvé a enviarla.",
+      "reopened": "Reabierta: {{reason}}"
+    },
+    "timeOff": "Ausencia",
+    "suggestions": {
+      "title": "Sugeridas por tu actividad",
+      "lead": "De tus turnos, tareas completadas, reuniones y Google Calendar. No se carga nada hasta que lo agregues.",
+      "addAll": "Agregar todas las que tienen tiempo",
+      "add": "Agregar",
+      "dismiss": "Descartar",
+      "dismissed": "Sugerencia descartada"
+    },
+    "source": {
+      "shift": "Turno",
+      "task": "Tarea",
+      "meeting": "Reunión",
+      "calendar": "Google Calendar",
+      "manual": "Manual",
+      "adjustment": "Ajuste"
+    },
+    "entries": "Horas cargadas",
+    "col": {
+      "day": "Día",
+      "what": "Qué",
+      "source": "Origen",
+      "billable": "Facturable",
+      "time": "Tiempo",
+      "actions": "Acciones"
+    },
+    "emptyTitle": "No hay horas cargadas esta semana",
+    "emptyBody": "Agregá las sugerencias de arriba o cargá horas a mano.",
+    "addEntry": "Agregar horas",
+    "editEntry": "Editar horas",
+    "deleteEntry": "Eliminar",
+    "adjustmentOf": "Corrección de la semana del {{week}}: {{reason}}",
+    "adjustedBy": "Correcciones cargadas después",
+    "inWeek": "en la semana del {{week}}, {{status}}",
+    "yes": "Sí",
+    "hours": "Horas",
+    "minutes": "Minutos",
+    "minutesShort": "min",
+    "description": "Descripción",
+    "descriptionPlaceholder": "En qué trabajaste",
+    "project": "Proyecto",
+    "company": "Empresa",
+    "none": "Ninguno",
+    "billableToggle": "Facturable al cliente",
+    "save": "Guardar",
+    "added": "Horas agregadas",
+    "addedAll": "Sugerencias agregadas",
+    "saved": "Guardado",
+    "deleted": "Eliminado",
+    "submit": "Enviar semana",
+    "approve": "Aprobar",
+    "sendBack": "Devolver",
+    "reopen": "Reabrir",
+    "requestAdjustment": "Pedir un ajuste",
+    "submittedToast": "Semana enviada a aprobación",
+    "approvedToast": "Semana aprobada",
+    "returnedToast": "Semana devuelta",
+    "reopenedToast": "Semana reabierta",
+    "adjustedToast": "Ajuste agregado a tu semana actual",
+    "loadFailed": "No se pudo cargar el timesheet: {{message}}",
+    "failed": "No se pudo guardar: {{message}}",
+    "dialog": {
+      "submit": {
+        "title": "¿Enviar esta semana?",
+        "body": "Cargaste {{total}}. Una vez enviada no se puede editar, salvo que te la devuelvan.",
+        "confirm": "Enviar",
+        "noteLabel": ""
+      },
+      "return": {
+        "title": "Devolver",
+        "body": "Va a poder editarla de nuevo. Decile qué corregir.",
+        "confirm": "Devolver",
+        "noteLabel": "Qué tiene que cambiar"
+      },
+      "reopen": {
+        "title": "Reabrir esta semana",
+        "body": "Vuelve a quedar abierta para corregirla y enviarla otra vez. El motivo queda en el Registro de actividad.",
+        "confirm": "Reabrir",
+        "noteLabel": "Motivo"
+      },
+      "adjust": {
+        "title": "Pedir un ajuste",
+        "body": "Esta semana está cerrada. La corrección va a tu semana actual, se aprueba con ella y apunta a esta.",
+        "confirm": "Agregar ajuste",
+        "noteLabel": "Motivo",
+        "direction": "Sumar o restar",
+        "add": "Sumar",
+        "remove": "Restar"
+      }
+    }
+  },
+  "approvals": {
+    "title": "Aprobaciones",
+    "subtitle": "Timesheets que esperan tu decisión. Abrí uno para aprobarlo o devolverlo.",
+    "tab": {
+      "submitted": "Por revisar",
+      "returned": "Devueltas",
+      "approved": "Aprobadas"
+    },
+    "col": {
+      "person": "Persona",
+      "week": "Semana",
+      "logged": "Cargado",
+      "billable": "Facturable",
+      "adjustments": "Ajustes",
+      "submitted": "Enviada",
+      "decided": "Decidida"
+    },
+    "empty": {
+      "submitted": "Nada por revisar",
+      "returned": "No hay semanas devueltas",
+      "approved": "Todavía no hay semanas aprobadas"
+    },
+    "nobody": "No aprobás timesheets de nadie: nadie te reporta y tu rol no incluye aprobar timesheets."
   }
 }

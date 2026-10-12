@@ -9,6 +9,11 @@ import type {
   ShiftSkill,
   ShiftsSettings,
   ShiftTemplate,
+  TimeEntry,
+  TimesheetApprovalRow,
+  TimesheetStatus,
+  TimesheetWeek,
+  TimeSuggestion,
 } from './types.js';
 
 // Shifts module (docs/general/spec-shifts.md): settings and locations (Unidad 2), shifts,
@@ -144,4 +149,45 @@ export const shiftsApi = {
       method: 'POST',
       body: JSON.stringify({ response, reason }),
     }),
+
+  // Timesheet (Unidades 9 y 11). The viewer's timezone decides which day a task or event falls on.
+  getTimesheet: (token: string, params: { weekStart?: string; employeeId?: string } = {}) => {
+    const qs = new URLSearchParams({ tz: Intl.DateTimeFormat().resolvedOptions().timeZone });
+    if (params.weekStart) qs.set('weekStart', params.weekStart);
+    if (params.employeeId) qs.set('employeeId', params.employeeId);
+    return call<TimesheetWeek>(token, `/api/shifts/timesheet?${qs.toString()}`);
+  },
+  addTimeEntry: (
+    token: string,
+    data: {
+      date: string;
+      minutes: number;
+      description?: string | null;
+      billable?: boolean;
+      companyId?: string | null;
+      projectId?: string | null;
+      source?: TimeSuggestion['sourceType'];
+      sourceId?: string;
+    },
+  ) => call<{ id: string; weekStart: string }>(token, '/api/shifts/timesheet/entries', { method: 'POST', body: JSON.stringify(data) }),
+  updateTimeEntry: (token: string, entryId: string, data: Partial<Pick<TimeEntry, 'date' | 'minutes' | 'description' | 'billable' | 'companyId' | 'projectId' | 'reason'>>) =>
+    call<{ id: string }>(token, `/api/shifts/timesheet/entries/${entryId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteTimeEntry: (token: string, entryId: string) => call<void>(token, `/api/shifts/timesheet/entries/${entryId}`, { method: 'DELETE' }),
+  dismissTimeSuggestion: (token: string, sourceType: string, sourceId: string) =>
+    call<void>(token, '/api/shifts/timesheet/suggestions/dismiss', { method: 'POST', body: JSON.stringify({ sourceType, sourceId }) }),
+  restoreTimeSuggestion: (token: string, sourceType: string, sourceId: string) =>
+    call<void>(token, '/api/shifts/timesheet/suggestions/restore', { method: 'POST', body: JSON.stringify({ sourceType, sourceId }) }),
+  submitTimesheet: (token: string, weekStart: string) =>
+    call<{ status: TimesheetStatus }>(token, '/api/shifts/timesheet/submit', { method: 'POST', body: JSON.stringify({ weekStart }) }),
+  addTimesheetAdjustment: (token: string, timesheetId: string, data: { minutes: number; reason: string; description?: string | null }) =>
+    call<{ id: string; weekStart: string }>(token, `/api/shifts/timesheet/${timesheetId}/adjustments`, {
+      method: 'POST',
+      body: JSON.stringify({ ...data, tz: Intl.DateTimeFormat().resolvedOptions().timeZone }),
+    }),
+  listTimesheetApprovals: (token: string, status: TimesheetStatus = 'submitted') =>
+    call<{ canApprove: boolean; timesheets: TimesheetApprovalRow[] }>(token, `/api/shifts/timesheet/approvals?status=${status}`),
+  decideTimesheet: (token: string, timesheetId: string, decision: 'approve' | 'return', note?: string) =>
+    call<{ status: TimesheetStatus }>(token, `/api/shifts/timesheet/${timesheetId}/decision`, { method: 'POST', body: JSON.stringify({ decision, note }) }),
+  reopenTimesheet: (token: string, timesheetId: string, reason: string) =>
+    call<{ status: TimesheetStatus }>(token, `/api/shifts/timesheet/${timesheetId}/reopen`, { method: 'POST', body: JSON.stringify({ reason }) }),
 };

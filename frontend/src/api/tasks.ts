@@ -1,6 +1,6 @@
 import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
 import type { TaskEntityType, Task, TaskComment } from './types.js';
-import { TASK_COMPLETED_EVENT } from '../lib/duration';
+import { TASK_COMPLETED_EVENT } from '../lib/taskEvents';
 
 export interface ListTasksHubParams {
   includeCompleted?: boolean;

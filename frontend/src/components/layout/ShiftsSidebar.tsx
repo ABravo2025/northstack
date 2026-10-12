@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../api';
-import { CalendarIcon, ChevronLeftIcon, ClockIcon, GearIcon, XIcon } from '../common/Icons';
+import { CalendarIcon, CheckIcon, ChevronLeftIcon, ClockIcon, GearIcon, ListIcon, XIcon } from '../common/Icons';
 import { usePermissions } from '../../contexts/PermissionsContext';
 
 interface ShiftsSidebarProps {
@@ -35,6 +35,19 @@ export default function ShiftsSidebar({ token, mobileOpen, onMobileClose }: Shif
   const navigate = useNavigate();
   const permissions = usePermissions();
   const canSchedule = useCanSchedule(token);
+  // Timesheet (Unidad 11): only when the company uses it; Approvals for whoever approves anyone
+  // (the permission, or having direct reports), with how many weeks wait for them.
+  const [timesheet, setTimesheet] = useState<{ enabled: boolean; canApprove: boolean; pending: number }>({ enabled: false, canApprove: false, pending: 0 });
+  useEffect(() => {
+    api
+      .getShiftsSettings(token)
+      .then(async (s) => {
+        if (!s.timesheetEnabled) return;
+        const r = await api.listTimesheetApprovals(token, 'submitted').catch(() => ({ canApprove: false, timesheets: [] }));
+        setTimesheet({ enabled: true, canApprove: r.canApprove, pending: r.timesheets.length });
+      })
+      .catch(() => undefined);
+  }, [token]);
   const linkClass = ({ isActive }: { isActive: boolean }) => `sidebar-link${isActive ? ' active' : ''}`;
 
   return (
@@ -64,6 +77,19 @@ export default function ShiftsSidebar({ token, mobileOpen, onMobileClose }: Shif
             <ClockIcon className="h-4 w-4 shrink-0" />
             {t('nav.mine')}
           </NavLink>
+          {timesheet.enabled && (
+            <NavLink to="/shifts/timesheet" className={linkClass} onClick={onMobileClose}>
+              <ListIcon className="h-4 w-4 shrink-0" />
+              {t('nav.timesheet')}
+            </NavLink>
+          )}
+          {timesheet.enabled && timesheet.canApprove && (
+            <NavLink to="/shifts/approvals" className={linkClass} onClick={onMobileClose}>
+              <CheckIcon className="h-4 w-4 shrink-0" />
+              {t('nav.approvals')}
+              {timesheet.pending > 0 && <span className="ml-auto rounded-full bg-accent px-1.5 text-[11px] leading-5 font-semibold text-white dark:bg-brand-blue-light dark:text-dark-page">{timesheet.pending}</span>}
+            </NavLink>
+          )}
           {/* Locations and rules live in Settings → Shifts; linked here too so they're found
               where people plan shifts (same as Time Off's settings link). */}
           {permissions.has('manage_shifts') && (

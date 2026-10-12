@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api, type Task } from '../../api';
 import { useToast } from '../common/ToastProvider';
-import { TASK_COMPLETED_EVENT } from '../../lib/duration';
+import { TASK_COMPLETED_EVENT } from '../../lib/taskEvents';
+import { formatDuration } from '../../lib/shiftDates';
 
 interface TaskTimePromptProps {
   token: string;
@@ -81,7 +82,7 @@ export default function TaskTimePrompt({ token, userId }: TaskTimePromptProps) {
       <div className="mt-3 flex flex-wrap gap-1.5">
         {CHOICES.map((m) => (
           <button key={m} type="button" className="sh-template-chip" onClick={() => save(m)}>
-            {m < 60 ? `${m} min` : `${m / 60} h`}
+            {formatDuration(m)}
           </button>
         ))}
       </div>

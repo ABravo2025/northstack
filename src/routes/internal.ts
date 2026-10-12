@@ -7,6 +7,7 @@ import { runStripeEventPolling } from '../modules/integrations/stripePaymentsSer
 import { runScheduledTerminations } from '../modules/hr/terminationService.js';
 import { runActivityLogRetention } from '../modules/activity/activityLogRetentionService.js';
 import { runWebhookDeliveryRetries } from '../modules/integrations/webhookDispatchService.js';
+import { runShiftReminders } from '../modules/shifts/shiftReminderService.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 import type express from 'express';
 
@@ -117,6 +118,16 @@ internalRouter.get('/api/internal/activity-log-retention/run', async (req, res) 
   if (!checkCronSecret(req, res, '/api/internal/activity-log-retention/run')) return;
 
   const result = await runActivityLogRetention();
+  return res.json(result);
+});
+
+// Triggered once a day by Vercel Cron — Shifts reminders (spec-shifts.md Unidad 8): tomorrow's
+// shifts, shifts still waiting for an answer, and expiring skills (shiftReminderService.ts).
+// Writes notifications and sends email, so it skips suspended/cancelled tenants.
+internalRouter.get('/api/internal/shifts/reminders/run', async (req, res) => {
+  if (!checkCronSecret(req, res, '/api/internal/shifts/reminders/run')) return;
+
+  const result = await runShiftReminders();
   return res.json(result);
 });
 

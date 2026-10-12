@@ -7,13 +7,14 @@ vi.mock('nodemailer', () => ({
 }));
 
 let sendShiftEmail: typeof import('../src/lib/mailer.js').sendShiftEmail;
+let sendSkillExpiryEmail: typeof import('../src/lib/mailer.js').sendSkillExpiryEmail;
 let formatShiftWhen: typeof import('../src/modules/shifts/shiftNotifier.js').formatShiftWhen;
 let buildIcs: typeof import('../src/modules/shifts/shiftIcs.js').buildIcs;
 
 beforeAll(async () => {
   process.env.ZOHO_SMTP_USER = 'no-reply@example.test';
   process.env.ZOHO_SMTP_PASSWORD = 'x';
-  ({ sendShiftEmail } = await import('../src/lib/mailer.js'));
+  ({ sendShiftEmail, sendSkillExpiryEmail } = await import('../src/lib/mailer.js'));
   ({ formatShiftWhen } = await import('../src/modules/shifts/shiftNotifier.js'));
   ({ buildIcs } = await import('../src/modules/shifts/shiftIcs.js'));
   // shiftNotifier pulls in googleapis, which is slow to load the first time.
@@ -94,5 +95,59 @@ describe('sendShiftEmail', () => {
     expect(sent[0].text).toContain('Reason: Exam that morning');
     // Only the template's inline logo — no .ics on a decline notice.
     expect(sent[0].attachments.map((a: { filename?: string; cid?: string }) => a.cid ?? a.filename)).toEqual(['northstack-logo']);
+  });
+});
+
+describe('daily reminders (Unidad 8)', () => {
+  it('tomorrow: one email listing the shifts, accept only while pending', async () => {
+    sent.length = 0;
+    await sendShiftEmail({
+      to: 'mia@example.test',
+      locale: 'en',
+      kind: 'tomorrow',
+      firstName: 'Mia',
+      companyName: 'Lab',
+      shifts: [
+        { when: 'Tue, Oct 13 · 07:00–11:30', location: 'Lab Central', acceptUrl: 'https://app/a?answer=accepted', declineUrl: 'https://app/a?answer=declined' },
+        { when: 'Tue, Oct 13 · 14:00–18:00', location: 'Lab Norte', acceptUrl: null, declineUrl: 'https://app/b?answer=declined' },
+      ],
+      scheduleUrl: 'https://app/shifts/mine',
+    });
+    expect(sent).toHaveLength(1);
+    expect(sent[0].subject).toBe('You have 2 shifts tomorrow');
+    expect(sent[0].text).toContain("I'll be there: https://app/a?answer=accepted");
+    expect(sent[0].text).toContain("Can't make it after all?: https://app/b?answer=declined");
+  });
+
+  it('unanswered, in Spanish', async () => {
+    sent.length = 0;
+    await sendShiftEmail({
+      to: 'mia@example.test',
+      locale: 'es',
+      kind: 'unanswered',
+      firstName: 'Mia',
+      companyName: 'Lab',
+      shifts: [{ when: 'jue, 15 oct · 07:00–11:30', location: 'Lab Central', acceptUrl: 'https://app/a?answer=accepted', declineUrl: 'https://app/a?answer=declined' }],
+    });
+    expect(sent[0].subject).toBe('¿Podés ir? jue, 15 oct · 07:00–11:30');
+    expect(sent[0].text).toContain('todavía espera tu respuesta sobre este turno');
+  });
+
+  it('skill expiry: the team list names each person, the holder gets no link', async () => {
+    sent.length = 0;
+    const items = [
+      { skill: 'Reagent handling', person: 'Mia Member', expiresOn: '2026-10-19', daysLeft: 7 },
+      { skill: 'First aid', person: 'Leo Tech', expiresOn: '2026-10-12', daysLeft: 0 },
+    ];
+    await sendSkillExpiryEmail({ to: 'boss@example.test', locale: 'en', firstName: 'Ana', companyName: 'Lab', items, forManager: true, url: 'https://app/settings/shifts' });
+    expect(sent[0].subject).toBe('2 skills expire soon');
+    expect(sent[0].text).toContain('Mia Member — Reagent handling — expires on October 19, 2026 (in 7 days)');
+    expect(sent[0].text).toContain('Leo Tech — First aid — expires today');
+    expect(sent[0].text).toContain('Open skills settings: https://app/settings/shifts');
+
+    await sendSkillExpiryEmail({ to: 'mia@example.test', locale: 'es', firstName: 'Mia', companyName: 'Lab', items: [{ ...items[0], person: null }], forManager: false, url: null });
+    expect(sent[1].subject).toBe('Tu habilitación Reagent handling vence pronto');
+    expect(sent[1].text).toContain('Reagent handling — vence el 19 de octubre de 2026 (en 7 días)');
+    expect(sent[1].text).not.toContain('Abrir habilidades');
   });
 });

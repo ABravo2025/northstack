@@ -5064,3 +5064,26 @@ Solo backend (sin pantallas todavía: la grilla es la Unidad 5 y "Mis turnos" la
 2. Turno que requiere ambas: los avisos aparecen según quién tiene qué; un turno después del vencimiento avisa "vencida", uno antes no.
 3. Desactivar una habilidad: deja de aparecer en el formulario del turno, pero los turnos que ya la requerían la siguen nombrando.
 4. Bajar el tenant a Starter: nota Growth, sin chips en el formulario.
+
+## QA-108 — Shifts, Unidad 8: recordatorios diarios + sesión que no se pierde al recargar (2026-10-12, en `staging`)
+
+### Qué cambió
+
+- **Cron diario** (`/api/internal/shifts/reminders/run`, 12:00 UTC = 09:00 Argentina, en `vercel.json`). Cada persona recibe una notificación y un email por tipo, nunca uno por turno:
+  - **Turnos de mañana** (si "Recordar el turno el día anterior" está activo): con "Voy"/"No puedo" si todavía no respondió, o "¿Al final no podés?" si ya aceptó. "Mañana" es el de la zona horaria de la locación.
+  - **Turnos sin respuesta** (si la empresa pide confirmación y "Recordar a quien todavía no respondió" está activo): al día siguiente del aviso y como máximo una vez por día, hasta que responda o empiece el turno.
+  - **Habilidades que vencen** (Growth): a los 30 días, 7 días y el último día válido. El titular recibe las suyas; quien gestiona turnos (Owner o rol con `manage_shifts`) recibe la lista del equipo.
+- Cada recordatorio renueva los botones de un clic: los del email anterior pasan a decir "Este link ya no es válido" y mandan a Mis turnos.
+- Correrlo dos veces el mismo día no duplica nada.
+- La campana: clic en un aviso de turno abre **Mis turnos**; "X no puede cubrir el turno" abre el **Cronograma**.
+- **Sesión:** recargar mientras la app verificaba la sesión (o un corte de red) deslogueaba. Ahora solo se cierra la sesión si el servidor rechaza el token; si es un problema de red reintenta y, si sigue, muestra el login sin olvidar la sesión.
+
+**Verificado en esta sesión:** escenario real contra la base de `staging` limitado al tenant de QA y sin SMTP (14/14): turno de mañana avisado, turno sin respuesta avisado, uno notificado hace 3 h no, uno aceptado de otro día no, tokens rotados, 3 avisos en la campana de Mia y 1 de equipo para el Owner, segunda corrida el mismo día sin envíos, con "día anterior" apagado el turno pendiente de mañana recibe el recordatorio de respuesta. Emails EN/ES con tests (asunto, botones, lista del equipo). Sesión (Playwright, 4/4): recargas rápidas no desloguean, sin red se conserva el token y la siguiente carga restaura, un token rechazado se borra. 761/761 tests de backend.
+
+### Qué probar
+
+1. **Vercel solo corre los crons en producción**: en `staging` hay que dispararlo a mano (`GET /api/internal/shifts/reminders/run` con `Authorization: Bearer $CRON_SECRET`).
+2. Turno publicado para mañana con alguien pendiente y otro que aceptó: los dos reciben el email con los botones correctos; el link del email original ya no sirve.
+3. Apagar los dos interruptores de recordatorios en Settings → Turnos: no sale nada de turnos.
+4. Habilidad que vence en 7 días: email al titular y al Owner; en Starter no sale.
+5. Recargar varias veces seguidas cualquier página: no te saca de la sesión.

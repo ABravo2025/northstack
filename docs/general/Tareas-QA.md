@@ -5167,6 +5167,12 @@ Solo backend y API; las pantallas llegan en la Unidad 11. Schema nuevo aplicado 
 3. Un Admin sin acceso a Payroll: ve horas pero no costo.
 4. Facturar horas a una empresa sin vincular a Stripe: el formulario avisa que hay que vincularla.
 
+**Actualización 2026-10-13 (pedido de Alejandro: "que se pueda ver absolutamente todo… para ser predecibles"):**
+- Reportes ya no filtra por semanas aprobadas: muestra **todo el mes**. Por persona: **Planificado** (turnos publicados aceptados o esperando respuesta), **Ya pasaron**, **Por venir**, **Sin confirmar** (en ámbar), **Cargado** (cualquier estado), **Aprobado**, **Facturable** y Costo. Por empresa/proyecto, las columnas de horas cargadas (los turnos no tienen empresa).
+- Indicadores: Planificado (ya pasaron · por venir), Sin confirmar, Cargado (con lo aprobado), Facturable y Costo (con el costo planificado del mes). Más chicos y centrados sobre la tabla; en el celular, de a dos.
+- Una duración de cero se muestra "0" (antes "0m"), en toda la app. El mes ya no sale "Octubre De 2026".
+- **Verificado** (API + Playwright contra `staging`, 7/7): turno pasado de 4h + turno de mañana de 5h sin confirmar → Planificado 9h, ya pasaron 4h, por venir 5h, sin confirmar 5h; cargado 4h enviado → aprobado 0; costo planificado USD 135; indicadores centrados (140 px a cada lado de la tabla en 1440 px); sin scroll lateral en 390 px; ningún "0m".
+
 ## QA-113 — Unidad 13: preferencias de notificación por email (2026-10-12, en `staging`)
 
 Resuelve el pendiente de agosto ("un área en el perfil de las notificaciones que desea recibir el usuario, así no lo acosamos").

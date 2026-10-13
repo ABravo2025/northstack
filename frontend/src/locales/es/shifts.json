@@ -454,7 +454,7 @@
   },
   "reports": {
     "title": "Reportes de horas",
-    "subtitle": "Horas cargadas por persona, empresa o proyecto. Semanas aprobadas, salvo que incluyas el resto.",
+    "subtitle": "Todo el mes: turnos planificados (los que ya pasaron, los que vienen y los sin confirmar) junto a las horas cargadas y aprobadas.",
     "prevMonth": "Mes anterior",
     "nextMonth": "Mes siguiente",
     "groupBy": "Agrupar por",
@@ -463,9 +463,7 @@
       "company": "Empresa",
       "project": "Proyecto"
     },
-    "approvedOnly": "Solo semanas aprobadas",
     "csv": "Descargar CSV",
-    "hours": "Horas",
     "billable": "Facturable",
     "billableShare": "{{pct}}% de las horas",
     "cost": "Costo",
@@ -476,8 +474,7 @@
       "company": "Sin empresa",
       "project": "Sin proyecto"
     },
-    "emptyTitle": "No hay horas en este mes",
-    "emptyBodyApproved": "Solo cuentan las semanas aprobadas. Desactivá “Solo semanas aprobadas” para ver el resto.",
+    "emptyTitle": "No hay nada en este mes",
     "truncated": "El CSV trae las primeras 5.000 entradas; elegí un período más corto para el resto.",
     "invoice": "Facturar horas",
     "invoiceTitle": "Facturar a {{name}}",
@@ -487,6 +484,17 @@
     "continue": "Continuar",
     "invoiceLine": "{{hours}} de trabajo en {{month}} a {{rate}}/h",
     "invoiceSent": "Factura enviada",
-    "loadFailed": "No se pudo cargar el reporte: {{message}}"
+    "loadFailed": "No se pudo cargar el reporte: {{message}}",
+    "planned": "Planificado",
+    "plannedHint": "{{past}} ya pasaron · {{upcoming}} por venir",
+    "past": "Ya pasaron",
+    "upcoming": "Por venir",
+    "unconfirmed": "Sin confirmar",
+    "unconfirmedHint": "Turnos que esperan respuesta",
+    "logged": "Cargado",
+    "approved": "Aprobado",
+    "approvedHint": "{{hours}} aprobadas",
+    "plannedCost": "{{cost}} planificado",
+    "emptyBody": "No hay nada planificado ni cargado este mes."
   }
 }

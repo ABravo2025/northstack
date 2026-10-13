@@ -62,11 +62,23 @@ export async function loadRates(tenantId: string, employeeIds: string[], from: s
 export interface ReportRow {
   key: string | null;
   name: string | null;
+  // Logged in the timesheet, whatever the week's status, and the part already approved.
   minutes: number;
+  approvedMinutes: number;
   billableMinutes: number;
   cost: CostTotals | null;
-  // Hours whose person had no hourly rate that day (fixed salary or no compensation on file).
+  // Logged hours whose person had no hourly rate that day (fixed salary or no compensation).
   minutesWithoutRate: number;
+  // Planned (published shifts, accepted or still waiting for an answer). Per person only (a shift
+  // has no company or project), and always in the totals.
+  planned: PlannedMinutes | null;
+}
+
+export interface PlannedMinutes {
+  total: number;
+  past: number; // shifts that already ended
+  upcoming: number;
+  unconfirmed: number; // still waiting for the person's answer
 }
 
 export interface ReportEntry {
@@ -82,49 +94,78 @@ export interface ReportEntry {
 }
 
 const MAX_CSV_ENTRIES = 5000;
+const emptyPlanned = (): PlannedMinutes => ({ total: 0, past: 0, upcoming: 0, unconfirmed: 0 });
 
+// Reports (Unidad 12; widened 2026-10-13 at Alejandro's request: "see absolutely everything —
+// confirmed, pending and past hours — so we can be predictable"): for the month, what was planned
+// (past / upcoming / still unconfirmed) next to what was logged (all of it, and the approved part).
 export async function buildHoursReport(
   tenantId: string,
-  opts: { from: string; to: string; groupBy: ReportGroup; approvedOnly: boolean; withCost: boolean },
+  opts: { from: string; to: string; groupBy: ReportGroup; withCost: boolean; now?: Date },
 ) {
-  const entries = await prisma.timeEntry.findMany({
-    where: {
-      tenantId,
-      date: { gte: new Date(`${opts.from}T00:00:00Z`), lte: new Date(`${opts.to}T00:00:00Z`) },
-      timesheet: opts.approvedOnly ? { status: 'approved' } : {},
-    },
-    include: {
-      employee: { select: { id: true, firstName: true, lastName: true } },
-      timesheet: { select: { status: true } },
-    },
-    orderBy: [{ date: 'asc' }, { createdAt: 'asc' }],
-  });
+  const now = opts.now ?? new Date();
+  const range = { gte: new Date(`${opts.from}T00:00:00Z`), lte: new Date(`${opts.to}T00:00:00Z`) };
+  const [entries, assignments] = await Promise.all([
+    prisma.timeEntry.findMany({
+      where: { tenantId, date: range },
+      include: {
+        employee: { select: { id: true, firstName: true, lastName: true } },
+        timesheet: { select: { status: true } },
+      },
+      orderBy: [{ date: 'asc' }, { createdAt: 'asc' }],
+    }),
+    prisma.shiftAssignment.findMany({
+      where: { tenantId, status: { in: ['pending', 'accepted'] }, shift: { status: 'published', date: range } },
+      select: {
+        status: true,
+        employee: { select: { id: true, firstName: true, lastName: true } },
+        shift: { select: { date: true, startsAt: true, endsAt: true } },
+      },
+    }),
+  ]);
 
+  const employeeIds = [...new Set([...entries.map((e) => e.employeeId), ...assignments.map((a) => a.employee.id)])];
   const companyIds = [...new Set(entries.map((e) => e.companyId).filter((x): x is string => !!x))];
   const projectIds = [...new Set(entries.map((e) => e.projectId).filter((x): x is string => !!x))];
   const [companies, projects, rates] = await Promise.all([
     companyIds.length ? prisma.company.findMany({ where: { tenantId, id: { in: companyIds } }, select: { id: true, name: true } }) : [],
     projectIds.length ? prisma.project.findMany({ where: { tenantId, id: { in: projectIds } }, select: { id: true, name: true } }) : [],
-    opts.withCost ? loadRates(tenantId, [...new Set(entries.map((e) => e.employeeId))], opts.from, opts.to) : Promise.resolve([]),
+    opts.withCost ? loadRates(tenantId, employeeIds, opts.from, opts.to) : Promise.resolve([]),
   ]);
   const companyName = new Map(companies.map((c) => [c.id, c.name]));
   const projectName = new Map(projects.map((p) => [p.id, p.name]));
 
+  const byPerson = opts.groupBy === 'person';
+  const newRow = (key: string | null, name: string | null): ReportRow => ({
+    key,
+    name,
+    minutes: 0,
+    approvedMinutes: 0,
+    billableMinutes: 0,
+    cost: opts.withCost ? {} : null,
+    minutesWithoutRate: 0,
+    planned: byPerson ? emptyPlanned() : null,
+  });
   const rows = new Map<string, ReportRow>();
-  const totals: ReportRow = { key: null, name: null, minutes: 0, billableMinutes: 0, cost: opts.withCost ? {} : null, minutesWithoutRate: 0 };
+  const rowFor = (key: string | null, name: string | null) => {
+    const k = key ?? '__none__';
+    const row = rows.get(k) ?? newRow(key, name);
+    rows.set(k, row);
+    return row;
+  };
+  const totals: ReportRow = { ...newRow(null, null), planned: emptyPlanned() };
+  const plannedCost: CostTotals | null = opts.withCost ? {} : null;
+
   for (const e of entries) {
     const date = e.date.toISOString().slice(0, 10);
-    const key = opts.groupBy === 'person' ? e.employeeId : opts.groupBy === 'company' ? e.companyId : e.projectId;
-    const name =
-      opts.groupBy === 'person'
-        ? `${e.employee.firstName} ${e.employee.lastName}`
-        : opts.groupBy === 'company'
-          ? (e.companyId ? (companyName.get(e.companyId) ?? null) : null)
-          : (e.projectId ? (projectName.get(e.projectId) ?? null) : null);
-    const mapKey = key ?? '__none__';
-    const row = rows.get(mapKey) ?? { key, name, minutes: 0, billableMinutes: 0, cost: opts.withCost ? {} : null, minutesWithoutRate: 0 };
+    const row = byPerson
+      ? rowFor(e.employeeId, `${e.employee.firstName} ${e.employee.lastName}`)
+      : opts.groupBy === 'company'
+        ? rowFor(e.companyId, e.companyId ? (companyName.get(e.companyId) ?? null) : null)
+        : rowFor(e.projectId, e.projectId ? (projectName.get(e.projectId) ?? null) : null);
     for (const target of [row, totals]) {
       target.minutes += e.minutes;
+      if (e.timesheet.status === 'approved') target.approvedMinutes += e.minutes;
       if (e.billable) target.billableMinutes += e.minutes;
     }
     if (opts.withCost) {
@@ -137,7 +178,22 @@ export async function buildHoursReport(
         totals.minutesWithoutRate += e.minutes;
       }
     }
-    rows.set(mapKey, row);
+  }
+
+  for (const a of assignments) {
+    const minutes = Math.round((a.shift.endsAt.getTime() - a.shift.startsAt.getTime()) / 60000);
+    const targets = [totals.planned!];
+    if (byPerson) targets.push(rowFor(a.employee.id, `${a.employee.firstName} ${a.employee.lastName}`).planned!);
+    for (const p of targets) {
+      p.total += minutes;
+      if (a.shift.endsAt <= now) p.past += minutes;
+      else p.upcoming += minutes;
+      if (a.status === 'pending') p.unconfirmed += minutes;
+    }
+    if (plannedCost) {
+      const rate = rateOn(rates, a.employee.id, a.shift.date.toISOString().slice(0, 10));
+      if (rate && rate.compensationType === 'hourly') addCost(plannedCost, rate.currency, costCents(rate.rateCents, minutes));
+    }
   }
 
   const csv: ReportEntry[] = entries.slice(0, MAX_CSV_ENTRIES).map((e) => ({
@@ -152,9 +208,11 @@ export async function buildHoursReport(
     weekStatus: e.timesheet.status,
   }));
 
+  const size = (r: ReportRow) => Math.max(r.minutes, r.planned?.total ?? 0);
   return {
-    rows: [...rows.values()].sort((a, b) => b.minutes - a.minutes),
+    rows: [...rows.values()].sort((a, b) => size(b) - size(a)),
     totals,
+    plannedCost,
     entries: csv,
     truncated: entries.length > MAX_CSV_ENTRIES,
   };

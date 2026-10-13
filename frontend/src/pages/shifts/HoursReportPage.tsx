@@ -50,8 +50,10 @@ const csvCell = (v: string | number | boolean | null) => {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 };
 
-// Shifts → Reports (spec-shifts.md, Unidad 12): hours for a month by person, company or project —
-// billable hours, and cost when the company shows it and the viewer has Payroll access. Company
+// Shifts → Reports (spec-shifts.md, Unidad 12; everything in one place since 2026-10-13): for a
+// month, planned shift hours (past, upcoming, still unconfirmed) next to logged hours (all, and the
+// approved part) and billable hours — by person, company or project — plus cost when the company
+// shows it and the viewer has Payroll access. Company
 // rows with billable hours can be invoiced through Payments (the usual Stripe invoice form, filled
 // in with hours × rate, reviewed before sending). CSV of every entry.
 export default function HoursReportPage({ token }: HoursReportPageProps) {
@@ -60,7 +62,6 @@ export default function HoursReportPage({ token }: HoursReportPageProps) {
   const { features } = usePermissions();
   const [from, setFrom] = useState(monthStart(todayString()));
   const [groupBy, setGroupBy] = useState<Group>('person');
-  const [approvedOnly, setApprovedOnly] = useState(true);
   const [report, setReport] = useState<HoursReport | null>(null);
   const [tenantCurrency, setTenantCurrency] = useState('USD');
   const [invoiceFor, setInvoiceFor] = useState<HoursReportRow | null>(null);
@@ -71,11 +72,11 @@ export default function HoursReportPage({ token }: HoursReportPageProps) {
   useEffect(() => {
     setReport(null);
     api
-      .getHoursReport(token, { from, to, groupBy, approvedOnly })
+      .getHoursReport(token, { from, to, groupBy })
       .then(setReport)
       .catch((error) => toast.error(t('reports.loadFailed', { message: (error as Error).message })));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, from, to, groupBy, approvedOnly]);
+  }, [token, from, to, groupBy]);
 
   useEffect(() => {
     api
@@ -84,9 +85,13 @@ export default function HoursReportPage({ token }: HoursReportPageProps) {
       .catch(() => undefined);
   }, [token]);
 
-  const monthLabel = new Date(`${from}T00:00:00Z`).toLocaleDateString(i18n.language.startsWith('es') ? 'es-AR' : 'en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  const monthText = new Date(`${from}T00:00:00Z`).toLocaleDateString(i18n.language.startsWith('es') ? 'es-AR' : 'en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  // "octubre de 2026" → "Octubre de 2026" (only the first letter).
+  const monthLabel = monthText.charAt(0).toUpperCase() + monthText.slice(1);
   const canInvoice = features.payments && groupBy === 'company';
-  const cols = 3 + (report?.withCost ? 1 : 0) + (canInvoice ? 1 : 0);
+  const byPerson = groupBy === 'person';
+  const cols = 1 + (byPerson ? 4 : 0) + 3 + (report?.withCost ? 1 : 0) + (canInvoice ? 1 : 0);
+  const dash = (m: number) => (m ? formatDuration(m) : '—');
 
   const downloadCsv = () => {
     if (!report) return;
@@ -116,7 +121,7 @@ export default function HoursReportPage({ token }: HoursReportPageProps) {
           <button type="button" className="icon-btn" aria-label={t('reports.prevMonth')} onClick={() => setFrom(shiftMonth(from, -1))}>
             <ChevronLeftIcon className="h-4 w-4" />
           </button>
-          <span className="sh-weeknav-label capitalize">{monthLabel}</span>
+          <span className="sh-weeknav-label">{monthLabel}</span>
           <button type="button" className="icon-btn" aria-label={t('reports.nextMonth')} onClick={() => setFrom(shiftMonth(from, 1))}>
             <ChevronRightIcon className="h-4 w-4" />
           </button>
@@ -131,20 +136,32 @@ export default function HoursReportPage({ token }: HoursReportPageProps) {
             </button>
           ))}
         </div>
-        <label className="rules-switch !m-0">
-          <input type="checkbox" checked={approvedOnly} onChange={() => setApprovedOnly(!approvedOnly)} />
-          {t('reports.approvedOnly')}
-        </label>
         <button type="button" className="btn-secondary ml-auto" disabled={!report || report.entries.length === 0} onClick={downloadCsv}>
           {t('reports.csv')}
         </button>
       </div>
 
       {report && (
-        <div className="sh-kpis">
+        <div className="sh-kpis rep-kpis">
           <div className="sh-kpi">
-            <span className="sh-kpi-label">{t('reports.hours')}</span>
+            <span className="sh-kpi-label">{t('reports.planned')}</span>
+            <span className="sh-kpi-value">{formatDuration(report.totals.planned?.total ?? 0)}</span>
+            <span className="sh-kpi-hint">
+              {t('reports.plannedHint', {
+                past: formatDuration(report.totals.planned?.past ?? 0),
+                upcoming: formatDuration(report.totals.planned?.upcoming ?? 0),
+              })}
+            </span>
+          </div>
+          <div className="sh-kpi">
+            <span className="sh-kpi-label">{t('reports.unconfirmed')}</span>
+            <span className="sh-kpi-value">{formatDuration(report.totals.planned?.unconfirmed ?? 0)}</span>
+            <span className="sh-kpi-hint">{t('reports.unconfirmedHint')}</span>
+          </div>
+          <div className="sh-kpi">
+            <span className="sh-kpi-label">{t('reports.logged')}</span>
             <span className="sh-kpi-value">{formatDuration(report.totals.minutes)}</span>
+            <span className="sh-kpi-hint">{t('reports.approvedHint', { hours: formatDuration(report.totals.approvedMinutes) })}</span>
           </div>
           <div className="sh-kpi">
             <span className="sh-kpi-label">{t('reports.billable')}</span>
@@ -157,9 +174,7 @@ export default function HoursReportPage({ token }: HoursReportPageProps) {
             <div className="sh-kpi">
               <span className="sh-kpi-label">{t('reports.cost')}</span>
               <span className="sh-kpi-value">{costText(report.totals.cost)}</span>
-              {report.totals.minutesWithoutRate > 0 && (
-                <span className="sh-kpi-hint">{t('reports.withoutRate', { hours: formatDuration(report.totals.minutesWithoutRate) })}</span>
-              )}
+              <span className="sh-kpi-hint">{t('reports.plannedCost', { cost: costText(report.plannedCost) })}</span>
             </div>
           )}
         </div>
@@ -173,18 +188,36 @@ export default function HoursReportPage({ token }: HoursReportPageProps) {
             <thead>
               <tr>
                 <th>{t(`reports.group.${groupBy}`)}</th>
-                <th>{t('reports.hours')}</th>
+                {byPerson && (
+                  <>
+                    <th>{t('reports.planned')}</th>
+                    <th>{t('reports.past')}</th>
+                    <th>{t('reports.upcoming')}</th>
+                    <th>{t('reports.unconfirmed')}</th>
+                  </>
+                )}
+                <th>{t('reports.logged')}</th>
+                <th>{t('reports.approved')}</th>
                 <th>{t('reports.billable')}</th>
                 {report.withCost && <th>{t('reports.cost')}</th>}
                 {canInvoice && <th aria-label={t('reports.invoice')} />}
               </tr>
             </thead>
-            <TableBody colSpan={cols} isEmpty={report.rows.length === 0} empty={{ icon: <ClockIcon />, title: t('reports.emptyTitle'), body: approvedOnly ? t('reports.emptyBodyApproved') : undefined }}>
+            <TableBody colSpan={cols} isEmpty={report.rows.length === 0} empty={{ icon: <ClockIcon />, title: t('reports.emptyTitle'), body: t('reports.emptyBody') }}>
               {report.rows.map((r) => (
                 <tr key={r.key ?? 'none'}>
                   <td className={r.key ? 'font-medium' : 'text-ink-muted dark:text-dark-ink-muted'}>{rowName(r)}</td>
-                  <td>{formatDuration(r.minutes)}</td>
-                  <td>{r.billableMinutes ? formatDuration(r.billableMinutes) : '—'}</td>
+                  {byPerson && (
+                    <>
+                      <td>{dash(r.planned?.total ?? 0)}</td>
+                      <td>{dash(r.planned?.past ?? 0)}</td>
+                      <td>{dash(r.planned?.upcoming ?? 0)}</td>
+                      <td className={r.planned?.unconfirmed ? 'text-amber-700 dark:text-amber-300' : ''}>{dash(r.planned?.unconfirmed ?? 0)}</td>
+                    </>
+                  )}
+                  <td>{dash(r.minutes)}</td>
+                  <td>{dash(r.approvedMinutes)}</td>
+                  <td>{dash(r.billableMinutes)}</td>
                   {report.withCost && (
                     <td>
                       {costText(r.cost)}

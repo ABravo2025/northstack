@@ -1549,14 +1549,18 @@ export interface HoursReportRow {
   key: string | null;
   name: string | null;
   minutes: number;
+  approvedMinutes: number;
   billableMinutes: number;
   cost: Record<string, number> | null;
   minutesWithoutRate: number;
+  // Planned shifts: per person, and in the totals; null on company/project rows.
+  planned: { total: number; past: number; upcoming: number; unconfirmed: number } | null;
 }
 
 export interface HoursReport {
   rows: HoursReportRow[];
   totals: HoursReportRow;
+  plannedCost: Record<string, number> | null;
   entries: {
     date: string;
     person: string;

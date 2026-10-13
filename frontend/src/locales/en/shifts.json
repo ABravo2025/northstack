@@ -454,7 +454,7 @@
   },
   "reports": {
     "title": "Hours reports",
-    "subtitle": "Logged hours by person, company or project. Approved weeks unless you include the rest.",
+    "subtitle": "Everything for the month: planned shifts (done, upcoming, unconfirmed) next to logged and approved hours.",
     "prevMonth": "Previous month",
     "nextMonth": "Next month",
     "groupBy": "Group by",
@@ -463,9 +463,7 @@
       "company": "Company",
       "project": "Project"
     },
-    "approvedOnly": "Only approved weeks",
     "csv": "Download CSV",
-    "hours": "Hours",
     "billable": "Billable",
     "billableShare": "{{pct}}% of the hours",
     "cost": "Cost",
@@ -476,8 +474,7 @@
       "company": "No company",
       "project": "No project"
     },
-    "emptyTitle": "No hours in this month",
-    "emptyBodyApproved": "Only approved weeks count. Turn off “Only approved weeks” to see the rest.",
+    "emptyTitle": "Nothing in this month",
     "truncated": "The CSV includes the first 5,000 entries; pick a shorter period for the rest.",
     "invoice": "Invoice hours",
     "invoiceTitle": "Invoice {{name}}",
@@ -487,6 +484,17 @@
     "continue": "Continue",
     "invoiceLine": "{{hours}} of work in {{month}} at {{rate}}/h",
     "invoiceSent": "Invoice sent",
-    "loadFailed": "Couldn't load the report: {{message}}"
+    "loadFailed": "Couldn't load the report: {{message}}",
+    "planned": "Planned",
+    "plannedHint": "{{past}} done · {{upcoming}} upcoming",
+    "past": "Done",
+    "upcoming": "Upcoming",
+    "unconfirmed": "Unconfirmed",
+    "unconfirmedHint": "Shifts waiting for an answer",
+    "logged": "Logged",
+    "approved": "Approved",
+    "approvedHint": "{{hours}} approved",
+    "plannedCost": "{{cost}} planned",
+    "emptyBody": "Nothing planned or logged this month."
   }
 }

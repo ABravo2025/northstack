@@ -3891,6 +3891,12 @@ textarea.overview-field-input {
 .sh-templates {
   @apply flex flex-wrap gap-1.5;
 }
+.rep-kpis {
+  @apply flex flex-wrap justify-center gap-3;
+}
+.rep-kpis .sh-kpi {
+  @apply w-44 items-center text-center max-sm:w-[calc(50%-0.375rem)];
+}
 .sh-note-warn {
   @apply border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200;
 }

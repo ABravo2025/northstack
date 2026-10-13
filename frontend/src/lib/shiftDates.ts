@@ -47,6 +47,7 @@ export function shiftDurationMinutes(startMinute: number, endMinute: number): nu
 // "45m", "2h", "1h 15m"; negative (a timesheet adjustment) gets a minus sign.
 export function formatDuration(minutes: number): string {
   if (minutes < 0) return `−${formatDuration(-minutes)}`;
+  if (minutes === 0) return '0';
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   if (h === 0) return `${m}m`;

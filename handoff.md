@@ -4,7 +4,7 @@ Running context of the whole project, kept current so any session (or person) ca
 last one left off. **Update this file whenever a feature ships or something important changes**
 (newest entries on top in "Changelog"). Rule set in `README.md`.
 
-_Last updated: 2026-10-07_
+_Last updated: 2026-10-13_
 
 ---
 
@@ -85,6 +85,7 @@ SEO is part of marketing: every SEO change is logged in `seo/README.md` + a chan
 ---
 
 ## Changelog (newest first)
+- **2026-10-13** — **LinkedIn strategy started** (`linkedin/README.md`): 2–3 posts/week, each in ES and EN as separate posts, aimed at startups and SMBs (5–50 people); goal = brand awareness + sign up (15-day trial) or contact directly (DM to Alejandro / info@joinnorthstack.com, 20-min demo). Pillars: everyday pain, product in action, tips, founder/behind the scenes. First 5 posts drafted (not published): `2026-10/semana-03/linkedin/` (Shifts, customer-request founder story) and `2026-10/semana-04/linkedin/` (5 signs, Projects monthly close, Time Off). Gap: no site analytics, so LinkedIn signups can't be attributed yet.
 - **2026-10-12** — **Shifts module live in production** (`a621596`), promoted on its own (not the rest of staging). Production DB: additive SQL only (the prod DB already had Projects tables that a `db push` would have dropped); Admin permissions backfilled (13 roles); Android build ran OK. Marketing angle: "stop chasing people on WhatsApp to confirm shifts — they get it in their calendar and answer with one click"; strongest for labs, clinics, security, retail and cleaning teams with several sites.
 - **2026-10-07** — **Projects module LIVE in production** (main `f1288ff`, docs `4d78fdb`): everything from staging plus the review fixes (task chat with @mentions, Meet invite email, task columns with created date). Brought to main by cherry-pick only — the rest of staging (Shifts, Referrals, MCP, i18n) was not promoted. Prod DB: additive SQL only via migrate diff, Admin permissions backfill (13 roles), 9 system templates seeded. Marketing angle: "start from a blank board or your niche's template in one click" — accounting firms' monthly close is the strongest example.
 - **2026-10-06** — **Referral program LIVE in production** (`main` 7755c8a; prod DB got only the additive referral tables first). Users recommend Northstack and earn 10% of a referred company's first 3 payments; the company gets a 30-day trial. Admin → Referidos to pay with receipt. Marketing angle for later: "your users become your sales team" — but **wait for the terms review** before any post or announcement. Mockup: https://claude.ai/artifact/DcECpgxfXvmPKfsXJMbNoN

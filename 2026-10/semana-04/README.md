@@ -8,5 +8,5 @@ LinkedIn, 3 posts (ver `../../linkedin/README.md`).
 | Proyectos: el cierre de mes de un estudio contable ES / EN | `linkedin/02-proyectos-es.md`, `-en.md` | mié 21/10 | Página Northstack | Borrador, para revisar |
 | Vacaciones: "¿cuántos días le quedan?" ES / EN | `linkedin/03-vacaciones-es.md`, `-en.md` | jue 22/10 | Página Northstack | Borrador, para revisar |
 
-Visuales pendientes: carrusel de 6 láminas (señales), captura de la plantilla "Cierre mensual",
-captura de saldos de vacaciones (o reusar el video demo de la semana 01).
+Visuales: Proyectos y Vacaciones usan los GIFs de `../semana-03/gif/`. Pendiente: carrusel PDF de 6
+láminas para "5 señales".

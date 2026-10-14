@@ -4,7 +4,7 @@ Running context of the whole project, kept current so any session (or person) ca
 last one left off. **Update this file whenever a feature ships or something important changes**
 (newest entries on top in "Changelog"). Rule set in `README.md`.
 
-_Last updated: 2026-10-13_
+_Last updated: 2026-10-14_
 
 ---
 
@@ -85,6 +85,7 @@ SEO is part of marketing: every SEO change is logged in `seo/README.md` + a chan
 ---
 
 ## Changelog (newest first)
+- **2026-10-14** — LinkedIn round 2: posts moved to **neutral Spanish (tú)**; the 16/10 founder post now says the lab only *asked* (not a customer, unnamed); links moved out of the post text into the first comment + comment-a-keyword CTAs; research in `linkedin/research-2026-10.md` (founder profile > company page, carousels/GIFs, 3 hashtags by industry, free analytics options: LinkedIn Insight Tag / Cloudflare / GA4 — Vercel Analytics is paid). Product GIFs ES/EN for Shifts, Projects and Time Off in `2026-10/semana-03/gif/` (tooling `tools/gif/`). Staging demo tenant "Acme Latam" now has logins for all 13 fictitious people, shifts for the weeks of Oct 19 and 26 (Palermo/Belgrano) and three "· 10/2026" monthly-close projects.
 - **2026-10-13** — **Shifts units 7–13 live in production** (main `ec6a9fd`): skills, daily reminders, timesheet + approvals, task timer, hours reports with cost and invoicing, email notification preferences. Promoted alone by cherry-pick; prod DB got additive SQL only (30 statements; an unrelated `Invoice` drift was left untouched); `approve_timesheets` backfilled on 14 Admin roles; Help Center + bilingual announcement. Marketing angle: "from shift to timesheet to invoice in one place — hours fill themselves in from what your team already did"; strongest for agencies/consultancies (billable hours by client) and labs/clinics (planned vs. worked).
 - **2026-10-13** — **LinkedIn strategy started** (`linkedin/README.md`): 2–3 posts/week, each in ES and EN as separate posts, aimed at startups and SMBs (5–50 people); goal = brand awareness + sign up (15-day trial) or contact directly (DM to Alejandro / info@joinnorthstack.com, 20-min demo). Pillars: everyday pain, product in action, tips, founder/behind the scenes. First 5 posts drafted (not published): `2026-10/semana-03/linkedin/` (Shifts, customer-request founder story) and `2026-10/semana-04/linkedin/` (5 signs, Projects monthly close, Time Off). Gap: no site analytics, so LinkedIn signups can't be attributed yet.
 - **2026-10-12** — **Shifts module live in production** (`a621596`), promoted on its own (not the rest of staging). Production DB: additive SQL only (the prod DB already had Projects tables that a `db push` would have dropped); Admin permissions backfilled (13 roles); Android build ran OK. Marketing angle: "stop chasing people on WhatsApp to confirm shifts — they get it in their calendar and answer with one click"; strongest for labs, clinics, security, retail and cleaning teams with several sites.

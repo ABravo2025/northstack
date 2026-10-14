@@ -546,7 +546,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
         <div className="page-toolbar">
           <h2 className="page-title">{t('payroll.page.title')}</h2>
         </div>
-        <p className="text-sm text-ink-muted">{t('payroll.page.ownerOnly')}</p>
+        <p className="text-sm text-ink-muted dark:text-dark-ink-muted">{t('payroll.page.ownerOnly')}</p>
       </div>
     );
   }
@@ -582,7 +582,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
           {tab === 'timeline' && (
             <>
               <div className="flex items-start justify-between gap-4 mb-3">
-                <p className="text-sm text-ink-muted">
+                <p className="text-sm text-ink-muted dark:text-dark-ink-muted">
                   {t('payroll.page.timeline.description')}
                 </p>
                 {canManagePayroll && (
@@ -718,7 +718,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
           {tab === 'assignments' && (
             <>
               <div className="flex items-start justify-between gap-4 mb-3">
-                <p className="text-sm text-ink-muted">
+                <p className="text-sm text-ink-muted dark:text-dark-ink-muted">
                   {t('payroll.page.assignments.description')}
                 </p>
                 {canManagePayroll && assignmentSubTab !== 'terminated' && (
@@ -825,7 +825,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                     <>
                     <div className="entity-card-list">
                       {canManagePayroll && (
-                        <label className="flex items-center gap-2 px-1 pb-1 text-xs font-medium text-ink-muted">
+                        <label className="flex items-center gap-2 px-1 pb-1 text-xs font-medium text-ink-muted dark:text-dark-ink-muted">
                           <input
                             type="checkbox"
                             checked={selectedEmployeeIds.size > 0 && selectedEmployeeIds.size === visibleAssignments.length}
@@ -916,7 +916,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                                     {entry.currentCompensation.payFrequencyName}
                                   </span>
                                 ) : (
-                                  <span className="text-ink-muted">{t('payroll.page.assignments.noPolicyAssigned')}</span>
+                                  <span className="text-ink-muted dark:text-dark-ink-muted">{t('payroll.page.assignments.noPolicyAssigned')}</span>
                                 )}
                               </td>
                               <td>
@@ -943,7 +943,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
               <div className="flex items-start justify-between gap-4 mb-1">
                 <div>
                   <h3 className="card-title mb-1">{t('payroll.page.policies.payFrequenciesTitle')}</h3>
-                  <p className="text-sm text-ink-muted">
+                  <p className="text-sm text-ink-muted dark:text-dark-ink-muted">
                     {t('payroll.page.policies.payFrequenciesDesc')}
                   </p>
                 </div>
@@ -1056,7 +1056,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                     className="flex items-center justify-between gap-3 card"
                     style={{ padding: '0.5rem 0.75rem' }}
                   >
-                    <span className={!method.isActive ? 'line-through text-ink-muted' : ''}>{method.name}</span>
+                    <span className={!method.isActive ? 'line-through text-ink-muted dark:text-dark-ink-muted' : ''}>{method.name}</span>
                     {canManagePayroll && (
                       <button type="button" className="btn-secondary btn-sm" onClick={() => handleToggleMethodActive(method)}>
                         {method.isActive ? t('payroll.page.policies.deactivate') : t('payroll.page.policies.activate')}

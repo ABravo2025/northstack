@@ -109,7 +109,7 @@
 }
 
 .time-off-policy-chip-remove {
-  @apply cursor-pointer leading-none text-ink-faint hover:text-red-500;
+  @apply cursor-pointer leading-none text-ink-faint dark:text-dark-ink-faint hover:text-red-500;
 }
 
 .time-off-active-tag {
@@ -143,7 +143,7 @@
 }
 
 .btn-outline {
-  @apply btn border border-accent bg-surface-0 text-accent hover:bg-accent/10 dark:bg-dark-page dark:hover:bg-accent/10;
+  @apply btn border border-accent bg-surface-0 text-accent dark:text-brand-blue-light hover:bg-accent/10 dark:bg-dark-page dark:hover:bg-accent/10;
 }
 
 /* Size modifiers — .btn defaults to --size-control-lg (36px, toolbar rows).
@@ -244,7 +244,7 @@
 }
 
 .tour-step-label {
-  @apply text-[10px] font-bold tracking-wide text-accent uppercase;
+  @apply text-[10px] font-bold tracking-wide text-accent dark:text-brand-blue-light uppercase;
 }
 
 .tour-tooltip-title {
@@ -344,7 +344,7 @@
 }
 
 .help-crosslink a {
-  @apply font-semibold text-accent no-underline hover:underline;
+  @apply font-semibold text-accent dark:text-brand-blue-light no-underline hover:underline;
 }
 
 .help-shell {
@@ -380,7 +380,7 @@
 }
 
 .help-nav-link.active {
-  @apply bg-accent-tint font-semibold text-accent;
+  @apply bg-accent-tint font-semibold text-accent dark:text-brand-blue-light;
 }
 
 .help-nav-link.active svg {
@@ -408,7 +408,7 @@
 }
 
 .help-module-card-top svg {
-  @apply h-4 w-4 shrink-0 text-accent;
+  @apply h-4 w-4 shrink-0 text-accent dark:text-brand-blue-light;
 }
 
 .help-module-card-top span {
@@ -424,7 +424,7 @@
 }
 
 .help-eyebrow {
-  @apply mb-2 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-accent uppercase;
+  @apply mb-2 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-accent dark:text-brand-blue-light uppercase;
 }
 
 .help-eyebrow svg {
@@ -473,7 +473,7 @@
 }
 
 .help-pill-plan {
-  @apply border-accent/30 bg-accent-tint text-accent;
+  @apply border-accent/30 bg-accent-tint text-accent dark:text-brand-blue-light;
 }
 
 .help-callout {
@@ -572,7 +572,7 @@ table.help-ref td.num {
 }
 
 table.help-ref td.yes {
-  @apply font-bold text-emerald-600 dark:text-emerald-400;
+  @apply font-bold text-emerald-700 dark:text-emerald-400;
 }
 
 table.help-ref td.no {
@@ -612,7 +612,7 @@ table.help-ref td.no {
 }
 
 .help-faq-cat-title {
-  @apply mb-2.5 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-accent uppercase;
+  @apply mb-2.5 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-accent dark:text-brand-blue-light uppercase;
 }
 
 .help-faq-cat-title svg {
@@ -743,7 +743,7 @@ table.help-ref td.no {
 }
 
 .table-link {
-  @apply cursor-pointer border-none bg-transparent p-0 text-sm font-medium text-accent hover:underline;
+  @apply cursor-pointer border-none bg-transparent p-0 text-sm font-medium text-accent dark:text-brand-blue-light hover:underline;
 }
 
 .balance-detail-block {
@@ -981,11 +981,11 @@ table.help-ref td.no {
 }
 
 .sidebar-toggle-desktop {
-  @apply mb-2 hidden w-full cursor-pointer items-center justify-end rounded-md border-none bg-transparent p-1.5 text-ink-faint transition-colors hover:bg-surface-2 hover:text-brand-navy md:flex dark:hover:bg-white/[0.06] dark:hover:text-gray-100;
+  @apply mb-2 hidden w-full cursor-pointer items-center justify-end rounded-md border-none bg-transparent p-1.5 text-ink-faint dark:text-dark-ink-faint transition-colors hover:bg-surface-2 hover:text-brand-navy md:flex dark:hover:bg-white/[0.06] dark:hover:text-gray-100;
 }
 
 .sidebar-toggle-mobile {
-  @apply mb-2 flex w-full cursor-pointer items-center justify-end rounded-md border-none bg-transparent p-1.5 text-ink-faint transition-colors hover:bg-surface-2 hover:text-brand-navy md:hidden dark:hover:bg-white/[0.06] dark:hover:text-gray-100;
+  @apply mb-2 flex w-full cursor-pointer items-center justify-end rounded-md border-none bg-transparent p-1.5 text-ink-faint dark:text-dark-ink-faint transition-colors hover:bg-surface-2 hover:text-brand-navy md:hidden dark:hover:bg-white/[0.06] dark:hover:text-gray-100;
 }
 
 .sidebar-collapsed .sidebar-toggle-desktop {
@@ -1152,7 +1152,7 @@ table.help-ref td.no {
 }
 
 .legal-modal-close {
-  @apply cursor-pointer rounded-md border-none bg-transparent p-1.5 text-ink-faint hover:bg-surface-2 hover:text-ink dark:hover:bg-white/[0.06] dark:hover:text-dark-ink;
+  @apply cursor-pointer rounded-md border-none bg-transparent p-1.5 text-ink-faint dark:text-dark-ink-faint hover:bg-surface-2 hover:text-ink dark:hover:bg-white/[0.06] dark:hover:text-dark-ink;
 }
 
 .legal-modal-body {
@@ -1241,11 +1241,11 @@ table.help-ref td.no {
 }
 
 .skeleton-avatar {
-  @apply h-[26px] w-[26px] shrink-0 rounded-full bg-[#ece5da] dark:bg-[#2e2823];
+  @apply h-[26px] w-[26px] shrink-0 rounded-full bg-line dark:bg-dark-line;
 }
 
 .skeleton-bar {
-  @apply h-[9px] rounded-none bg-[#ece5da] dark:bg-[#2e2823];
+  @apply h-[9px] rounded-none bg-line dark:bg-dark-line;
 }
 
 @keyframes skeleton-pulse {
@@ -1309,7 +1309,7 @@ table.help-ref td.no {
 }
 
 .toolbar-search svg {
-  @apply h-4 w-4 shrink-0 text-ink-faint;
+  @apply h-4 w-4 shrink-0 text-ink-faint dark:text-dark-ink-faint;
 }
 
 .toolbar-search input {
@@ -1343,7 +1343,7 @@ table.help-ref td.no {
 }
 
 .entity-card-avatar {
-  @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-avatar-bg text-[11px] font-bold text-brand-navy dark:bg-[#3b2f26] dark:text-[#e8c9a0];
+  @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-avatar-bg text-[11px] font-bold text-brand-navy dark:bg-[#2d2550] dark:text-[#cdbdff];
 }
 
 .entity-card-body {
@@ -1397,7 +1397,7 @@ table.help-ref td.no {
 }
 
 .avatar {
-  @apply inline-flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-avatar-bg text-[0.64rem] font-bold text-brand-navy dark:bg-[#3b2f26] dark:text-[#e8c9a0];
+  @apply inline-flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-avatar-bg text-[0.64rem] font-bold text-brand-navy dark:bg-[#2d2550] dark:text-[#cdbdff];
 }
 
 .status-chip {
@@ -1507,11 +1507,11 @@ table.help-ref td.no {
 }
 
 .list-section-header .cnt {
-  @apply font-mono text-[0.68rem] font-normal text-ink-faint;
+  @apply font-mono text-[0.68rem] font-normal text-ink-faint dark:text-dark-ink-faint;
 }
 
 .list-chevron {
-  @apply h-3.5 w-3.5 shrink-0 -rotate-90 text-ink-faint transition-transform;
+  @apply h-3.5 w-3.5 shrink-0 -rotate-90 text-ink-faint dark:text-dark-ink-faint transition-transform;
 }
 
 .list-chevron.list-chevron-open {
@@ -1525,7 +1525,7 @@ table.help-ref td.no {
 .icon-btn {
   height: var(--size-control-md);
   width: var(--size-control-md);
-  @apply relative inline-flex cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-ink-faint transition-colors hover:bg-surface-2 hover:text-brand-navy dark:hover:bg-white/[0.06] dark:hover:text-gray-100;
+  @apply relative inline-flex cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-ink-faint dark:text-dark-ink-faint transition-colors hover:bg-surface-2 hover:text-brand-navy dark:hover:bg-white/[0.06] dark:hover:text-gray-100;
 }
 
 .icon-btn svg {
@@ -1552,7 +1552,7 @@ table.help-ref td.no {
 /* Close (×) button of the detail modals (Company/Contact/Opportunity/Employee). The side
    panel this class came from is gone (2026-10): everything opens in a centered Modal now. */
 .slideover-close {
-  @apply cursor-pointer rounded-md border-none bg-transparent p-1 text-ink-faint hover:bg-surface-2 hover:text-brand-navy dark:hover:bg-white/[0.06] dark:hover:text-gray-100;
+  @apply cursor-pointer rounded-md border-none bg-transparent p-1 text-ink-faint dark:text-dark-ink-faint hover:bg-surface-2 hover:text-brand-navy dark:hover:bg-white/[0.06] dark:hover:text-gray-100;
 }
 
 /* ---------- Modal: centered, backdrop-covered form ----------
@@ -1609,7 +1609,7 @@ table.help-ref td.no {
 }
 
 .modal-close {
-  @apply cursor-pointer rounded-md border-none bg-transparent p-1 text-ink-faint hover:bg-surface-2 hover:text-brand-navy dark:hover:bg-white/[0.06] dark:hover:text-gray-100;
+  @apply cursor-pointer rounded-md border-none bg-transparent p-1 text-ink-faint dark:text-dark-ink-faint hover:bg-surface-2 hover:text-brand-navy dark:hover:bg-white/[0.06] dark:hover:text-gray-100;
 }
 
 .modal-body {
@@ -1661,7 +1661,7 @@ table.help-ref td.no {
 }
 
 .overview-panel-heading p {
-  @apply m-0 truncate text-xs text-ink-muted before:mr-2 before:text-gray-300 before:content-['—'] dark:before:text-gray-700;
+  @apply m-0 truncate text-xs text-ink-muted dark:text-dark-ink-muted before:mr-2 before:text-gray-300 before:content-['—'] dark:before:text-gray-700;
 }
 
 /* Generic tab bar — used both by the (legacy) top-level tabs and the new
@@ -1671,7 +1671,7 @@ table.help-ref td.no {
 }
 
 .overview-panel-tabs button {
-  @apply flex-1 cursor-pointer border-none border-b-2 border-transparent bg-transparent py-2.5 text-sm font-medium text-ink-muted hover:text-brand-navy dark:hover:text-gray-100;
+  @apply flex-1 cursor-pointer border-none border-b-2 border-transparent bg-transparent py-2.5 text-sm font-medium text-ink-muted dark:text-dark-ink-muted hover:text-brand-navy dark:hover:text-gray-100;
 }
 
 .overview-panel-tabs button.active {
@@ -1782,7 +1782,7 @@ table.help-ref td.no {
 }
 
 .overview-panel-placeholder {
-  @apply py-8 text-center text-sm text-ink-faint;
+  @apply py-8 text-center text-sm text-ink-faint dark:text-dark-ink-faint;
 }
 
 /* Always-expanded Task/Note compose form (right-column tabs) — replaces the
@@ -1814,7 +1814,7 @@ table.help-ref td.no {
 }
 
 .dropdown-trigger-wrap .chev {
-  @apply pointer-events-none absolute top-1/2 right-2 h-2.5 w-2.5 -translate-y-1/2 text-ink-faint;
+  @apply pointer-events-none absolute top-1/2 right-2 h-2.5 w-2.5 -translate-y-1/2 text-ink-faint dark:text-dark-ink-faint;
 }
 
 /* Status-type trigger — always the reserved brand-blue tint (1.4's rule: blue
@@ -1845,7 +1845,7 @@ table.help-ref td.no {
 }
 
 .password-toggle {
-  @apply absolute right-1.5 inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded border-none bg-transparent text-ink-faint hover:text-brand-navy dark:hover:text-gray-100;
+  @apply absolute right-1.5 inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded border-none bg-transparent text-ink-faint dark:text-dark-ink-faint hover:text-brand-navy dark:hover:text-gray-100;
 }
 
 .password-checklist {
@@ -1857,7 +1857,7 @@ table.help-ref td.no {
 }
 
 .password-checklist li.met {
-  @apply text-emerald-600 dark:text-emerald-400;
+  @apply text-emerald-700 dark:text-emerald-400;
 }
 
 .password-checklist-dot {
@@ -1993,7 +1993,7 @@ table.help-ref td.no {
 
 .view-tab {
   height: var(--size-control-lg);
-  @apply relative top-px flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-t-md border border-transparent border-b-0 px-3 py-0 text-sm font-medium text-ink-muted hover:bg-surface-2 hover:text-brand-navy dark:hover:bg-white/[0.06] dark:hover:text-gray-100;
+  @apply relative top-px flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-t-md border border-transparent border-b-0 px-3 py-0 text-sm font-medium text-ink-muted dark:text-dark-ink-muted hover:bg-surface-2 hover:text-brand-navy dark:hover:bg-white/[0.06] dark:hover:text-gray-100;
 }
 
 .view-tab svg {
@@ -2005,11 +2005,11 @@ table.help-ref td.no {
 }
 
 .view-tab-menu {
-  @apply ml-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded text-ink-faint hover:bg-gray-200 hover:text-brand-navy dark:hover:bg-white/[0.06] dark:hover:text-gray-100;
+  @apply ml-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded text-ink-faint dark:text-dark-ink-faint hover:bg-gray-200 hover:text-brand-navy dark:hover:bg-white/[0.06] dark:hover:text-gray-100;
 }
 
 .view-tab-add {
-  @apply flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-ink-faint hover:bg-surface-2 hover:text-brand-navy dark:hover:bg-white/[0.06] dark:hover:text-gray-100;
+  @apply flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-ink-faint dark:text-dark-ink-faint hover:bg-surface-2 hover:text-brand-navy dark:hover:bg-white/[0.06] dark:hover:text-gray-100;
 }
 
 /* ---------- Popovers (filter builder, new view, tab menu) ---------- */
@@ -2052,7 +2052,7 @@ table.help-ref td.no {
 }
 
 .filter-row .rm-filter {
-  @apply flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded text-ink-faint hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400;
+  @apply flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded text-ink-faint dark:text-dark-ink-faint hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400;
 }
 
 .filter-row .rm-filter svg {
@@ -2060,7 +2060,7 @@ table.help-ref td.no {
 }
 
 .add-filter-btn {
-  @apply flex cursor-pointer items-center gap-1.5 border-none bg-transparent p-0.5 text-xs font-semibold text-accent hover:underline;
+  @apply flex cursor-pointer items-center gap-1.5 border-none bg-transparent p-0.5 text-xs font-semibold text-accent dark:text-brand-blue-light hover:underline;
 }
 
 .add-filter-btn svg {
@@ -2094,7 +2094,7 @@ table.help-ref td.no {
 }
 
 .toggle-opt.active {
-  @apply border-brand-blue bg-brand-blue/10 font-semibold text-brand-blue;
+  @apply border-brand-blue bg-brand-blue/10 font-semibold text-brand-blue dark:text-brand-blue-light;
 }
 
 /* Compact segmented control (e.g. Active/Deactivated filter above a table) */
@@ -2186,11 +2186,11 @@ table.help-ref td.no {
 }
 
 .full-table th.sorted .sort-arrow {
-  @apply text-brand-blue opacity-100;
+  @apply text-brand-blue dark:text-brand-blue-light opacity-100;
 }
 
 .col-menu-trigger {
-  @apply ml-1 inline-flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded text-ink-faint normal-case hover:bg-gray-200 hover:text-brand-navy dark:hover:bg-white/[0.06] dark:hover:text-gray-100;
+  @apply ml-1 inline-flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded text-ink-faint dark:text-dark-ink-faint normal-case hover:bg-gray-200 hover:text-brand-navy dark:hover:bg-white/[0.06] dark:hover:text-gray-100;
 }
 
 .col-menu-trigger svg {
@@ -2202,7 +2202,7 @@ table.help-ref td.no {
 }
 
 .col-add-trigger {
-  @apply flex h-6 w-6 cursor-pointer items-center justify-center rounded text-ink-faint normal-case hover:bg-gray-200 hover:text-brand-navy dark:hover:bg-white/[0.06] dark:hover:text-gray-100;
+  @apply flex h-6 w-6 cursor-pointer items-center justify-center rounded text-ink-faint dark:text-dark-ink-faint normal-case hover:bg-gray-200 hover:text-brand-navy dark:hover:bg-white/[0.06] dark:hover:text-gray-100;
 }
 
 .col-add-trigger svg {
@@ -2228,11 +2228,11 @@ table.help-ref td.no {
 }
 
 .kanban-col-head .cnt {
-  @apply ml-auto font-mono text-[0.68rem] font-normal text-ink-faint;
+  @apply ml-auto font-mono text-[0.68rem] font-normal text-ink-faint dark:text-dark-ink-faint;
 }
 
 .kanban-col-head .kanban-col-total {
-  @apply ml-1 font-mono text-[0.68rem] font-normal text-ink-faint before:mr-1 before:content-['·'] [font-variant-numeric:tabular-nums];
+  @apply ml-1 font-mono text-[0.68rem] font-normal text-ink-faint dark:text-dark-ink-faint before:mr-1 before:content-['·'] [font-variant-numeric:tabular-nums];
 }
 
 .kanban-body {
@@ -2260,7 +2260,7 @@ table.help-ref td.no {
 }
 
 .kc-owner {
-  @apply inline-flex h-5 w-5 items-center justify-center rounded-full bg-avatar-bg text-[9px] font-bold text-ink dark:bg-[#3b2f26] dark:text-[#e8c9a0];
+  @apply inline-flex h-5 w-5 items-center justify-center rounded-full bg-avatar-bg text-[9px] font-bold text-ink dark:bg-[#2d2550] dark:text-[#cdbdff];
 }
 
 .kc-age {
@@ -2499,7 +2499,7 @@ input[type='number'] {
 }
 
 .task-row-date {
-  @apply shrink-0 text-xs text-ink-faint;
+  @apply shrink-0 text-xs text-ink-faint dark:text-dark-ink-faint;
 }
 
 /* ---------- My Tasks hub (/tasks) ---------- */
@@ -2579,7 +2579,7 @@ input[type='number'] {
 }
 
 .task-folder-row.active svg {
-  @apply text-accent;
+  @apply text-accent dark:text-brand-blue-light;
 }
 
 .task-folder-name {
@@ -2654,7 +2654,7 @@ input[type='number'] {
 }
 
 .task-relationship-chip.creator {
-  @apply bg-accent/10 text-accent;
+  @apply bg-accent/10 text-accent dark:text-brand-blue-light;
 }
 
 .task-relationship-chip.both {
@@ -2688,7 +2688,7 @@ input[type='number'] {
 }
 
 .note-row-date {
-  @apply mt-1 block text-[11px] text-ink-faint;
+  @apply mt-1 block text-[11px] text-ink-faint dark:text-dark-ink-faint;
 }
 
 .kcard.dragging {
@@ -2726,7 +2726,7 @@ input[type='number'] {
 }
 
 .activity-row-toggle {
-  @apply shrink-0 whitespace-nowrap text-xs text-accent hover:underline;
+  @apply shrink-0 whitespace-nowrap text-xs text-accent dark:text-brand-blue-light hover:underline;
 }
 
 .activity-row-changes {
@@ -2776,7 +2776,7 @@ input[type='number'] {
 }
 
 .status-manage-grip {
-  @apply flex shrink-0 cursor-grab items-center justify-center text-ink-faint hover:text-ink-muted active:cursor-grabbing dark:hover:text-gray-200;
+  @apply flex shrink-0 cursor-grab items-center justify-center text-ink-faint dark:text-dark-ink-faint hover:text-ink-muted active:cursor-grabbing dark:hover:text-gray-200;
 }
 
 .color-dot {
@@ -2792,7 +2792,7 @@ input[type='number'] {
 }
 
 .status-manage-link {
-  @apply shrink-0 cursor-pointer border-none bg-transparent p-0 text-[0.68rem] font-semibold text-accent hover:underline;
+  @apply shrink-0 cursor-pointer border-none bg-transparent p-0 text-[0.68rem] font-semibold text-accent dark:text-brand-blue-light hover:underline;
 }
 
 .col-visibility-list {
@@ -3398,7 +3398,7 @@ html.dark {
   @apply inline-flex h-5 w-5 items-center justify-center rounded-full bg-avatar-bg text-[9px] font-bold text-ink dark:bg-gray-700 dark:text-dark-ink;
 }
 .to-assignee-remove {
-  @apply ml-0.5 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-sm leading-none text-ink-faint hover:bg-line hover:text-ink dark:hover:bg-dark-line dark:hover:text-dark-ink;
+  @apply ml-0.5 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-sm leading-none text-ink-faint dark:text-dark-ink-faint hover:bg-line hover:text-ink dark:hover:bg-dark-line dark:hover:text-dark-ink;
 }
 
 /* Count pill next to a sidebar item (Time Off › Team). */

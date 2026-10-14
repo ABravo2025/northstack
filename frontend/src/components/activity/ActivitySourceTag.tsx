@@ -9,7 +9,7 @@ export default function ActivitySourceTag({ entry }: { entry: Pick<ActivityLogEn
 
   const label = t(`activityLog.source.${entry.source}`);
   return (
-    <span className="ml-1 rounded bg-accent-tint px-1.5 py-0.5 text-[11px] font-medium text-accent">
+    <span className="ml-1 rounded bg-accent-tint px-1.5 py-0.5 text-[11px] font-medium text-accent dark:text-brand-blue-light">
       {entry.sourceClientName ? `${label} · ${entry.sourceClientName}` : label}
     </span>
   );

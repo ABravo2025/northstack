@@ -203,7 +203,7 @@ export default function TopBar({ user, token, onLogout, onMenuClick, onReplayTou
             <button
               type="button"
               className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium ${
-                feedbackType === 'ticket' ? 'border-accent bg-accent-tint text-accent' : 'border-line-strong text-ink-muted'
+                feedbackType === 'ticket' ? 'border-accent bg-accent-tint text-accent dark:text-brand-blue-light' : 'border-line-strong dark:border-dark-line text-ink-muted dark:text-dark-ink-muted'
               }`}
               onClick={() => setFeedbackType('ticket')}
               disabled={sendingFeedback}
@@ -213,7 +213,7 @@ export default function TopBar({ user, token, onLogout, onMenuClick, onReplayTou
             <button
               type="button"
               className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium ${
-                feedbackType === 'idea' ? 'border-accent bg-accent-tint text-accent' : 'border-line-strong text-ink-muted'
+                feedbackType === 'idea' ? 'border-accent bg-accent-tint text-accent dark:text-brand-blue-light' : 'border-line-strong dark:border-dark-line text-ink-muted dark:text-dark-ink-muted'
               }`}
               onClick={() => setFeedbackType('idea')}
               disabled={sendingFeedback}

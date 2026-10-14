@@ -69,7 +69,7 @@ export default function DateRangeFilter({ presetKey, range, onChange }: DateRang
               onClick={() => selectPreset(p.key)}
             >
               {p.label}
-              {presetKey === p.key && <CheckIcon className="h-4 w-4 shrink-0 text-accent" />}
+              {presetKey === p.key && <CheckIcon className="h-4 w-4 shrink-0 text-accent dark:text-brand-blue-light" />}
             </button>
           ))}
           <div className="mt-2 border-t border-line pt-2 dark:border-dark-line">

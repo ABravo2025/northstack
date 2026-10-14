@@ -202,8 +202,8 @@ const CsvImportExportMenu = forwardRef<CsvImportExportMenuHandle, CsvImportExpor
             </p>
             {result.errors.length > 0 && (
               <div className="mt-2">
-                <p className="text-sm font-semibold text-red-600">{t('csvImport.rowsHadErrors', { count: result.errors.length })}</p>
-                <ul className="mt-1 flex flex-col gap-1 text-xs text-red-600">
+                <p className="text-sm font-semibold text-red-600 dark:text-red-400">{t('csvImport.rowsHadErrors', { count: result.errors.length })}</p>
+                <ul className="mt-1 flex flex-col gap-1 text-xs text-red-600 dark:text-red-400">
                   {result.errors.map((err, i) => (
                     <li key={i}>{t('csvImport.rowError', { row: err.row, message: err.message })}</li>
                   ))}

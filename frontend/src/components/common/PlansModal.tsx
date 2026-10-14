@@ -211,8 +211,8 @@ export default function PlansModal({ open, tenant, onClose, onSelectPlan, curren
   return (
     <Modal open={open} title={t('plansModal.title')} onClose={onClose} xwide>
       <div className="text-center mb-2">
-        <div className="text-xs font-semibold text-accent uppercase tracking-wide mb-1">{t('plansModal.lastStep')}</div>
-        <p className="text-sm text-ink-muted max-w-md mx-auto">
+        <div className="text-xs font-semibold text-accent dark:text-brand-blue-light uppercase tracking-wide mb-1">{t('plansModal.lastStep')}</div>
+        <p className="text-sm text-ink-muted dark:text-dark-ink-muted max-w-md mx-auto">
           {hasTrialLeft ? t('plansModal.introTrial', { count: trialDaysLeft }) : t('plansModal.introExpired')}
         </p>
       </div>
@@ -259,19 +259,19 @@ export default function PlansModal({ open, tenant, onClose, onSelectPlan, curren
                 )
               )}
               <h3 className="card-title mt-1">{card.name}</h3>
-              <p className="text-xs text-ink-muted mb-4 min-h-[2rem]">{card.tagline}</p>
+              <p className="text-xs text-ink-muted dark:text-dark-ink-muted mb-4 min-h-[2rem]">{card.tagline}</p>
 
               <p className="mb-0.5 flex flex-wrap items-baseline gap-x-2">
-                {regularPrice && <s className="text-sm text-ink-faint">{regularPrice}</s>}
+                {regularPrice && <s className="text-sm text-ink-faint dark:text-dark-ink-faint">{regularPrice}</s>}
                 <span className="text-2xl font-bold">{displayPrice}</span>
-                {card.priceSuffix && <span className="text-sm font-normal text-ink-muted">{card.priceSuffix}</span>}
+                {card.priceSuffix && <span className="text-sm font-normal text-ink-muted dark:text-dark-ink-muted">{card.priceSuffix}</span>}
                 {discount ? (
                   <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[11px] font-bold text-orange-700 dark:bg-orange-500/15 dark:text-orange-300">
                     -{discount}%
                   </span>
                 ) : null}
               </p>
-              <p className="text-xs text-ink-faint mb-3">{card.cap}</p>
+              <p className="text-xs text-ink-faint dark:text-dark-ink-faint mb-3">{card.cap}</p>
 
               {/* Rendered for every card, invisible on trial (no "locked price" concept for a
                   free plan) — reserves the same height so the feature list below starts at the
@@ -290,7 +290,7 @@ export default function PlansModal({ open, tenant, onClose, onSelectPlan, curren
                 {card.features.map((feature) => (
                   <li
                     key={feature.label}
-                    className={`flex items-start gap-2 ${feature.included ? '' : 'text-ink-faint'}`}
+                    className={`flex items-start gap-2 ${feature.included ? '' : 'text-ink-faint dark:text-dark-ink-faint'}`}
                   >
                     <CheckIcon
                       className={`h-3.5 w-3.5 flex-shrink-0 mt-0.5 ${
@@ -299,7 +299,7 @@ export default function PlansModal({ open, tenant, onClose, onSelectPlan, curren
                     />
                     <span className="flex flex-col">
                       <span>{feature.label}</span>
-                      {feature.sub && <span className="text-xs text-ink-faint">{feature.sub}</span>}
+                      {feature.sub && <span className="text-xs text-ink-faint dark:text-dark-ink-faint">{feature.sub}</span>}
                     </span>
                   </li>
                 ))}
@@ -322,15 +322,15 @@ export default function PlansModal({ open, tenant, onClose, onSelectPlan, curren
         })}
       </div>
 
-      <p className="text-center text-xs text-ink-faint mt-5">
+      <p className="text-center text-xs text-ink-faint dark:text-dark-ink-faint mt-5">
         {t('plansModal.enterprisePrefix')}{' '}
-        <a href="mailto:info@joinnorthstack.com?subject=Northstack%20Enterprise%20plan" className="underline text-accent">
+        <a href="mailto:info@joinnorthstack.com?subject=Northstack%20Enterprise%20plan" className="underline text-accent dark:text-brand-blue-light">
           {t('plansModal.enterpriseLink')}
         </a>{' '}
         {t('plansModal.enterpriseSuffix')}
       </p>
 
-      <p className="text-center text-xs text-ink-faint mt-4 leading-relaxed">
+      <p className="text-center text-xs text-ink-faint dark:text-dark-ink-faint mt-4 leading-relaxed">
         {hasTrialLeft
           ? t('plansModal.footerTrialActive', { count: trialDaysLeft })
           : t('plansModal.footerTrialExpired')}

@@ -409,7 +409,7 @@ export default function CompanyDetailModal({
             </button>
           </div>
           {companyContacts.length === 0 && !addingContact && (
-            <p className="text-xs text-ink-faint">{t('companyDetail.contactsSection.noneYet')}</p>
+            <p className="text-xs text-ink-faint dark:text-dark-ink-faint">{t('companyDetail.contactsSection.noneYet')}</p>
           )}
           {companyContacts.map((contact) => (
             <div key={contact.id} className="flex items-center justify-between gap-2 py-1 text-sm">
@@ -441,10 +441,10 @@ export default function CompanyDetailModal({
                   {t('common.link')}
                 </button>
               </div>
-              <p className="text-xs text-ink-faint">{t('companyDetail.contactsSection.orCreateNew')}</p>
+              <p className="text-xs text-ink-faint dark:text-dark-ink-faint">{t('companyDetail.contactsSection.orCreateNew')}</p>
               <div className="flex items-center gap-1.5">
                 <div className="min-w-0 flex-1">
-                  <label htmlFor="company-new-contact-firstName" className="mb-0.5 block text-xs text-ink-faint">
+                  <label htmlFor="company-new-contact-firstName" className="mb-0.5 block text-xs text-ink-faint dark:text-dark-ink-faint">
                     {t('companyDetail.contactsSection.firstName')}
                     <RequiredMark />
                   </label>
@@ -458,7 +458,7 @@ export default function CompanyDetailModal({
                   />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <label htmlFor="company-new-contact-lastName" className="mb-0.5 block text-xs text-ink-faint">
+                  <label htmlFor="company-new-contact-lastName" className="mb-0.5 block text-xs text-ink-faint dark:text-dark-ink-faint">
                     {t('companyDetail.contactsSection.lastName')}
                     <RequiredMark />
                   </label>
@@ -473,7 +473,7 @@ export default function CompanyDetailModal({
                 </div>
               </div>
               <div>
-                <label htmlFor="company-new-contact-email" className="mb-0.5 block text-xs text-ink-faint">
+                <label htmlFor="company-new-contact-email" className="mb-0.5 block text-xs text-ink-faint dark:text-dark-ink-faint">
                   {t('companyDetail.contactsSection.email')}
                   <RequiredMark />
                 </label>
@@ -512,12 +512,12 @@ export default function CompanyDetailModal({
             </button>
           </div>
           {companyOpportunities.length === 0 && !addingOpportunity && (
-            <p className="text-xs text-ink-faint">{t('companyDetail.opportunitiesSection.noneYet')}</p>
+            <p className="text-xs text-ink-faint dark:text-dark-ink-faint">{t('companyDetail.opportunitiesSection.noneYet')}</p>
           )}
           {companyOpportunities.map((opp) => (
             <div key={opp.id} className="flex items-center justify-between gap-2 py-1 text-sm">
               <span>{opp.name}</span>
-              <span className="text-xs text-ink-faint">
+              <span className="text-xs text-ink-faint dark:text-dark-ink-faint">
                 {opp.stage?.name} · {formatMoney(opp.amountCents, opp.currency)}
                 {opp.pipeline?.isActive === false && ` · ${t('common.archived')}`}
               </span>
@@ -525,7 +525,7 @@ export default function CompanyDetailModal({
           ))}
           {addingOpportunity && (
             <div className="inline-add-form mt-2 flex flex-col gap-2 rounded-md border border-line p-2 dark:border-dark-line">
-              <label className="text-xs text-ink-muted" htmlFor="new-opp-pipeline">
+              <label className="text-xs text-ink-muted dark:text-dark-ink-muted" htmlFor="new-opp-pipeline">
                 {t('companyDetail.opportunitiesSection.pipeline')}
                 <RequiredMark />
               </label>
@@ -544,7 +544,7 @@ export default function CompanyDetailModal({
                   </option>
                 ))}
               </select>
-              <label className="text-xs text-ink-muted" htmlFor="new-opp-contact">
+              <label className="text-xs text-ink-muted dark:text-dark-ink-muted" htmlFor="new-opp-contact">
                 {t('companyDetail.opportunitiesSection.contactOptional')}
               </label>
               <select
@@ -560,7 +560,7 @@ export default function CompanyDetailModal({
                   </option>
                 ))}
               </select>
-              <label className="text-xs text-ink-muted" htmlFor="new-opp-name">
+              <label className="text-xs text-ink-muted dark:text-dark-ink-muted" htmlFor="new-opp-name">
                 {t('companyDetail.opportunitiesSection.dealName')}
                 <RequiredMark />
               </label>

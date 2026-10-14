@@ -78,7 +78,7 @@ export default function DeleteCompanyAccount({ token, companyName }: { token: st
                 {t('company.deleteAccount.password')}
                 <PasswordInput id="delete-account-password" autoComplete="current-password" value={password} onChange={setPassword} />
               </label>
-              {error && <p className="m-0 text-sm text-rose-600">{error}</p>}
+              {error && <p className="m-0 text-sm text-rose-600 dark:text-rose-400">{error}</p>}
             </form>
           )}
         </Modal>

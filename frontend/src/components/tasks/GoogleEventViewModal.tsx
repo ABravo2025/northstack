@@ -40,7 +40,7 @@ export default function GoogleEventViewModal({ event, onClose }: GoogleEventView
             </a>
           )}
           {event.htmlLink && (
-            <a href={event.htmlLink} target="_blank" rel="noopener noreferrer" className="text-accent text-xs underline self-center">
+            <a href={event.htmlLink} target="_blank" rel="noopener noreferrer" className="text-accent dark:text-brand-blue-light text-xs underline self-center">
               {t('myTasks.googleEvent.openInGoogleCalendar')}
             </a>
           )}

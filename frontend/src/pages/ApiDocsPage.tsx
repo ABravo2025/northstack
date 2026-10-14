@@ -63,7 +63,7 @@ export default function ApiDocsPage() {
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-surface-0 p-6 text-center">
+      <div className="flex min-h-screen items-center justify-center bg-surface-0 dark:bg-dark-page p-6 text-center">
         <p className="text-sm text-ink-muted dark:text-dark-ink-muted">{error}</p>
       </div>
     );

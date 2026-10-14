@@ -180,7 +180,7 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
   if (!canManagePayroll) {
     return (
       <div className="container">
-        <p className="text-sm text-ink-muted">{t('payroll.runDetail.ownerOnly')}</p>
+        <p className="text-sm text-ink-muted dark:text-dark-ink-muted">{t('payroll.runDetail.ownerOnly')}</p>
       </div>
     );
   }
@@ -236,7 +236,7 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
         )}
       </div>
 
-      <p className="text-sm text-ink-muted mb-3">
+      <p className="text-sm text-ink-muted dark:text-dark-ink-muted mb-3">
         {t('payroll.runDetail.payFrequencyLabel', { name: detail.run.payFrequency?.name || '—' })}
       </p>
 
@@ -247,7 +247,7 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
       )}
 
       {detail.employeeRows.length === 0 ? (
-        <p className="text-sm text-ink-muted">{t('payroll.runDetail.noOneInRun')}</p>
+        <p className="text-sm text-ink-muted dark:text-dark-ink-muted">{t('payroll.runDetail.noOneInRun')}</p>
       ) : (
         <div className="full-table-wrap" ref={tableWrapRef}>
           <table className="table full-table">
@@ -292,7 +292,7 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
                         ) : isDraft ? (
                           <div className="flex flex-col gap-1">
                             <div className="flex items-center gap-1.5">
-                              <label className="text-xs text-ink-muted" htmlFor={`hours-${row.employeeId}`}>
+                              <label className="text-xs text-ink-muted dark:text-dark-ink-muted" htmlFor={`hours-${row.employeeId}`}>
                                 {t('payroll.runDetail.hoursLabel')}
                               </label>
                               <input
@@ -307,7 +307,7 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
                                 onBlur={() => handleSaveHours(row.employeeId)}
                               />
                             </div>
-                            <span className="text-xs text-ink-muted">
+                            <span className="text-xs text-ink-muted dark:text-dark-ink-muted">
                               {t('payroll.runDetail.rateBaseLine', {
                                 rate: formatMoney(row.rateCents, row.currency),
                                 base: formatMoney(row.baseAmountCents, row.currency),
@@ -315,7 +315,7 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
                             </span>
                           </div>
                         ) : (
-                          <div className="flex flex-col gap-0.5 text-xs text-ink-muted">
+                          <div className="flex flex-col gap-0.5 text-xs text-ink-muted dark:text-dark-ink-muted">
                             <span>{t('payroll.runDetail.hoursLine', { hours: baseEntry?.hoursQty ?? 0 })}</span>
                             <span>
                               {t('payroll.runDetail.rateBaseLine', {
@@ -461,7 +461,7 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
         onClose={() => setAddPersonModalOpen(false)}
       >
         {addPersonCandidates.length === 0 ? (
-          <p className="text-sm text-ink-muted">
+          <p className="text-sm text-ink-muted dark:text-dark-ink-muted">
             {t('payroll.runDetail.addPersonModal.emptyMessage', {
               payFrequency: detail.run.payFrequency?.name ?? t('payroll.runDetail.addPersonModal.fallbackPayFrequency'),
             })}
@@ -473,7 +473,7 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
                 <span>
                   {entry.employeeFirstName} {entry.employeeLastName}
                   {!entry.currentCompensation && (
-                    <span className="text-ink-muted">{t('payroll.runDetail.addPersonModal.noActiveCompensationNote')}</span>
+                    <span className="text-ink-muted dark:text-dark-ink-muted">{t('payroll.runDetail.addPersonModal.noActiveCompensationNote')}</span>
                   )}
                 </span>
                 <button

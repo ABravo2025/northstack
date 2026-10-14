@@ -222,7 +222,7 @@ function StripeMatchList({
   const { t } = useTranslation('crm');
 
   if (matches.length === 0) {
-    return <p className="mt-2 text-xs text-ink-faint">{t('companyStripe.noMatches')}</p>;
+    return <p className="mt-2 text-xs text-ink-faint dark:text-dark-ink-faint">{t('companyStripe.noMatches')}</p>;
   }
 
   return (
@@ -231,7 +231,7 @@ function StripeMatchList({
         <div key={match.id} className="flex items-center justify-between gap-2 py-0.5 text-sm">
           <span>
             {match.name || match.email || match.id}
-            <span className="ml-1 text-xs text-ink-faint">
+            <span className="ml-1 text-xs text-ink-faint dark:text-dark-ink-faint">
               {t('companyStripe.matchedVia', { email: match.matchedViaEmail })}
             </span>
           </span>

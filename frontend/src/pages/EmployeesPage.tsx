@@ -1485,7 +1485,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                 <h4 className="field-group-title">{t('employees.groups.timeOff')}</h4>
                 <div className="field-group-body">
                   {timeOffPolicies.length === 0 ? (
-                    <p className="text-sm text-ink-faint">{t('employees.noTimeOffPolicies')}</p>
+                    <p className="text-sm text-ink-faint dark:text-dark-ink-faint">{t('employees.noTimeOffPolicies')}</p>
                   ) : (
                     <div className="flex flex-col gap-1.5">
                       {timeOffPolicies.map((policy) => (

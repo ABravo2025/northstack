@@ -185,7 +185,7 @@ export default function TerminateEmployeeModal({
         <Field label={t('terminateModal.fields.lastDay')}>
           <input type="date" value={lastDay} onChange={(e) => setLastDay(e.target.value)} />
         </Field>
-        <p className="text-xs text-ink-faint">
+        <p className="text-xs text-ink-faint dark:text-dark-ink-faint">
           {isFuture
             ? t('terminateModal.effectFuture', { date: lastDay })
             : t('terminateModal.effectImmediate')}
@@ -196,7 +196,7 @@ export default function TerminateEmployeeModal({
             <p className="text-sm font-medium mb-1">
               {t('terminateModal.directReportsCount', { count: directReports.length })}
             </p>
-            <p className="text-xs text-ink-faint mb-2">
+            <p className="text-xs text-ink-faint dark:text-dark-ink-faint mb-2">
               {t('terminateModal.directReportsHelp', { name: employee.firstName })}
             </p>
             <div className="flex flex-col gap-2">
@@ -268,7 +268,7 @@ export default function TerminateEmployeeModal({
 
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-ink-muted">
+                    <span className="text-xs font-medium text-ink-muted dark:text-dark-ink-muted">
                       {t('terminateModal.additionalPaymentsNote')}
                     </span>
                     <button type="button" className="btn-secondary btn-sm" onClick={addLine}>

@@ -62,8 +62,8 @@ export default function MultiSelectDropdown({
         className="multi-select-trigger"
         onClick={() => setOpen((v) => !v)}
       >
-        <span className={selectedLabels.length === 0 ? 'text-ink-faint' : ''}>{summary}</span>
-        <ChevronDownIcon className="h-4 w-4 text-ink-faint" />
+        <span className={selectedLabels.length === 0 ? 'text-ink-faint dark:text-dark-ink-faint' : ''}>{summary}</span>
+        <ChevronDownIcon className="h-4 w-4 text-ink-faint dark:text-dark-ink-faint" />
       </button>
       <Popover open={open} onClose={() => setOpen(false)} anchorRef={triggerRef} width={260}>
         <div className="col-visibility-list" style={{ maxHeight: 220, overflowY: 'auto' }}>
@@ -78,7 +78,7 @@ export default function MultiSelectDropdown({
                 <input type="checkbox" checked={selected.includes(opt.value)} onChange={() => toggle(opt.value)} />
                 <span>
                   {opt.label}
-                  {opt.note && <span className="text-ink-faint"> {opt.note}</span>}
+                  {opt.note && <span className="text-ink-faint dark:text-dark-ink-faint"> {opt.note}</span>}
                 </span>
               </label>
             ))}

@@ -316,7 +316,7 @@ export default function ContactDetailModal({
         </h4>
         <div className="px-4 pb-3">
           {linkedOpportunities.length === 0 && !addingOpportunity && (
-            <p className="text-xs text-ink-faint">{t('contactDetail.opportunitiesSection.noneYet')}</p>
+            <p className="text-xs text-ink-faint dark:text-dark-ink-faint">{t('contactDetail.opportunitiesSection.noneYet')}</p>
           )}
           {linkedOpportunities.map((opp) => (
             <button
@@ -326,7 +326,7 @@ export default function ContactDetailModal({
               onClick={() => onOpenOpportunity?.(opp.id)}
             >
               <span>{opp.name}</span>
-              <span className="text-xs text-ink-faint">
+              <span className="text-xs text-ink-faint dark:text-dark-ink-faint">
                 {opp.stage?.name} · {formatMoney(opp.amountCents, opp.currency)}
                 {opp.pipeline?.isActive === false && ` · ${t('common.archived')}`}
               </span>
@@ -349,10 +349,10 @@ export default function ContactDetailModal({
                       {t('common.link')}
                     </button>
                   </div>
-                  <p className="text-xs text-ink-faint">{t('contactDetail.opportunitiesSection.orCreateNew')}</p>
+                  <p className="text-xs text-ink-faint dark:text-dark-ink-faint">{t('contactDetail.opportunitiesSection.orCreateNew')}</p>
                 </>
               )}
-              <label className="text-xs text-ink-muted" htmlFor="new-contact-opp-pipeline">
+              <label className="text-xs text-ink-muted dark:text-dark-ink-muted" htmlFor="new-contact-opp-pipeline">
                 {t('contactDetail.opportunitiesSection.pipeline')}
                 <RequiredMark />
               </label>
@@ -370,7 +370,7 @@ export default function ContactDetailModal({
               </select>
               {!company && activePipelines.find((p) => p.id === newOppPipelineId)?.type === 'lead' && (
                 <>
-                  <label className="text-xs text-ink-muted" htmlFor="new-contact-opp-company">
+                  <label className="text-xs text-ink-muted dark:text-dark-ink-muted" htmlFor="new-contact-opp-company">
                     {t('contactDetail.opportunitiesSection.companyNameLabel')}
                     <RequiredMark />
                   </label>
@@ -383,7 +383,7 @@ export default function ContactDetailModal({
                   />
                 </>
               )}
-              <label className="text-xs text-ink-muted" htmlFor="new-contact-opp-name">
+              <label className="text-xs text-ink-muted dark:text-dark-ink-muted" htmlFor="new-contact-opp-name">
                 {t('contactDetail.opportunitiesSection.dealName')}
                 <RequiredMark />
               </label>

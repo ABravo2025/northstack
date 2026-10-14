@@ -7,9 +7,9 @@ import Popover from './Popover';
 // purpose so this component works for any future feature that needs a
 // color picker, not just the one it was built for.
 const PRESET_COLORS = [
-  '#0d2a48', // brand navy
-  '#3c6da1', // brand blue
-  '#8dbada', // brand blue light
+  '#1b1733', // brand navy
+  '#5b21e6', // brand violet
+  '#a98bff', // brand violet light
   '#ef4444', // red
   '#f97316', // orange
   '#eab308', // yellow
@@ -51,11 +51,11 @@ export default function ColorPicker({ value, onChange }: ColorPickerProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [customColors, setCustomColors] = useState<string[]>(() => loadCustomColors());
-  const [draftHex, setDraftHex] = useState(value || '#3c6da1');
+  const [draftHex, setDraftHex] = useState(value || '#5b21e6');
   const triggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    setDraftHex(value || '#3c6da1');
+    setDraftHex(value || '#5b21e6');
   }, [value]);
 
   const isDraftValid = HEX_PATTERN.test(draftHex);
@@ -132,7 +132,7 @@ export default function ColorPicker({ value, onChange }: ColorPickerProps) {
             >
               <input
                 type="color"
-                value={isDraftValid ? draftHex : '#3c6da1'}
+                value={isDraftValid ? draftHex : '#5b21e6'}
                 onChange={(e) => setDraftHex(e.target.value)}
                 aria-label={t('ui.colorPicker.pickCustom')}
               />
@@ -141,7 +141,7 @@ export default function ColorPicker({ value, onChange }: ColorPickerProps) {
               type="text"
               value={draftHex}
               onChange={(e) => setDraftHex(e.target.value)}
-              placeholder="#3c6da1"
+              placeholder="#5b21e6"
               maxLength={7}
               className="color-hex-input"
               aria-label={t('ui.colorPicker.hex')}

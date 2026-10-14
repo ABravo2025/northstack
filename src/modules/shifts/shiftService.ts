@@ -64,6 +64,7 @@ export function serializeShift(shift: ShiftWithRelations) {
     publishedAt: shift.publishedAt,
     requiredSkillIds: shift.requiredSkillIds,
     openToClaim: shift.openToClaim,
+    isOvertime: shift.isOvertime,
     assignments: shift.assignments.map((a) => ({
       id: a.id,
       employeeId: a.employeeId,

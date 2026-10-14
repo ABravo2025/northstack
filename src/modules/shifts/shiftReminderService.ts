@@ -12,6 +12,8 @@ import { addDays, zonedDateString } from './shiftTime.js';
 import { weekStartFor } from './timesheetService.js';
 import { expireStartedRequests } from './shiftRequestService.js';
 import { notifyExpired } from './shiftRequestNotifier.js';
+import { autoCloseOpenEntries } from './clockService.js';
+import { notifyAutoClosed } from './clockNotifier.js';
 
 // Shifts module, Unidad 8 (spec-shifts.md §0.4) — the one daily run (Vercel Hobby = crons once a
 // day). In order:
@@ -349,6 +351,7 @@ export interface ShiftReminderRunResult {
   skillManagers: number;
   timesheet: number;
   expiredRequests: number;
+  autoClosedPunches: number;
 }
 
 export async function runShiftReminders(now: Date = new Date(), only?: string): Promise<ShiftReminderRunResult> {
@@ -376,5 +379,15 @@ export async function runShiftReminders(now: Date = new Date(), only?: string): 
     },
     0,
   );
-  return { tomorrow, unanswered, skillHolders: skills.holders, skillManagers: skills.managers, timesheet, expiredRequests };
+  // Phase 2, block B: punches nobody closed are closed at the shift's end and flagged for review.
+  const autoClosedPunches = await step(
+    'auto-close punches',
+    async () => {
+      const closed = await autoCloseOpenEntries(now, only);
+      await notifyAutoClosed(closed);
+      return closed.length;
+    },
+    0,
+  );
+  return { tomorrow, unanswered, skillHolders: skills.holders, skillManagers: skills.managers, timesheet, expiredRequests, autoClosedPunches };
 }

@@ -187,8 +187,12 @@ export async function updateLocation(
 
 // Only a location nobody ever scheduled can be deleted outright; otherwise deactivate it.
 export async function deleteLocation(existing: Location, changedByUserId: string): Promise<Result<null>> {
-  const shiftCount = await prisma.shift.count({ where: { locationId: existing.id } });
-  if (shiftCount > 0) {
+  // Shifts and punches (phase 2) both keep their history: deactivate instead.
+  const [shiftCount, punchCount] = await Promise.all([
+    prisma.shift.count({ where: { locationId: existing.id } }),
+    prisma.clockEntry.count({ where: { locationId: existing.id } }),
+  ]);
+  if (shiftCount > 0 || punchCount > 0) {
     return { success: false, error: 'This location has shifts. Deactivate it instead to keep their history.' };
   }
   await prisma.location.delete({ where: { id: existing.id } });

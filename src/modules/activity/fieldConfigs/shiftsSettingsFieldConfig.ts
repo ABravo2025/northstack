@@ -10,6 +10,7 @@ export const shiftsSettingsActivityFieldConfig: ActivityFieldConfigMap = {
   timesheetReminder: { label: 'Timesheet reminder' },
   showScheduleCost: { label: 'Show schedule cost' },
   allowSwaps: { label: 'Let people hand over and swap shifts' },
+  lateToleranceMinutes: { label: 'Late after (minutes)' },
   swapNeedsApproval: { label: "Swaps need a manager's approval" },
   openShiftNeedsApproval: { label: "Open shifts need a manager's approval" },
 };

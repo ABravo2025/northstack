@@ -1075,6 +1075,8 @@ export interface SendShiftRequestEmailInput {
   message: string;
   note?: string | null;
   url: string;
+  // Defaults to shiftSwaps; attendance notices reuse this short email.
+  category?: EmailCategory;
 }
 
 export async function sendShiftRequestEmail(input: SendShiftRequestEmailInput): Promise<void> {
@@ -1097,7 +1099,7 @@ export async function sendShiftRequestEmail(input: SendShiftRequestEmailInput): 
     },
     'Failed to send shift request email:',
     lng,
-    'shiftSwaps',
+    input.category ?? 'shiftSwaps',
   );
 }
 

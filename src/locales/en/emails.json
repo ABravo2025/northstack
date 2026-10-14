@@ -184,6 +184,11 @@
     "notifSkillOwn_other": "{{count}} of your skills expire soon",
     "notifSkillTeam_one": "1 skill in your team expires soon",
     "notifSkillTeam_other": "{{count}} skills in your team expire soon",
+    "clock": {
+      "overtime": "{{name}} clocked in at {{location}} without a shift: {{hours}} added as overtime",
+      "autoClosed": "{{name}} didn't clock out at {{location}}: the punch was closed at the shift's end — please review",
+      "autoClosedOwn": "You didn't clock out at {{location}}: we closed it at the shift's end. Your manager will review it."
+    },
     "request": {
       "swapAsk": "{{name}} wants to swap: their shift on {{when}} for yours on {{otherWhen}}",
       "managerClaim": "{{name}} wants the open shift on {{when}} at {{location}}",

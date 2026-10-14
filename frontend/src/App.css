@@ -24,7 +24,7 @@
 }
 
 .form-group label {
-  @apply mb-1 text-sm font-medium text-brand-navy dark:text-gray-200;
+  @apply mb-1    dark:text-gray-200;
 }
 
 /* Red asterisk marking a required field — the one reusable marker for this
@@ -37,17 +37,17 @@
 .form-group input,
 .form-group select,
 .form-group textarea {
-  @apply rounded-md border border-line-strong bg-surface-1 px-2.5 py-2 text-sm text-brand-navy dark:border-gray-600 dark:bg-gray-800 dark:text-dark-ink;
+  @apply rounded-md border   px-2.5 py-2 text-sm    dark:text-dark-ink;
 }
 
 .select-compact {
-  @apply rounded-md border border-line-strong bg-surface-1 px-2 py-1 text-xs text-brand-navy dark:border-gray-600 dark:bg-gray-800 dark:text-dark-ink;
+  @apply rounded-md border border-line-strong bg-surface-1 px-2 py-1 text-xs text-brand-navy   dark:text-dark-ink;
 }
 
 /* MultiSelectDropdown's trigger — a <button>, so it can't ride .form-group's
    input/select/textarea selector above; styled to match it exactly. */
 .multi-select-trigger {
-  @apply flex w-full items-center justify-between gap-2 rounded-md border border-line-strong bg-surface-1 px-2.5 py-2 text-left text-sm text-brand-navy dark:border-gray-600 dark:bg-gray-800 dark:text-dark-ink;
+  @apply flex w-full items-center justify-between gap-2 rounded-md border    py-2 text-left     dark:text-dark-ink;
 }
 
 .multi-select-trigger:hover {
@@ -65,7 +65,7 @@
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
-  @apply border-brand-blue outline-none ring-2 ring-brand-blue/25;
+  @apply outline-none ring-2 ring-brand-blue/25;
 }
 
 .form-actions {
@@ -90,10 +90,6 @@
 
 .color-swatch-trigger {
   @apply border border-line-strong dark:border-gray-600;
-}
-
-.color-swatch-custom {
-  @apply flex items-center justify-center border border-dashed border-gray-400 bg-transparent text-sm leading-none text-ink-muted dark:border-gray-500 dark:text-dark-ink-muted;
 }
 
 .color-picker-section-label {
@@ -125,7 +121,7 @@
 }
 
 .color-hex-input {
-  @apply w-24 rounded-md border border-line-strong bg-surface-1 px-2 py-1 text-xs text-brand-navy dark:border-gray-600 dark:bg-gray-800 dark:text-dark-ink;
+  @apply w-24 rounded-md border   px-2 py-1 text-xs    dark:text-dark-ink;
 }
 
 .btn-primary {
@@ -133,7 +129,7 @@
 }
 
 .btn-secondary {
-  @apply btn border border-line-strong bg-surface-1 text-ink hover:bg-surface-2 dark:border-dark-line dark:bg-dark-surface dark:text-dark-ink dark:hover:bg-white/[0.06];
+  @apply btn border border-line-strong  text-ink hover:bg-surface-2   dark:text-dark-ink dark:hover:bg-white/[0.06];
 }
 
 /* Lower-weight action than .btn-secondary — Dismiss, Load sample data,
@@ -168,10 +164,6 @@
 
 .btn-danger-solid {
   @apply btn bg-red-600 text-white hover:bg-red-700;
-}
-
-.btn-success {
-  @apply btn bg-emerald-600 text-white hover:bg-emerald-700;
 }
 
 /* "Connect with Google" button — white/bordered per Google's own brand
@@ -210,7 +202,7 @@
 }
 
 .card {
-  @apply mb-5 rounded-lg border border-line bg-surface-0 p-5 dark:border-dark-line dark:bg-dark-page;
+  @apply mb-5 rounded-lg border border-line  p-5 dark:border-dark-line dark:bg-dark-page;
 }
 
 .card-title {
@@ -219,7 +211,7 @@
 
 /* ClickUp visual direction (1.2): title of a centered modal/dialog — 18px -> 15px. */
 .modal-title {
-  @apply m-0 text-[15px] font-bold text-brand-navy dark:text-dark-ink;
+  @apply dark:text-dark-ink;
 }
 
 /* ---------- Guided product tour (ProductTour.tsx) ----------
@@ -244,7 +236,7 @@
 }
 
 .tour-step-label {
-  @apply text-[10px] font-bold tracking-wide text-accent dark:text-brand-blue-light uppercase;
+  @apply text-3xs font-bold tracking-wide text-accent dark:text-brand-blue-light uppercase;
 }
 
 .tour-tooltip-title {
@@ -364,7 +356,7 @@
 }
 
 .help-nav-label {
-  @apply mb-1.5 px-2 text-[11px] font-bold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint;
+  @apply mb-1.5 px-2 text-2xs font-bold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint;
 }
 
 .help-nav-link {
@@ -424,7 +416,7 @@
 }
 
 .help-eyebrow {
-  @apply mb-2 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-accent dark:text-brand-blue-light uppercase;
+  @apply mb-2 flex items-center gap-1.5 text-2xs font-bold tracking-wide text-accent dark:text-brand-blue-light uppercase;
 }
 
 .help-eyebrow svg {
@@ -465,7 +457,7 @@
 }
 
 .help-pill {
-  @apply inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold whitespace-nowrap;
+  @apply inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-2xs font-semibold whitespace-nowrap;
 }
 
 .help-pill-role {
@@ -477,7 +469,7 @@
 }
 
 .help-callout {
-  @apply mb-4 flex max-w-2xl gap-2.5 rounded-lg border p-3 text-[13px];
+  @apply mb-4 flex max-w-2xl gap-2.5 rounded-lg border p-3 text-sm;
 }
 
 .help-callout svg {
@@ -485,7 +477,7 @@
 }
 
 .help-callout p {
-  @apply m-0 text-[13px];
+  @apply m-0 text-sm;
 }
 
 .help-callout strong {
@@ -528,7 +520,7 @@
 
 .help-steps li::before {
   content: counter(help-step);
-  @apply absolute top-[-1px] left-[-11px] flex h-5 w-5 items-center justify-center rounded-full border border-line-strong bg-surface-1 font-mono text-[10px] font-semibold text-brand-navy;
+  @apply absolute top-[-1px] left-[-11px] flex h-5 w-5 items-center justify-center rounded-full border border-line-strong bg-surface-1 font-mono text-3xs font-semibold text-brand-navy;
 }
 
 /* Tailwind v4 gotcha (see design-system.md §1): a `dark:` variant `@apply`-ed onto a rule
@@ -548,11 +540,11 @@
 }
 
 table.help-ref {
-  @apply w-full min-w-[380px] border-collapse text-[13px];
+  @apply w-full min-w-[380px] border-collapse text-sm;
 }
 
 table.help-ref th {
-  @apply border-b border-line bg-surface-2 px-3.5 py-2 text-left text-[11px] font-bold tracking-wide text-ink-faint uppercase whitespace-nowrap dark:border-dark-line dark:bg-dark-raised dark:text-dark-ink-faint;
+  @apply border-b border-line bg-surface-2 px-3.5 py-2 text-left text-2xs font-semibold text-ink-muted whitespace-nowrap dark:border-dark-line dark:bg-dark-raised dark:text-dark-ink-muted;
 }
 
 table.help-ref td {
@@ -588,11 +580,11 @@ table.help-ref td.no {
 }
 
 .help-fielddef dt {
-  @apply text-[13px] font-semibold text-brand-navy dark:text-dark-ink;
+  @apply text-sm font-semibold text-brand-navy dark:text-dark-ink;
 }
 
 .help-fielddef dd {
-  @apply m-0 mt-0.5 text-[13px] text-ink-muted dark:text-dark-ink-muted;
+  @apply m-0 mt-0.5 text-sm text-ink-muted dark:text-dark-ink-muted;
 }
 
 .help-search {
@@ -612,7 +604,7 @@ table.help-ref td.no {
 }
 
 .help-faq-cat-title {
-  @apply mb-2.5 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-accent dark:text-brand-blue-light uppercase;
+  @apply mb-2.5 flex items-center gap-1.5 text-2xs font-bold tracking-wide text-accent dark:text-brand-blue-light uppercase;
 }
 
 .help-faq-cat-title svg {
@@ -671,23 +663,11 @@ table.help-ref td.no {
   @apply relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-ink-muted hover:bg-surface-2 hover:text-brand-navy dark:text-dark-ink-muted dark:hover:bg-white/[0.06] dark:hover:text-gray-100;
 }
 
-.changelog-dot {
-  @apply absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-accent ring-2 ring-brand-cream dark:ring-black;
-}
-
-.changelog-list {
-  @apply flex max-h-96 flex-col gap-3 overflow-y-auto;
-}
-
-.changelog-entry {
-  @apply border-b border-line-soft pb-3 last:border-0 last:pb-0 dark:border-dark-line;
-}
-
 /* In-app notifications bell (docs/tareas/specredisenosalesv2.md §3.9) —
    trigger reuses .changelog-trigger's box, badge shows an actual unread
    count rather than just a dot since the number itself is useful here. */
 .notification-badge {
-  @apply absolute top-0.5 right-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold leading-none text-white ring-2 ring-brand-cream dark:ring-black;
+  @apply absolute top-0.5 right-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-accent px-1 text-3xs font-semibold leading-none text-white ring-2 ring-brand-cream dark:ring-black;
 }
 
 .notification-list {
@@ -710,18 +690,6 @@ table.help-ref td.no {
   @apply px-2 py-4 text-center text-sm text-ink-faint dark:text-dark-ink-faint;
 }
 
-.changelog-entry-date {
-  @apply text-[0.68rem] font-semibold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint;
-}
-
-.changelog-entry-title {
-  @apply mt-0.5 text-sm font-semibold text-brand-navy dark:text-dark-ink;
-}
-
-.changelog-entry-desc {
-  @apply mt-1 text-xs text-ink-muted dark:text-dark-ink-muted;
-}
-
 .table {
   @apply mt-4 w-full border-collapse;
 }
@@ -731,11 +699,11 @@ table.help-ref td.no {
 }
 
 .table th {
-  @apply border-b-2 border-line p-3 text-left text-sm font-semibold text-brand-navy dark:border-dark-line dark:text-dark-ink;
+  @apply border-b border-line bg-surface-2 px-3 py-2.5 text-left text-2xs font-semibold text-ink-muted dark:border-dark-line dark:bg-dark-raised dark:text-dark-ink-muted;
 }
 
 .table td {
-  @apply border-b border-line p-3 text-sm text-brand-navy dark:border-dark-line dark:text-gray-200;
+  @apply border-b border-line-soft px-3 py-3 text-sm text-ink dark:border-dark-line-soft dark:text-dark-ink;
 }
 
 .table tr:hover {
@@ -746,56 +714,8 @@ table.help-ref td.no {
   @apply cursor-pointer border-none bg-transparent p-0 text-sm font-medium text-accent dark:text-brand-blue-light hover:underline;
 }
 
-.balance-detail-block {
-  @apply mb-4 border-b border-line pb-4 last:mb-0 last:border-0 last:pb-0 dark:border-dark-line;
-}
-
-.balance-detail-head {
-  @apply flex items-center gap-2;
-}
-
-.balance-detail-toggle {
-  @apply w-full cursor-pointer rounded-md border-none bg-transparent p-1 text-left hover:bg-surface-2 dark:hover:bg-white/[0.06];
-}
-
-.balance-detail-body {
-  @apply mt-2.5 pl-1;
-}
-
-.balance-detail-stats {
-  @apply grid grid-cols-4 gap-2 text-center;
-}
-
-.balance-detail-stat-value {
-  @apply text-lg font-semibold text-brand-navy dark:text-dark-ink;
-}
-
-.balance-detail-stat-value.highlight {
-  @apply text-brand-blue dark:text-brand-blue-light;
-}
-
-.balance-detail-stat-label {
-  @apply text-xs text-ink-muted dark:text-dark-ink-muted;
-}
-
-.balance-detail-requests {
-  @apply mt-3 flex flex-col gap-1.5 border-t border-line-soft pt-3 dark:border-dark-line/60;
-}
-
-.balance-detail-request-row {
-  @apply flex items-center gap-2 text-xs text-brand-navy dark:text-gray-200;
-}
-
-.balance-detail-request-dates {
-  @apply flex-1 truncate;
-}
-
-.balance-detail-request-days {
-  @apply shrink-0 text-ink-faint dark:text-dark-ink-faint;
-}
-
 .status-badge {
-  @apply shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold;
+  @apply shrink-0 rounded-full px-2 py-0.5 text-3xs font-semibold;
 }
 
 .status-badge.status-pending {
@@ -929,11 +849,11 @@ table.help-ref td.no {
 }
 
 .settings-tile-label {
-  @apply mt-2.5 block text-[13px] font-semibold text-ink dark:text-dark-ink;
+  @apply mt-2.5 block text-sm font-semibold text-ink dark:text-dark-ink;
 }
 
 .settings-tile-desc {
-  @apply mt-0.5 block text-[11.5px] leading-snug text-ink-muted dark:text-dark-ink-muted;
+  @apply mt-0.5 block text-2xs leading-snug text-ink-muted dark:text-dark-ink-muted;
 }
 
 .settings-tile.disabled {
@@ -958,7 +878,7 @@ table.help-ref td.no {
      edge on mobile, hiding whatever sits there (the Settings link in .sidebar-footer, found by
      the user 2026-09-08 testing the mobile drawer on a real phone: it scrolled into that band and
      visually disappeared behind the tabbar). */
-  @apply fixed inset-y-0 left-0 z-40 flex w-64 -translate-x-full flex-col overflow-y-auto border-r border-line bg-surface-0 p-3 transition-transform duration-200 dark:border-dark-line dark:bg-dark-page md:static md:z-auto md:w-48 md:shrink-0 md:translate-x-0 md:overflow-visible md:transition-[width];
+  @apply fixed inset-y-0 left-0 z-40 flex w-64 -translate-x-full flex-col overflow-y-auto border-r border-line  p-3 transition-transform duration-200 dark:border-dark-line  md:static md:z-auto md:w-48 md:shrink-0 md:translate-x-0 md:overflow-visible md:transition-[width];
 }
 
 .sidebar.mobile-open {
@@ -1018,16 +938,12 @@ table.help-ref td.no {
 }
 
 .sidebar-link {
-  @apply flex items-center gap-2 overflow-hidden rounded-md px-3 py-2 text-xs whitespace-nowrap text-brand-navy no-underline transition-colors hover:bg-surface-2 dark:text-gray-200 dark:hover:bg-white/[0.06];
+  @apply flex items-center gap-2 overflow-hidden rounded-md px-3 py-2  whitespace-nowrap  no-underline transition-colors hover:bg-surface-2  dark:hover:bg-white/[0.06];
 }
 
 .sidebar-link.active {
-  @apply bg-brand-blue/10 font-medium text-brand-blue dark:text-[#f2c8b4];
+  @apply dark:text-[#f2c8b4];
   /* dark override below the @apply so the rgba alpha wins over the utility's opacity handling */
-}
-
-.dark .sidebar-link.active {
-  background: rgba(184, 80, 47, 0.28);
 }
 
 .sidebar-footer {
@@ -1043,7 +959,7 @@ table.help-ref td.no {
 }
 
 .user-menu-dropdown {
-  @apply absolute top-full right-0 z-10 mt-1 w-48 rounded-md border border-line bg-surface-1 py-1 shadow-lg dark:border-dark-line dark:bg-dark-surface;
+  @apply absolute top-full right-0 z-10 mt-1 w-48 rounded-md border border-line bg-surface-1 py-1  dark:border-dark-line dark:bg-dark-surface;
 }
 
 .user-menu-item {
@@ -1058,10 +974,6 @@ table.help-ref td.no {
   @apply border border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300;
 }
 
-.alert-success {
-  @apply border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300;
-}
-
 /* First real consumer: the past_due grace-period banner in AppLayout.tsx
    (spec-subscription-plans.md). design-system.md names amber as the token for
    non-destructive warning states but notes no dedicated class existed yet. */
@@ -1072,7 +984,7 @@ table.help-ref td.no {
 /* First real consumer: the "choose a plan" reminder banner in AppLayout.tsx — same pattern as
    alert-warning/error/success above, blue for a non-urgent FYI rather than a warning. */
 .alert-info {
-  @apply border border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-300;
+  @apply border border-accent/25 bg-[#f3eeff] text-accent-hover dark:border-brand-blue-light/25 dark:bg-[#1f1838] dark:text-[#cdbdff];
 }
 
 .field-error {
@@ -1169,7 +1081,7 @@ table.help-ref td.no {
 }
 
 .legal-modal-body .effective-date {
-  @apply mb-6 inline-block rounded-full bg-accent-tint px-3 py-1 text-[13px] font-semibold text-accent dark:text-brand-blue-light;
+  @apply mb-6 inline-block rounded-full bg-accent-tint px-3 py-1 text-sm font-semibold text-accent dark:text-brand-blue-light;
 }
 
 .legal-modal-body h2 {
@@ -1258,10 +1170,6 @@ table.help-ref td.no {
   }
 }
 
-.section-label {
-  @apply mb-2 text-xs font-semibold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint;
-}
-
 .text-center {
   @apply text-center;
 }
@@ -1305,7 +1213,7 @@ table.help-ref td.no {
 
 .toolbar-search {
   height: var(--size-control-lg);
-  @apply flex min-w-[160px] flex-1 items-center gap-2 rounded-md border border-line-strong bg-surface-0 px-3 py-0 text-sm dark:border-dark-line dark:bg-dark-page;
+  @apply flex min-w-[160px] flex-1 items-center gap-2 rounded-md border border-line-strong  px-3 py-0 text-sm  dark:bg-dark-page;
 }
 
 .toolbar-search svg {
@@ -1343,7 +1251,7 @@ table.help-ref td.no {
 }
 
 .entity-card-avatar {
-  @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-avatar-bg text-[11px] font-bold text-brand-navy dark:bg-[#2d2550] dark:text-[#cdbdff];
+  @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-avatar-bg text-2xs font-bold text-brand-navy dark:bg-[#2d2550] dark:text-[#cdbdff];
 }
 
 .entity-card-body {
@@ -1379,25 +1287,25 @@ table.help-ref td.no {
 }
 
 .full-table thead th {
-  @apply sticky top-0 bg-surface-0 dark:bg-dark-raised;
+  @apply sticky top-0  dark:bg-dark-raised;
 }
 
 .full-table th {
-  @apply relative overflow-hidden border-b border-line py-2.5 text-[10px] font-medium text-ink-muted dark:border-dark-line dark:text-dark-ink-muted;
+  @apply relative overflow-hidden border-b border-line py-2.5   text-ink-muted dark:border-dark-line dark:text-dark-ink-muted;
 }
 
 /* Secondary columns get an explicit muted color (ClickUp visual direction, 1.3) —
    .name-cell below overrides this back to full-strength text for the name column. */
 .full-table td {
-  @apply overflow-hidden px-3 py-4 text-[11.5px] text-ellipsis whitespace-nowrap text-ink-muted dark:text-dark-ink-muted;
+  @apply overflow-hidden px-3 py-4  text-ellipsis whitespace-nowrap text-ink-muted dark:text-dark-ink-muted;
 }
 
 .name-cell {
-  @apply flex items-center gap-2 text-sm font-semibold text-brand-navy dark:text-dark-ink;
+  @apply flex items-center gap-2  font-semibold text-brand-navy dark:text-dark-ink;
 }
 
 .avatar {
-  @apply inline-flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-avatar-bg text-[0.64rem] font-bold text-brand-navy dark:bg-[#2d2550] dark:text-[#cdbdff];
+  @apply inline-flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-avatar-bg text-3xs font-bold text-brand-navy dark:bg-[#2d2550] dark:text-[#cdbdff];
 }
 
 .status-chip {
@@ -1409,7 +1317,7 @@ table.help-ref td.no {
 }
 
 .role-chip {
-  @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold;
+  @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-3xs font-semibold;
 }
 
 /* ClickUp visual direction (1.4): reusable chip for any categorical field
@@ -1420,7 +1328,7 @@ table.help-ref td.no {
    uses emerald for success/approved semantics, so reusing it here would read
    as a status rather than a plain category label. */
 .category-chip {
-  @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold;
+  @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-3xs font-semibold;
 }
 
 .category-chip.chip-purple {
@@ -1476,7 +1384,7 @@ table.help-ref td.no {
    and table-fixed layout don't always paint edge-to-edge consistently across
    browsers). */
 .full-table tbody tr:hover td {
-  @apply bg-surface-2 dark:bg-white/5;
+  @apply dark:bg-white/5;
 }
 
 /* Frozen (sticky) columns need an opaque hover fill, not the translucent
@@ -1507,7 +1415,7 @@ table.help-ref td.no {
 }
 
 .list-section-header .cnt {
-  @apply font-mono text-[0.68rem] font-normal text-ink-faint dark:text-dark-ink-faint;
+  @apply font-mono text-2xs font-normal text-ink-faint dark:text-dark-ink-faint;
 }
 
 .list-chevron {
@@ -1548,7 +1456,6 @@ table.help-ref td.no {
   @apply rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300;
 }
 
-
 /* Close (×) button of the detail modals (Company/Contact/Opportunity/Employee). The side
    panel this class came from is gone (2026-10): everything opens in a centered Modal now. */
 .slideover-close {
@@ -1570,7 +1477,7 @@ table.help-ref td.no {
 }
 
 .modal-panel {
-  @apply flex max-h-[85vh] w-full max-w-md flex-col rounded-lg border border-line bg-surface-1 shadow-xl dark:border-dark-line dark:bg-dark-surface;
+  @apply flex max-h-[85vh] w-full max-w-md flex-col rounded-lg border border-line bg-surface-1  dark:border-dark-line dark:bg-dark-surface;
 }
 
 /* The standard size for forms and details (2026-10: the "Edit pipeline" frame, which Alejandro
@@ -1728,7 +1635,7 @@ table.help-ref td.no {
 }
 
 .field-group-title {
-  @apply m-0 px-4 pt-3 pb-2 text-[10px] font-bold tracking-[0.09em] text-ink-faint uppercase dark:text-dark-ink-faint;
+  @apply m-0 px-4 pt-3 pb-2 text-3xs font-bold tracking-[0.09em] text-ink-faint uppercase dark:text-dark-ink-faint;
 }
 
 .field-group-body {
@@ -1751,26 +1658,20 @@ table.help-ref td.no {
   @apply flex min-h-0 flex-1 flex-col overflow-y-auto p-4;
 }
 
-/* Legacy single-column body — still used wherever a detail surface hasn't
-   been split into the 2-column layout above. */
-.overview-panel-body {
-  @apply flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4;
-}
-
 .overview-field {
-  @apply flex items-center gap-3 border-b border-line-soft dark:border-dark-line;
-  min-height: 34px;
+  @apply flex items-center gap-3  border-line-soft dark:border-dark-line;
+  
   min-width: 0; /* CRITICAL: sin esto, un valor largo con white-space:nowrap
                    fija un min-content y rompe el reparto 1fr 1fr, desbordando
                    la columna derecha fuera del panel. */
 }
 
 .overview-field-label {
-  @apply w-28 shrink-0 text-[11.5px] text-ink-faint dark:text-dark-ink-faint;
+  @apply w-28 shrink-0 text-2xs text-ink-faint dark:text-dark-ink-faint;
 }
 
 .overview-field-value {
-  @apply min-w-0 flex-1 truncate text-[12.5px] text-ink dark:text-dark-ink;
+  @apply min-w-0 flex-1 truncate text-sm text-ink dark:text-dark-ink;
 }
 
 /* Inline-editable field inside a detail modal (Company/Contact/Opportunity) —
@@ -1778,11 +1679,7 @@ table.help-ref td.no {
    focused, autosaves per field (AutoSaveField/AutoSaveSelect), no Save button
    anywhere. */
 .overview-field-input {
-  @apply -mx-1.5 -my-1 min-w-0 flex-1 truncate rounded-md border border-transparent bg-transparent px-1.5 py-1 text-[12.5px] text-ink transition-colors hover:bg-surface-2 focus:border-brand-blue focus:bg-surface-1 focus:outline-none focus:ring-2 focus:ring-brand-blue/25 disabled:opacity-60 dark:text-dark-ink dark:hover:bg-white/[0.06] dark:focus:bg-gray-900;
-}
-
-.overview-panel-placeholder {
-  @apply py-8 text-center text-sm text-ink-faint dark:text-dark-ink-faint;
+  @apply min-w-0 flex-1 truncate rounded-md border      text-ink transition-colors  focus:border-brand-blue focus:bg-surface-1 focus:outline-none focus:ring-2 focus:ring-brand-blue/25 disabled:opacity-60 dark:text-dark-ink  dark:focus:bg-gray-900;
 }
 
 /* Always-expanded Task/Note compose form (right-column tabs) — replaces the
@@ -1810,7 +1707,7 @@ table.help-ref td.no {
 }
 
 .dropdown-trigger {
-  @apply h-7 w-max min-w-[110px] max-w-[220px] cursor-pointer appearance-none rounded-md border border-line-strong bg-transparent py-0 pr-7 pl-2.5 text-[11px] font-semibold text-brand-navy dark:border-dark-line dark:text-dark-ink;
+  @apply h-7 w-max min-w-[110px] max-w-[220px] cursor-pointer appearance-none rounded-md border border-line-strong bg-transparent py-0 pr-7 pl-2.5 text-2xs font-semibold text-brand-navy dark:border-dark-line dark:text-dark-ink;
 }
 
 .dropdown-trigger-wrap .chev {
@@ -1940,7 +1837,7 @@ table.help-ref td.no {
 
 .auth-right {
   @apply relative hidden flex-1 items-center justify-center overflow-hidden md:flex;
-  background: linear-gradient(160deg, #cfe0ee 0%, #a9c7dd 55%, #8dbada 100%);
+  
 }
 
 .auth-blob {
@@ -1955,7 +1852,7 @@ table.help-ref td.no {
 
 .auth-blob-2 {
   @apply -right-20 -bottom-16 h-96 w-96;
-  background: radial-gradient(circle, #3c6da1 0%, transparent 70%);
+  
   opacity: 0.2;
 }
 
@@ -2001,7 +1898,7 @@ table.help-ref td.no {
 }
 
 .view-tab.active {
-  @apply border-line bg-surface-0 font-semibold text-brand-navy dark:border-dark-line dark:bg-dark-page dark:text-dark-ink;
+  @apply border-line  font-semibold  dark:border-dark-line  dark:text-dark-ink;
 }
 
 .view-tab-menu {
@@ -2023,11 +1920,7 @@ table.help-ref td.no {
      popover (EntityTasksList) opens from inside .detail-modal-overlay/
      .slideover-panel, both z-50; a plain z-30 here left the popover rendered
      behind the modal's backdrop, which then stole its clicks. */
-  @apply absolute top-full left-0 z-[60] mt-1.5 rounded-lg border border-line bg-surface-1 p-3 shadow-xl dark:border-dark-line dark:bg-dark-surface;
-}
-
-.popover-panel.align-right {
-  @apply right-0 left-auto;
+  @apply absolute top-full left-0 z-[60] mt-1.5 rounded-lg border border-line bg-surface-1 p-3  dark:border-dark-line dark:bg-dark-surface;
 }
 
 .filter-row {
@@ -2078,7 +1971,7 @@ table.help-ref td.no {
 .nv-field input,
 .nv-field select,
 .nv-field textarea {
-  @apply w-full rounded-md border border-line-strong bg-surface-1 px-2 py-1.5 text-xs text-brand-navy dark:border-gray-600 dark:bg-gray-800 dark:text-dark-ink;
+  @apply w-full rounded-md border   px-2 py-1.5 text-xs    dark:text-dark-ink;
 }
 
 .toggle-row {
@@ -2172,7 +2065,7 @@ table.help-ref td.no {
 }
 
 .tb-btn .filter-count {
-  @apply absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[0.62rem] font-bold text-white;
+  @apply absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-3xs font-bold text-white;
 }
 
 /* ---------- Sortable grid header ---------- */
@@ -2228,11 +2121,11 @@ table.help-ref td.no {
 }
 
 .kanban-col-head .cnt {
-  @apply ml-auto font-mono text-[0.68rem] font-normal text-ink-faint dark:text-dark-ink-faint;
+  @apply ml-auto font-mono text-2xs font-normal text-ink-faint dark:text-dark-ink-faint;
 }
 
 .kanban-col-head .kanban-col-total {
-  @apply ml-1 font-mono text-[0.68rem] font-normal text-ink-faint dark:text-dark-ink-faint before:mr-1 before:content-['·'] [font-variant-numeric:tabular-nums];
+  @apply ml-1 font-mono text-2xs font-normal text-ink-faint dark:text-dark-ink-faint before:mr-1 before:content-['·'] [font-variant-numeric:tabular-nums];
 }
 
 .kanban-body {
@@ -2252,7 +2145,7 @@ table.help-ref td.no {
 }
 
 .kc-amount {
-  @apply shrink-0 text-[12.5px] font-bold text-ink [font-variant-numeric:tabular-nums] dark:text-dark-ink;
+  @apply shrink-0 text-sm font-bold text-ink [font-variant-numeric:tabular-nums] dark:text-dark-ink;
 }
 
 .kcard-foot {
@@ -2260,11 +2153,11 @@ table.help-ref td.no {
 }
 
 .kc-owner {
-  @apply inline-flex h-5 w-5 items-center justify-center rounded-full bg-avatar-bg text-[9px] font-bold text-ink dark:bg-[#2d2550] dark:text-[#cdbdff];
+  @apply inline-flex h-5 w-5 items-center justify-center rounded-full bg-avatar-bg text-3xs font-bold text-ink dark:bg-[#2d2550] dark:text-[#cdbdff];
 }
 
 .kc-age {
-  @apply text-[10.5px] font-semibold text-ink-faint dark:text-dark-ink-faint;
+  @apply text-2xs font-semibold text-ink-faint dark:text-dark-ink-faint;
 }
 
 .kc-age.late {
@@ -2275,16 +2168,12 @@ table.help-ref td.no {
    Opportunity with exactly one linked Contact, the one deal-risk case this
    badge exists to flag ("what if that one person leaves/goes quiet"). */
 .kc-single-thread {
-  @apply ml-auto inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-semibold text-amber-700 dark:text-amber-400;
+  @apply ml-auto inline-flex items-center rounded-full px-1.5 py-0.5 text-3xs font-semibold text-amber-700 dark:text-amber-400;
   background: rgba(217, 119, 6, 0.12);
 }
 
 .dark .kc-single-thread {
   background: rgba(217, 119, 6, 0.2);
-}
-
-.kc-tasks {
-  @apply ml-auto inline-flex items-center gap-1 text-[10.5px] text-ink-faint dark:text-dark-ink-faint;
 }
 
 .ghost-plus-box {
@@ -2308,7 +2197,7 @@ table.help-ref td.no {
   @apply rounded-none border-0 bg-transparent shadow-none;
 }
 .stage-table-head {
-  @apply flex items-center gap-2 border-b border-line bg-surface-2 px-4 py-2 text-[10px] font-semibold uppercase tracking-wide text-ink-faint dark:border-dark-line dark:bg-dark-raised dark:text-dark-ink-faint;
+  @apply flex items-center gap-2 border-b border-line bg-surface-2 px-4 py-2 text-3xs font-semibold uppercase tracking-wide text-ink-faint dark:border-dark-line dark:bg-dark-raised dark:text-dark-ink-faint;
 }
 .stage-table-row {
   @apply flex items-center gap-2 border-t-2 border-transparent px-4 py-2.5;
@@ -2326,9 +2215,6 @@ html.dark .stage-table-row {
 }
 .stage-table-row-new {
   @apply bg-accent-soft;
-}
-.stage-table-add-form {
-  @apply flex items-center gap-2 px-4 py-2.5;
 }
 /* Settings → Profile (2026-10): personal data and social profiles side by side on wide screens,
    stacked on narrow ones; autosaves, so the head shows a quiet status instead of a Save button. */
@@ -2417,7 +2303,7 @@ html.dark .stage-table-row {
 }
 
 .table-empty-body {
-  @apply text-[13px] text-ink-muted dark:text-dark-ink-muted;
+  @apply text-sm text-ink-muted dark:text-dark-ink-muted;
 }
 
 .table-empty-actions {
@@ -2523,7 +2409,7 @@ input[type='number'] {
 }
 
 .task-view-toggle button {
-  @apply cursor-pointer rounded-md border-none bg-transparent px-3.5 py-1 text-[13px] font-medium text-ink-muted dark:text-dark-ink-muted;
+  @apply cursor-pointer rounded-md border-none bg-transparent px-3.5 py-1 text-sm font-medium text-ink-muted dark:text-dark-ink-muted;
 }
 
 .task-view-toggle button.active {
@@ -2535,7 +2421,7 @@ input[type='number'] {
 }
 
 .task-folders-rail {
-  @apply flex w-52 shrink-0 flex-col gap-0.5 overflow-hidden border-r border-line py-5 pr-3 pl-1 transition-[width,padding] dark:border-dark-line;
+  @apply flex w-52 shrink-0 flex-col gap-0.5 overflow-hidden      transition-[width,padding] dark:border-dark-line;
 }
 
 .task-folders-rail.collapsed {
@@ -2547,7 +2433,7 @@ input[type='number'] {
 }
 
 .task-folders-label {
-  @apply text-[11px] font-semibold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint;
+  @apply text-2xs font-semibold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint;
 }
 
 .task-folders-toggle {
@@ -2575,7 +2461,7 @@ input[type='number'] {
 }
 
 .task-folder-row.active {
-  @apply bg-surface-2 font-semibold text-brand-navy dark:bg-white/[0.08] dark:text-dark-ink;
+  @apply font-semibold   dark:text-dark-ink;
 }
 
 .task-folder-row.active svg {
@@ -2630,7 +2516,7 @@ input[type='number'] {
 }
 
 .task-hub-card-dates {
-  @apply text-[10.5px] text-ink-faint dark:text-dark-ink-faint;
+  @apply text-2xs text-ink-faint dark:text-dark-ink-faint;
 }
 
 .task-hub-detail-meta {
@@ -2642,11 +2528,11 @@ input[type='number'] {
 }
 
 .task-hub-detail-row-label {
-  @apply w-20 shrink-0 text-[11px] font-semibold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint;
+  @apply w-20 shrink-0 text-2xs font-semibold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint;
 }
 
 .task-relationship-chip {
-  @apply inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium;
+  @apply inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-medium;
 }
 
 .task-relationship-chip.assignee {
@@ -2688,7 +2574,7 @@ input[type='number'] {
 }
 
 .note-row-date {
-  @apply mt-1 block text-[11px] text-ink-faint dark:text-dark-ink-faint;
+  @apply mt-1 block text-2xs text-ink-faint dark:text-dark-ink-faint;
 }
 
 .kcard.dragging {
@@ -2722,7 +2608,7 @@ input[type='number'] {
 }
 
 .activity-row-meta {
-  @apply mt-0.5 block text-[11px] text-ink-faint dark:text-dark-ink-faint;
+  @apply mt-0.5 block text-2xs text-ink-faint dark:text-dark-ink-faint;
 }
 
 .activity-row-toggle {
@@ -2750,11 +2636,11 @@ input[type='number'] {
 }
 
 .kcard .kc-name {
-  @apply text-[12.5px] leading-tight font-bold text-ink dark:text-dark-ink;
+  @apply text-sm leading-tight font-bold text-ink dark:text-dark-ink;
 }
 
 .kcard .kc-meta {
-  @apply mt-[3px] mb-2 text-[11px] text-ink-muted dark:text-dark-ink-muted;
+  @apply mt-[3px] mb-2 text-2xs text-ink-muted dark:text-dark-ink-muted;
 }
 
 /* ---------- Status "Manage options" popover ---------- */
@@ -2792,7 +2678,7 @@ input[type='number'] {
 }
 
 .status-manage-link {
-  @apply shrink-0 cursor-pointer border-none bg-transparent p-0 text-[0.68rem] font-semibold text-accent dark:text-brand-blue-light hover:underline;
+  @apply shrink-0 cursor-pointer border-none bg-transparent p-0 text-2xs font-semibold text-accent dark:text-brand-blue-light hover:underline;
 }
 
 .col-visibility-list {
@@ -2818,7 +2704,7 @@ input[type='number'] {
 }
 
 .policy-manage-meta {
-  @apply shrink-0 whitespace-nowrap text-[0.65rem] text-ink-faint dark:text-dark-ink-faint;
+  @apply shrink-0 whitespace-nowrap text-3xs text-ink-faint dark:text-dark-ink-faint;
 }
 
 /* ---------- Mobile pattern (Tarea 9, tareas-ux-ui.md) — everything below applies < md (768px) ---------- */
@@ -2830,7 +2716,7 @@ input[type='number'] {
 }
 
 .mobile-tabbar a {
-  @apply flex min-w-[56px] flex-col items-center justify-center text-[11px] font-semibold text-ink-faint no-underline dark:text-dark-ink-faint;
+  @apply flex min-w-[56px] flex-col items-center justify-center text-2xs font-semibold text-ink-faint no-underline dark:text-dark-ink-faint;
   height: 44px;
 }
 
@@ -2986,7 +2872,7 @@ html.dark {
   @apply bg-sidebar dark:bg-dark-sidebar;
 }
 .sidebar-link {
-  @apply text-[13px] text-ink-muted dark:text-dark-ink-muted;
+  @apply text-sm text-ink-muted dark:text-dark-ink-muted;
 }
 .sidebar-link:hover {
   @apply text-ink dark:text-dark-ink;
@@ -3016,7 +2902,7 @@ html.dark {
 
 /* ---- Inputs: hundidos, 38px, foco violeta con anillo ---- */
 .form-group label {
-  @apply text-[13px] font-medium text-ink dark:text-dark-ink;
+  @apply text-sm font-medium text-ink dark:text-dark-ink;
 }
 .form-group input,
 .form-group select,
@@ -3097,7 +2983,7 @@ html.dark {
   min-height: 0;
 }
 .modal-panel .overview-field-label {
-  @apply w-auto text-[13px] font-medium text-ink dark:text-dark-ink;
+  @apply w-auto text-sm font-medium text-ink dark:text-dark-ink;
 }
 .modal-panel .overview-field > :not(.overview-field-label) {
   @apply w-full;
@@ -3126,13 +3012,13 @@ html.dark {
   @apply bg-surface-2 dark:bg-dark-raised;
 }
 .full-table th {
-  @apply text-[11.5px] font-semibold;
+  @apply text-2xs font-semibold;
 }
 .full-table td {
-  @apply text-[13px];
+  @apply text-sm;
 }
 .name-cell {
-  @apply text-[13.5px];
+  @apply text-sm;
 }
 .full-table tbody tr:hover td {
   @apply bg-accent-soft;
@@ -3180,7 +3066,7 @@ html.dark {
   @apply m-0 text-[22px] font-semibold tracking-tight text-ink dark:text-dark-ink;
 }
 .to-subtitle {
-  @apply mt-1 mb-0 text-[13.5px] text-ink-muted dark:text-dark-ink-muted;
+  @apply mt-1 mb-0 text-sm text-ink-muted dark:text-dark-ink-muted;
 }
 .to-section-title {
   @apply m-0 flex items-center gap-2 text-sm font-semibold text-ink dark:text-dark-ink;
@@ -3195,10 +3081,10 @@ html.dark {
   @apply m-0 text-xs text-ink-faint dark:text-dark-ink-faint;
 }
 .to-link {
-  @apply cursor-pointer border-0 bg-transparent p-0 text-[13px] font-semibold text-accent hover:underline dark:text-brand-blue-light;
+  @apply cursor-pointer border-0 bg-transparent p-0 text-sm font-semibold text-accent hover:underline dark:text-brand-blue-light;
 }
 .to-filter-note {
-  @apply flex items-center gap-2 text-[13px] text-ink-muted dark:text-dark-ink-muted;
+  @apply flex items-center gap-2 text-sm text-ink-muted dark:text-dark-ink-muted;
 }
 .to-policy-name {
   @apply inline-flex items-center gap-2 font-medium;
@@ -3240,7 +3126,7 @@ html.dark {
   @apply text-[30px] leading-none font-semibold tracking-tight;
 }
 .to-bal-big small {
-  @apply ml-1 text-[13px] font-medium tracking-normal text-ink-muted dark:text-dark-ink-muted;
+  @apply ml-1 text-sm font-medium tracking-normal text-ink-muted dark:text-dark-ink-muted;
 }
 .to-bal-legend {
   @apply flex flex-wrap gap-3 text-xs text-ink-muted dark:text-dark-ink-muted;
@@ -3264,7 +3150,7 @@ html.dark {
 
 /* Tables: rows open a detail panel. */
 .to-table td {
-  @apply text-[13px] whitespace-nowrap;
+  @apply text-sm whitespace-nowrap;
 }
 .to-table .to-note-cell {
   @apply max-w-[280px] truncate;
@@ -3314,10 +3200,10 @@ html.dark {
   @apply grid grid-cols-3 gap-2 text-xs text-ink-faint dark:text-dark-ink-faint;
 }
 .to-ap-facts strong {
-  @apply mt-0.5 block text-[13px] font-semibold text-ink dark:text-dark-ink;
+  @apply mt-0.5 block text-sm font-semibold text-ink dark:text-dark-ink;
 }
 .to-ap-note {
-  @apply m-0 text-[13px] text-ink-muted dark:text-dark-ink-muted;
+  @apply m-0 text-sm text-ink-muted dark:text-dark-ink-muted;
 }
 .to-ap-actions {
   @apply flex flex-wrap items-center gap-2;
@@ -3337,10 +3223,10 @@ html.dark {
   @apply flex flex-col gap-2.5;
 }
 .to-panel-block h4 {
-  @apply m-0 text-[13px] font-semibold text-ink dark:text-dark-ink;
+  @apply m-0 text-sm font-semibold text-ink dark:text-dark-ink;
 }
 .to-panel-block p {
-  @apply m-0 text-[13px];
+  @apply m-0 text-sm;
 }
 .to-facts {
   @apply grid grid-cols-2 gap-3;
@@ -3364,7 +3250,7 @@ html.dark {
   @apply m-0 flex list-none flex-col gap-3 p-0;
 }
 .to-timeline li {
-  @apply flex gap-2.5 text-[13.5px] text-ink dark:text-dark-ink;
+  @apply flex gap-2.5 text-sm text-ink dark:text-dark-ink;
 }
 .to-timeline small {
   @apply block text-xs text-ink-faint dark:text-dark-ink-faint;
@@ -3379,14 +3265,14 @@ html.dark {
   @apply flex flex-col gap-3;
 }
 .to-pol-row {
-  @apply grid items-center gap-x-3 gap-y-1.5 text-[13.5px];
+  @apply grid items-center gap-x-3 gap-y-1.5 text-sm;
   grid-template-columns: minmax(0, 1fr) auto;
 }
 .to-pol-row .to-meter {
   grid-column: 1 / -1;
 }
 .to-hist > div {
-  @apply flex items-center justify-between gap-2.5 border-b border-line-soft py-2.5 text-[13px] dark:border-dark-line;
+  @apply flex items-center justify-between gap-2.5 border-b border-line-soft py-2.5 text-sm dark:border-dark-line;
 }
 .to-assignees {
   @apply flex flex-wrap gap-1.5;
@@ -3395,7 +3281,7 @@ html.dark {
   @apply inline-flex h-7 items-center gap-1.5 rounded-full border border-line bg-surface-2 py-0 pr-1.5 pl-1 text-xs text-ink dark:border-dark-line dark:bg-dark-raised dark:text-dark-ink;
 }
 .to-assignee-avatar {
-  @apply inline-flex h-5 w-5 items-center justify-center rounded-full bg-avatar-bg text-[9px] font-bold text-ink dark:bg-gray-700 dark:text-dark-ink;
+  @apply inline-flex h-5 w-5 items-center justify-center rounded-full bg-avatar-bg text-3xs font-bold text-ink dark:bg-gray-700 dark:text-dark-ink;
 }
 .to-assignee-remove {
   @apply ml-0.5 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-sm leading-none text-ink-faint dark:text-dark-ink-faint hover:bg-line hover:text-ink dark:hover:bg-dark-line dark:hover:text-dark-ink;
@@ -3403,7 +3289,7 @@ html.dark {
 
 /* Count pill next to a sidebar item (Time Off › Team). */
 .sidebar-count {
-  @apply ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-semibold text-white;
+  @apply ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-2xs font-semibold text-white;
 }
 
 /* Digits that line up in columns (balances, dates, counts). */
@@ -3427,7 +3313,7 @@ html.dark {
   min-height: 42px;
 }
 .overview-field-input {
-  @apply m-0 h-[34px] max-w-[20rem] flex-1 rounded-lg border-line-strong bg-input px-2.5 py-0 text-[13px] hover:border-ink-faint hover:bg-input dark:border-gray-700 dark:bg-dark-input dark:hover:border-gray-500 dark:hover:bg-dark-input;
+  @apply m-0 h-[34px] max-w-[20rem] flex-1 rounded-lg border-line-strong bg-input px-2.5 py-0 text-sm hover:border-ink-faint hover:bg-input dark:border-gray-700 dark:bg-dark-input dark:hover:border-gray-500 dark:hover:bg-dark-input;
   box-shadow: var(--ns-shadow-inset);
 }
 .overview-field-input:focus {
@@ -3445,7 +3331,7 @@ textarea.overview-field-input {
   max-width: 32rem;
 }
 .searchable-select-input {
-  @apply h-[34px] w-full max-w-[20rem] text-[13px];
+  @apply h-[34px] w-full max-w-[20rem] text-sm;
 }
 .select-compact {
   @apply rounded-lg dark:border-gray-700 dark:bg-dark-input;
@@ -3470,7 +3356,7 @@ textarea.overview-field-input {
 }
 /* Lead sentence at the top of a modal body (e.g. who approves a time off request). */
 .to-modal-lead {
-  @apply m-0 mb-4 text-[13.5px] text-ink-muted dark:text-dark-ink-muted;
+  @apply m-0 mb-4 text-sm text-ink-muted dark:text-dark-ink-muted;
 }
 
 /* Toolbar search: wide enough for a name or an email, not the whole screen. */
@@ -3564,19 +3450,19 @@ textarea.overview-field-input {
   @apply mb-0;
 }
 .rules-lead {
-  @apply m-0 max-w-[75ch] text-[13px] text-ink-muted dark:text-dark-ink-muted;
+  @apply m-0 max-w-[75ch] text-sm text-ink-muted dark:text-dark-ink-muted;
 }
 .rules-hint {
   @apply m-0 text-xs text-ink-faint dark:text-dark-ink-faint;
 }
 .rules-note {
-  @apply m-0 rounded-lg border border-dashed border-line-strong bg-surface-2 px-3.5 py-3 text-[13px] text-ink-muted dark:border-dark-line dark:bg-dark-raised dark:text-dark-ink-muted;
+  @apply m-0 rounded-lg border border-dashed border-line-strong bg-surface-2 px-3.5 py-3 text-sm text-ink-muted dark:border-dark-line dark:bg-dark-raised dark:text-dark-ink-muted;
 }
 .rules-subtitle {
-  @apply m-0 mt-2 text-[13px] font-semibold text-ink dark:text-dark-ink;
+  @apply m-0 mt-2 text-sm font-semibold text-ink dark:text-dark-ink;
 }
 .rules-label {
-  @apply mb-1 text-[13px] font-medium text-ink dark:text-dark-ink;
+  @apply mb-1 text-sm font-medium text-ink dark:text-dark-ink;
 }
 .rules-row {
   @apply flex flex-wrap items-end gap-4;
@@ -3591,7 +3477,7 @@ textarea.overview-field-input {
   @apply flex flex-wrap gap-1.5;
 }
 .rules-day {
-  @apply relative flex h-9 w-12 cursor-pointer items-center justify-center rounded-lg border border-line-strong bg-input text-[13px] font-medium text-ink-muted dark:border-gray-700 dark:bg-dark-input dark:text-dark-ink-muted;
+  @apply relative flex h-9 w-12 cursor-pointer items-center justify-center rounded-lg border border-line-strong bg-input text-sm font-medium text-ink-muted dark:border-gray-700 dark:bg-dark-input dark:text-dark-ink-muted;
 }
 .rules-day input {
   @apply pointer-events-none absolute opacity-0;
@@ -3603,7 +3489,7 @@ textarea.overview-field-input {
   box-shadow: 0 0 0 3px var(--ns-ring);
 }
 .rules-switch {
-  @apply inline-flex cursor-pointer items-center gap-2 text-[13px] text-ink-muted dark:text-dark-ink-muted;
+  @apply inline-flex cursor-pointer items-center gap-2 text-sm text-ink-muted dark:text-dark-ink-muted;
 }
 .rules-switch input {
   @apply relative h-[22px] w-[38px] shrink-0 cursor-pointer appearance-none rounded-full bg-line-strong transition-colors dark:bg-gray-600;
@@ -3664,10 +3550,10 @@ textarea.overview-field-input {
 
 /* Time Off request form + person ledger (company rules, 2026-10). */
 .to-ok {
-  @apply m-0 text-[13px] font-medium text-emerald-700 dark:text-emerald-300;
+  @apply m-0 text-sm font-medium text-emerald-700 dark:text-emerald-300;
 }
 .to-excluded {
-  @apply m-0 flex list-none flex-col gap-1.5 p-0 text-[13px];
+  @apply m-0 flex list-none flex-col gap-1.5 p-0 text-sm;
 }
 .to-excluded li {
   @apply flex items-center justify-between gap-2.5;
@@ -3713,7 +3599,7 @@ textarea.overview-field-input {
   @apply flex flex-col gap-1 rounded-xl border border-line bg-surface-1 px-4 py-3 dark:border-dark-line dark:bg-dark-surface;
 }
 .sh-kpi-label {
-  @apply text-[11px] font-semibold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint;
+  @apply text-2xs font-semibold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint;
 }
 .sh-kpi-value {
   @apply text-[22px] leading-tight font-semibold text-ink dark:text-dark-ink;
@@ -3746,7 +3632,7 @@ textarea.overview-field-input {
   @apply bg-surface-2 px-2.5 py-2 text-left text-xs font-semibold text-ink-muted dark:bg-dark-raised dark:text-dark-ink-muted;
 }
 .sh-grid thead th b {
-  @apply block text-[13px] text-ink dark:text-dark-ink;
+  @apply block text-sm text-ink dark:text-dark-ink;
 }
 .sh-grid thead th.sh-today,
 .sh-grid thead th.sh-today b {
@@ -3756,13 +3642,13 @@ textarea.overview-field-input {
   background: var(--color-accent-soft);
 }
 .sh-holiday {
-  @apply mt-0.5 block truncate text-[11px] font-medium text-amber-700 dark:text-amber-300;
+  @apply mt-0.5 block truncate text-2xs font-medium text-amber-700 dark:text-amber-300;
 }
 .sh-grid .sh-rowhead {
   @apply w-40 bg-surface-2 px-2.5 py-2.5 text-left text-xs font-normal text-ink-faint dark:bg-dark-raised dark:text-dark-ink-faint;
 }
 .sh-grid .sh-rowhead b {
-  @apply block truncate text-[13px] font-semibold text-ink dark:text-dark-ink;
+  @apply block truncate text-sm font-semibold text-ink dark:text-dark-ink;
 }
 .sh-cell {
   @apply p-1.5;
@@ -3806,16 +3692,16 @@ textarea.overview-field-input {
   @apply flex items-baseline justify-between gap-1 text-xs font-semibold;
 }
 .sh-card-time em {
-  @apply text-[11px] font-medium text-ink-faint not-italic dark:text-dark-ink-faint;
+  @apply text-2xs font-medium text-ink-faint not-italic dark:text-dark-ink-faint;
 }
 .sh-card-sub {
-  @apply mt-0.5 truncate text-[11px] text-ink-faint dark:text-dark-ink-faint;
+  @apply mt-0.5 truncate text-2xs text-ink-faint dark:text-dark-ink-faint;
 }
 .sh-card-people {
   @apply mt-1 flex flex-col gap-0.5;
 }
 .sh-person {
-  @apply flex min-w-0 items-center gap-1.5 text-[11.5px];
+  @apply flex min-w-0 items-center gap-1.5 text-2xs;
 }
 .sh-person span {
   @apply min-w-0 truncate;
@@ -3842,7 +3728,7 @@ textarea.overview-field-input {
   @apply bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-200;
 }
 .sh-open {
-  @apply mt-1 text-[11px] font-semibold text-red-600 dark:text-red-300;
+  @apply mt-1 text-2xs font-semibold text-red-600 dark:text-red-300;
 }
 .sh-legend {
   @apply flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-ink-muted dark:text-dark-ink-muted;
@@ -3856,7 +3742,7 @@ textarea.overview-field-input {
   @apply flex flex-col gap-4;
 }
 .sh-detail-meta {
-  @apply grid gap-x-4 gap-y-1.5 text-[13px];
+  @apply grid gap-x-4 gap-y-1.5 text-sm;
   grid-template-columns: 7.5rem 1fr;
 }
 .sh-detail-meta dt {
@@ -3896,7 +3782,7 @@ textarea.overview-field-input {
   @apply text-red-700 dark:text-red-300;
 }
 .sh-note-box {
-  @apply rounded-lg border border-dashed border-line-strong bg-surface-2 px-3 py-2 text-[13px] text-ink-muted dark:border-dark-line dark:bg-dark-raised dark:text-dark-ink-muted;
+  @apply rounded-lg border border-dashed border-line-strong bg-surface-2 px-3 py-2 text-sm text-ink-muted dark:border-dark-line dark:bg-dark-raised dark:text-dark-ink-muted;
 }
 .sh-templates {
   @apply flex flex-wrap gap-1.5;
@@ -3925,13 +3811,13 @@ textarea.overview-field-input {
   @apply border-accent dark:border-brand-blue-light;
 }
 .ts-day-name {
-  @apply text-[11px] font-semibold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint;
+  @apply text-2xs font-semibold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint;
 }
 .ts-day-total {
   @apply text-sm font-semibold;
 }
 .ts-day-off {
-  @apply text-[11px] text-amber-700 dark:text-amber-300;
+  @apply text-2xs text-amber-700 dark:text-amber-300;
 }
 .ts-suggestion {
   @apply flex flex-wrap items-center gap-2 border-b border-line py-2 last:border-b-0 dark:border-dark-line;
@@ -3960,7 +3846,7 @@ textarea.overview-field-input {
   @apply min-w-0 border-l border-line-soft px-2.5 py-2 text-xs font-semibold text-ink-muted dark:border-dark-line-soft dark:text-dark-ink-muted;
 }
 .sh-cal-dayhead b {
-  @apply block text-[13px] text-ink dark:text-dark-ink;
+  @apply block text-sm text-ink dark:text-dark-ink;
 }
 .sh-cal-dayhead.sh-today,
 .sh-cal-dayhead.sh-today b {
@@ -3973,7 +3859,7 @@ textarea.overview-field-input {
   @apply relative;
 }
 .sh-cal-hour {
-  @apply absolute right-1.5 -translate-y-1/2 text-[11px] text-ink-faint dark:text-dark-ink-faint;
+  @apply absolute right-1.5 -translate-y-1/2 text-2xs text-ink-faint dark:text-dark-ink-faint;
 }
 .sh-cal-day {
   @apply relative border-l border-line-soft dark:border-dark-line-soft;
@@ -4037,10 +3923,10 @@ textarea.overview-field-input {
 }
 .sh-block-time {
   /* Wraps instead of truncating: three overlapping shifts in one day leave ~50px each. */
-  @apply text-[11.5px] leading-tight font-semibold break-words;
+  @apply text-2xs leading-tight font-semibold break-words;
 }
 .sh-block-sub {
-  @apply truncate text-[11px] text-ink-faint dark:text-dark-ink-faint;
+  @apply truncate text-2xs text-ink-faint dark:text-dark-ink-faint;
 }
 .sh-block-people {
   @apply mt-0.5 flex min-w-0 flex-col gap-0.5;
@@ -4078,14 +3964,14 @@ textarea.overview-field-input {
   @apply flex min-w-0 shrink-0 items-center gap-1.5;
 }
 .sh-month-num {
-  @apply cursor-pointer rounded-md border-0 bg-transparent px-1 text-[13px] font-semibold text-ink hover:bg-accent-tint dark:text-dark-ink;
+  @apply cursor-pointer rounded-md border-0 bg-transparent px-1 text-sm font-semibold text-ink hover:bg-accent-tint dark:text-dark-ink;
   font-family: inherit;
 }
 .sh-month-day.sh-today .sh-month-num {
   @apply text-accent dark:text-brand-blue-light;
 }
 .sh-chip {
-  @apply w-full shrink-0 cursor-pointer truncate rounded border border-line bg-surface-1 px-1.5 py-0.5 text-left text-[11.5px] text-ink hover:border-accent dark:border-dark-line dark:bg-dark-raised dark:text-dark-ink dark:hover:border-brand-blue-light;
+  @apply w-full shrink-0 cursor-pointer truncate rounded border border-line bg-surface-1 px-1.5 py-0.5 text-left text-2xs text-ink hover:border-accent dark:border-dark-line dark:bg-dark-raised dark:text-dark-ink dark:hover:border-brand-blue-light;
   border-left-width: 3px;
   font-family: inherit;
 }
@@ -4109,11 +3995,26 @@ textarea.overview-field-input {
   @apply line-through opacity-60;
 }
 .sh-month-more {
-  @apply shrink-0 cursor-pointer self-start border-0 bg-transparent p-0 text-[11.5px] font-semibold text-accent hover:underline dark:text-brand-blue-light;
+  @apply shrink-0 cursor-pointer self-start border-0 bg-transparent p-0 text-2xs font-semibold text-accent hover:underline dark:text-brand-blue-light;
   font-family: inherit;
 }
 
 /* Selected chip (required skills in the shift form). */
 .sh-template-chip.sh-chip-on {
   @apply border-accent bg-accent-tint font-semibold text-accent dark:border-brand-blue-light dark:text-brand-blue-light;
+}
+
+/* Compact table inside a card (Billing invoices, Dashboards breakdowns): same header and cell
+   type as .full-table, without the toolbar chrome. */
+.mini-table {
+  @apply w-full border-collapse text-sm;
+}
+.mini-table th {
+  @apply pb-2 text-left text-2xs font-semibold text-ink-muted dark:text-dark-ink-muted;
+}
+.mini-table td {
+  @apply border-t border-line-soft py-2 text-ink-muted dark:border-dark-line-soft dark:text-dark-ink-muted;
+}
+.mini-table td:first-child {
+  @apply text-ink dark:text-dark-ink;
 }

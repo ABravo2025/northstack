@@ -422,20 +422,20 @@ export default function BillingPage({ token, tenant }: BillingPageProps) {
           <p className="text-sm text-ink-muted dark:text-dark-ink-muted">{t('billing.noInvoices')}</p>
         ) : (
           <div className="full-table-wrap">
-          <table className="w-full text-sm">
+          <table className="mini-table">
             <thead>
-              <tr className="text-left text-ink-faint dark:text-dark-ink-faint">
-                <th className="font-normal py-1.5">{t('billing.columns.date')}</th>
-                <th className="font-normal py-1.5">{t('billing.columns.amount')}</th>
-                <th className="font-normal py-1.5">{t('billing.columns.status')}</th>
-                <th className="font-normal py-1.5"></th>
+              <tr>
+                <th>{t('billing.columns.date')}</th>
+                <th>{t('billing.columns.amount')}</th>
+                <th>{t('billing.columns.status')}</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
               {subscription.invoices.map((invoice) => (
                 <tr key={invoice.id} className="border-t border-line dark:border-dark-line">
-                  <td className="py-1.5">{formatDate(invoice.paidAt ?? invoice.createdAt)}</td>
-                  <td className="py-1.5">
+                  <td>{formatDate(invoice.paidAt ?? invoice.createdAt)}</td>
+                  <td>
                     {formatMoney(invoice.amountCents, invoice.currency)}
                     {invoice.baseAmountCents != null && invoice.extraSeatsAmountCents != null && invoice.extraSeatsAmountCents > 0 && (
                       <span className="block text-xs text-ink-faint dark:text-dark-ink-faint">
@@ -446,10 +446,10 @@ export default function BillingPage({ token, tenant }: BillingPageProps) {
                       </span>
                     )}
                   </td>
-                  <td className="py-1.5">
+                  <td>
                     <StatusBadge status={invoice.status} />
                   </td>
-                  <td className="py-1.5 text-right whitespace-nowrap">
+                  <td className="text-right whitespace-nowrap">
                     {invoice.provider === 'dodopayments' && (
                       <button
                         type="button"

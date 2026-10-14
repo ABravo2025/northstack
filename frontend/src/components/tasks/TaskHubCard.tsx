@@ -49,7 +49,7 @@ export default function TaskHubCard({ task, onToggleComplete, onOpenDetail }: Ta
         {completed && task.completedAt ? t('myTasks.cardDates.done', { date: formatHubDate(task.completedAt) }) : ''}
       </div>
       <div className="kcard-foot mt-1.5 justify-between">
-        <span className={overdue ? 'text-[10.5px] font-semibold text-red-600 dark:text-red-400' : 'kc-age'}>
+        <span className={overdue ? 'text-2xs font-semibold text-red-600 dark:text-red-400' : 'kc-age'}>
           {task.dueDate ? formatHubDate(task.dueDate) : t('myTasks.common.noDueDate')}
         </span>
         {task.assignee && <Avatar firstName={task.assignee.firstName} lastName={task.assignee.lastName} />}

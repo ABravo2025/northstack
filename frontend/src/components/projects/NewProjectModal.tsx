@@ -240,7 +240,7 @@ function TemplateCard({ tag, title, body, meta, colors, dashed, selected, onSele
       }`}
     >
       <button type="button" className="absolute inset-0 rounded-lg" aria-pressed={selected} aria-label={title} onClick={onSelect} />
-      <span className="text-[10.5px] font-semibold uppercase tracking-wider text-accent dark:text-brand-blue-light">{tag}</span>
+      <span className="text-2xs font-semibold uppercase tracking-wider text-accent dark:text-brand-blue-light">{tag}</span>
       <span className="pr-6 text-sm font-semibold">{title}</span>
       {body && <span className="text-xs text-ink-muted dark:text-dark-ink-muted">{body}</span>}
       {colors && colors.length > 0 && (
@@ -250,7 +250,7 @@ function TemplateCard({ tag, title, body, meta, colors, dashed, selected, onSele
           ))}
         </span>
       )}
-      {meta && <span className="text-[11.5px] text-ink-faint dark:text-dark-ink-faint">{meta}</span>}
+      {meta && <span className="text-2xs text-ink-faint dark:text-dark-ink-faint">{meta}</span>}
       {onDelete && (
         <span className="absolute right-2 top-2 z-10">
           <button type="button" className="icon-btn" aria-label={deleteLabel} onClick={onDelete}>
@@ -495,12 +495,12 @@ function TemplateDetailsStep({ open, token, templateId, defaultCompanyId, onBack
                       return (
                         <div
                           key={task.id}
-                          className="grid grid-cols-[minmax(0,1fr)_auto_64px] items-center gap-3 border-t border-line-soft px-3 py-1.5 text-[13px] dark:border-dark-line-soft"
+                          className="grid grid-cols-[minmax(0,1fr)_auto_64px] items-center gap-3 border-t border-line-soft px-3 py-1.5 text-sm dark:border-dark-line-soft"
                         >
                           <span className="min-w-0">
                             {task.title}
                             {who.fallback && (
-                              <span className="block text-[11px] text-amber-700 dark:text-amber-400">
+                              <span className="block text-2xs text-amber-700 dark:text-amber-400">
                                 {task.projectRole ? t('new.fallbackRole', { role: task.projectRole }) : t('new.fallbackNoRole')}
                               </span>
                             )}

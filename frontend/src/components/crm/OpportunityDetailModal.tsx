@@ -542,7 +542,7 @@ export default function OpportunityDetailModal({
               return (
                 <div
                   key={stage.id}
-                  className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ${
+                  className={`shrink-0 rounded-full px-2.5 py-1 text-3xs font-semibold ${
                     isCurrent ? 'text-white' : 'bg-surface-2 text-ink-muted dark:bg-dark-raised dark:text-dark-ink-faint'
                   }`}
                   style={isCurrent ? { backgroundColor: stage.color || '#5b21e6' } : undefined}

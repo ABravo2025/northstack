@@ -432,7 +432,7 @@ function TaskColumnsHeader() {
   return (
     <li
       aria-hidden="true"
-      className={`${TASK_GRID} hidden border-b border-line-soft py-1.5 text-[11px] font-semibold uppercase tracking-wider text-ink-faint sm:grid dark:border-dark-line-soft dark:text-dark-ink-faint`}
+      className={`${TASK_GRID} hidden border-b border-line-soft py-1.5 text-2xs font-semibold uppercase tracking-wider text-ink-faint sm:grid dark:border-dark-line-soft dark:text-dark-ink-faint`}
     >
       <span />
       <span>{t('detail.columns.task')}</span>
@@ -765,7 +765,7 @@ function TeamTab({ token, project, tasks, canEdit, onChanged }: { token: string;
                       <Avatar firstName={m.employee.firstName} lastName={m.employee.lastName} />
                       <span className="min-w-0">
                         <span className="block truncate">{name(m)}</span>
-                        {isOwner && <span className="block text-[11px] font-semibold text-accent dark:text-brand-blue-light">{t('detail.team.ownerTag')}</span>}
+                        {isOwner && <span className="block text-2xs font-semibold text-accent dark:text-brand-blue-light">{t('detail.team.ownerTag')}</span>}
                       </span>
                     </span>
                   </td>

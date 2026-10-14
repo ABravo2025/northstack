@@ -360,7 +360,7 @@ export default function ShiftsSchedulePage({ token }: ShiftsSchedulePageProps) {
           )}
         </div>
         {activeLocations.length > 1 && (
-          <select id="shifts-location-filter" aria-label={t('form.location')} className="h-9 max-w-[14rem] !py-0 text-[13px]" value={locationFilter} onChange={(e) => chooseLocation(e.target.value)}>
+          <select id="shifts-location-filter" aria-label={t('form.location')} className="h-9 max-w-[14rem] !py-0 text-sm" value={locationFilter} onChange={(e) => chooseLocation(e.target.value)}>
             <option value="">{t('schedule.allLocations')}</option>
             {activeLocations.map((l) => (
               <option key={l.id} value={l.id}>

@@ -100,19 +100,19 @@ function AdminSidebar({ name, role, onLogout }: { name: string; role: string; on
         <span className="grid h-6 w-6 place-items-center rounded-md bg-accent text-xs font-bold text-white">N</span>
         <div className="leading-tight">
           <div className="text-sm font-bold text-white">Northstack</div>
-          <div className="text-[11px] text-[#c9c4e0]">Admin Center</div>
+          <div className="text-2xs text-[#c9c4e0]">Admin Center</div>
         </div>
       </div>
-      <div className="px-3 pb-1 pt-2 text-[10px] uppercase tracking-widest text-[#c9c4e0]/70">Negocio</div>
+      <div className="px-3 pb-1 pt-2 text-3xs uppercase tracking-widest text-[#c9c4e0]/70">Negocio</div>
       <NavLink to="/" end className={link}>Inicio</NavLink>
       <NavLink to="/clients" className={link}>Clientes</NavLink>
       <NavLink to="/billing" className={link}>Facturación</NavLink>
       {role === 'platform_admin' && <NavLink to="/referrals" className={link}>Referidos</NavLink>}
-      <div className="px-3 pb-1 pt-4 text-[10px] uppercase tracking-widest text-[#c9c4e0]/70">Soporte</div>
+      <div className="px-3 pb-1 pt-4 text-3xs uppercase tracking-widest text-[#c9c4e0]/70">Soporte</div>
       <NavLink to="/tickets" className={link}>Tickets</NavLink>
       <NavLink to="/ideas" className={link}>Ideas</NavLink>
       <NavLink to="/announcements" className={link}>Anuncios</NavLink>
-      <div className="px-3 pb-1 pt-4 text-[10px] uppercase tracking-widest text-[#c9c4e0]/70">Sistema</div>
+      <div className="px-3 pb-1 pt-4 text-3xs uppercase tracking-widest text-[#c9c4e0]/70">Sistema</div>
       <NavLink to="/audit" className={link}>Registro de acciones</NavLink>
       <div className="mt-auto border-t border-white/10 px-3 pt-3 text-xs text-[#c9c4e0]">
         <div className="font-medium text-white">{name}</div>

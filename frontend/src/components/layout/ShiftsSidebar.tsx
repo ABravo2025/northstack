@@ -110,7 +110,7 @@ export default function ShiftsSidebar({ token, mobileOpen, onMobileClose }: Shif
             <NavLink to="/shifts/approvals" className={linkClass} onClick={onMobileClose}>
               <CheckIcon className="h-4 w-4 shrink-0" />
               {t('nav.approvals')}
-              {timesheet.pending > 0 && <span className="ml-auto rounded-full bg-accent px-1.5 text-[11px] leading-5 font-semibold text-white dark:bg-brand-blue-light dark:text-dark-page">{timesheet.pending}</span>}
+              {timesheet.pending > 0 && <span className="ml-auto rounded-full bg-accent px-1.5 text-2xs leading-5 font-semibold text-white dark:bg-brand-blue-light dark:text-dark-page">{timesheet.pending}</span>}
             </NavLink>
           )}
           {timesheet.enabled && permissions.has('approve_timesheets') && (

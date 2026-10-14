@@ -133,11 +133,11 @@ export default function MyShiftsPage({ token }: MyShiftsPageProps) {
               return (
                 <div key={s.id} className="sh-assignee items-start">
                   <div className="w-14 shrink-0 rounded-lg border border-line bg-surface-2 py-1 text-center dark:border-dark-line dark:bg-dark-raised">
-                    <span className="block text-[10px] font-semibold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint">
+                    <span className="block text-3xs font-semibold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint">
                       {formatDay(s.date, i18n.language, { weekday: 'short' })}
                     </span>
                     <span className="block text-lg leading-tight font-semibold">{Number(s.date.slice(8, 10))}</span>
-                    <span className="block text-[10px] text-ink-faint dark:text-dark-ink-faint">{formatDay(s.date, i18n.language, { month: 'short' })}</span>
+                    <span className="block text-3xs text-ink-faint dark:text-dark-ink-faint">{formatDay(s.date, i18n.language, { month: 'short' })}</span>
                   </div>
                   <div className="sh-assignee-name">
                     <div className="flex flex-wrap items-center gap-2 font-semibold">

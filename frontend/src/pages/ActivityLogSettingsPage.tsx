@@ -107,7 +107,7 @@ function FeedRow({ entry }: { entry: ActivityLogEntry }) {
           <span className={`activity-action-icon activity-action-${entry.action}`}>
             <ActionIcon action={entry.action} />
           </span>
-          <span className="rounded bg-surface-2 px-1.5 py-0.5 text-[11px] font-medium text-ink-muted dark:bg-white/[0.06] dark:text-dark-ink-muted">
+          <span className="rounded bg-surface-2 px-1.5 py-0.5 text-2xs font-medium text-ink-muted dark:bg-white/[0.06] dark:text-dark-ink-muted">
             {t(`activityLogSettings.entityTypes.${entry.entityType}`)}
           </span>
           {entry.summary}

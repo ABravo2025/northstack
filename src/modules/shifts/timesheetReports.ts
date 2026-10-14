@@ -75,6 +75,8 @@ export interface ReportRow {
   // Phase 2, block B (Growth): clocked time, late clock-ins and missed shifts. Per person and in
   // the totals; null without clock-in.
   attendance: Attendance | null;
+  // Project rows only (phase 2, block C): the project's hour budget.
+  budgetMinutes?: number | null;
 }
 
 export interface Attendance {
@@ -138,7 +140,7 @@ export async function buildHoursReport(
   const projectIds = [...new Set(entries.map((e) => e.projectId).filter((x): x is string => !!x))];
   const [companies, projects, rates] = await Promise.all([
     companyIds.length ? prisma.company.findMany({ where: { tenantId, id: { in: companyIds } }, select: { id: true, name: true } }) : [],
-    projectIds.length ? prisma.project.findMany({ where: { tenantId, id: { in: projectIds } }, select: { id: true, name: true } }) : [],
+    projectIds.length ? prisma.project.findMany({ where: { tenantId, id: { in: projectIds } }, select: { id: true, name: true, budgetMinutes: true } }) : [],
     opts.withCost ? loadRates(tenantId, employeeIds, opts.from, opts.to) : Promise.resolve([]),
   ]);
   const companyName = new Map(companies.map((c) => [c.id, c.name]));
@@ -241,6 +243,11 @@ export async function buildHoursReport(
       totals.attendance!.absent += 1;
       if (byPerson) rowFor(a.employee.id, `${a.employee.firstName} ${a.employee.lastName}`).attendance!.absent += 1;
     }
+  }
+
+  if (opts.groupBy === 'project') {
+    const budget = new Map(projects.map((p) => [p.id, p.budgetMinutes]));
+    for (const row of rows.values()) row.budgetMinutes = row.key ? (budget.get(row.key) ?? null) : null;
   }
 
   const csv: ReportEntry[] = entries.slice(0, MAX_CSV_ENTRIES).map((e) => ({

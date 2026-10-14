@@ -184,6 +184,10 @@
     "notifSkillOwn_other": "{{count}} of your skills expire soon",
     "notifSkillTeam_one": "1 skill in your team expires soon",
     "notifSkillTeam_other": "{{count}} skills in your team expire soon",
+    "budget": {
+      "near": "{{name}} is at {{used}} of its {{budget}} budget (80%)",
+      "over": "{{name}} reached its {{budget}} budget ({{used}} logged)"
+    },
     "clock": {
       "overtime": "{{name}} clocked in at {{location}} without a shift: {{hours}} added as overtime",
       "autoClosed": "{{name}} didn't clock out at {{location}}: the punch was closed at the shift's end — please review",

@@ -1023,7 +1023,9 @@
     "title": "Email notifications",
     "lead": "Choose which emails you get. You'll still see everything in the bell.",
     "group": {
+      "projects": "Projects",
       "shifts": "Shifts and timesheet",
+      "projectBudget": "A project I own is near or over its hour budget",
       "timeOff": "Time off",
       "sales": "Sales"
     },

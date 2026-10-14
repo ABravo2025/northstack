@@ -138,7 +138,9 @@ export async function getProjectDetail(id: string) {
   const project = await prisma.project.findUnique({ where: { id }, include: PROJECT_DETAIL_INCLUDE });
   if (!project) return null;
   const progress = await computeProgress(project.tenantId, [project]);
-  return { ...project, progress: progress.get(project.id)! };
+  // Hours logged to the project in timesheets (phase 2, block C).
+  const logged = await prisma.timeEntry.aggregate({ where: { projectId: project.id }, _sum: { minutes: true } });
+  return { ...project, progress: progress.get(project.id)!, loggedMinutes: logged._sum.minutes ?? 0 };
 }
 
 // ---- Plan limit ----------------------------------------------------------------------------
@@ -291,6 +293,8 @@ export interface UpdateProjectInput {
   startDate?: Date | null;
   dueDate?: Date | null;
   isActive?: boolean;
+  // Phase 2, block C (Growth).
+  budgetMinutes?: number | null;
 }
 
 export async function updateProject(id: string, input: UpdateProjectInput, changedByUserId: string) {
@@ -305,6 +309,11 @@ export async function updateProject(id: string, input: UpdateProjectInput, chang
   if (input.startDate !== undefined) data.startDate = input.startDate;
   if (input.dueDate !== undefined) data.dueDate = input.dueDate;
   if (input.isActive !== undefined) data.isActive = input.isActive;
+  // A new budget starts the 80/100 % notices over.
+  if (input.budgetMinutes !== undefined && input.budgetMinutes !== before.budgetMinutes) {
+    data.budgetMinutes = input.budgetMinutes;
+    data.budgetNoticeLevel = 0;
+  }
   if (input.status !== undefined && input.status !== before.status) {
     data.status = input.status;
     data.completedAt = input.status === 'completed' ? new Date() : null;

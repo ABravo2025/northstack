@@ -22,6 +22,7 @@ import EntityActivityList from '../components/activity/EntityActivityList';
 import TaskDetailModal from '../components/tasks/TaskDetailModal';
 import ProjectFormModal from '../components/projects/ProjectFormModal';
 import SaveAsTemplateModal from '../components/projects/SaveAsTemplateModal';
+import ProjectBudget from '../components/projects/ProjectBudget';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { ProgressBar, ProjectStatusChip, isPastDue, useProjectDateFormat } from '../components/projects/projectUi';
 import { useTaskFolders } from '../hooks/useTaskFolders';
@@ -257,6 +258,7 @@ export default function ProjectDetailPage({ token, user }: { token: string; user
             {tasks.length ? t('detail.progress', { done, total: tasks.length }) : t('detail.noTasksYet')}
           </span>
         </div>
+        <ProjectBudget token={token} project={project} canEdit={canEdit} onChange={setProject} />
         <span className="inline-flex items-center gap-1.5 text-xs text-ink-faint dark:text-dark-ink-faint">
           <FolderIcon className="h-3.5 w-3.5" />
           {project.template ? t('detail.fromTemplate', { name: project.template.name }) : t('detail.blank')}

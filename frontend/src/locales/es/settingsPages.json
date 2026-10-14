@@ -1023,7 +1023,9 @@
     "title": "Notificaciones por email",
     "lead": "Elegí qué emails recibís. En la campana vas a seguir viendo todo.",
     "group": {
+      "projects": "Proyectos",
       "shifts": "Turnos y timesheet",
+      "projectBudget": "Un proyecto mío está por pasar o pasó sus horas presupuestadas",
       "timeOff": "Ausencias",
       "sales": "Ventas"
     },

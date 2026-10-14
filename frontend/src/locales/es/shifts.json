@@ -512,7 +512,9 @@
     "emptyBody": "No hay nada planificado ni cargado este mes.",
     "clocked": "Fichado",
     "late": "Tardanzas",
-    "absent": "Ausencias"
+    "absent": "Ausencias",
+    "budget": "Presupuesto",
+    "budgetOf": "{{budget}} · {{pct}}%"
   },
   "requests": {
     "title": "Pedidos",

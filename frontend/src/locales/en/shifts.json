@@ -512,7 +512,9 @@
     "emptyBody": "Nothing planned or logged this month.",
     "clocked": "Clocked",
     "late": "Late",
-    "absent": "Missed"
+    "absent": "Missed",
+    "budget": "Budget",
+    "budgetOf": "{{budget}} · {{pct}}%"
   },
   "requests": {
     "title": "Requests",

@@ -114,6 +114,11 @@ export default function NotificationBell({ token }: NotificationBellProps) {
       setOpen(false);
       navigate(notification.type === 'shift_request' ? '/shifts/requests' : '/shifts/mine');
     }
+    // Project hour budget (phase 2): open the project.
+    if (notification.type === 'project_budget') {
+      setOpen(false);
+      navigate(`/projects/${notification.entityId}`);
+    }
     // Clock-in (phase 2): schedulers' notices open Today; the person's own opens My shifts.
     if (notification.entityType === 'clockEntry') {
       setOpen(false);

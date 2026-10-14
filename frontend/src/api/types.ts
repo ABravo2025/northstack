@@ -1510,6 +1510,9 @@ export interface TimeSuggestion {
   minutes: number | null;
   title: string;
   detail: string | null;
+  // Shifts: clocked time (phase 2) and the planned length.
+  clockedMinutes?: number | null;
+  plannedMinutes?: number;
   companyId: string | null;
   projectId: string | null;
 }
@@ -1571,6 +1574,8 @@ export interface HoursReportRow {
   minutesWithoutRate: number;
   // Planned shifts: per person, and in the totals; null on company/project rows.
   planned: { total: number; past: number; upcoming: number; unconfirmed: number } | null;
+  // Phase 2 (Growth, clock-in): per person and in the totals.
+  attendance: { clockedMinutes: number; late: number; absent: number } | null;
 }
 
 export interface HoursReport {

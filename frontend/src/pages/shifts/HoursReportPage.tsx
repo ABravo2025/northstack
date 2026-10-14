@@ -90,7 +90,7 @@ export default function HoursReportPage({ token }: HoursReportPageProps) {
   const monthLabel = monthText.charAt(0).toUpperCase() + monthText.slice(1);
   const canInvoice = features.payments && groupBy === 'company';
   const byPerson = groupBy === 'person';
-  const cols = 1 + (byPerson ? 4 : 0) + 3 + (report?.withCost ? 1 : 0) + (canInvoice ? 1 : 0);
+  const cols = 1 + (byPerson ? 4 : 0) + 3 + (byPerson && report?.totals.attendance ? 3 : 0) + (report?.withCost ? 1 : 0) + (canInvoice ? 1 : 0);
   const dash = (m: number) => (m ? formatDuration(m) : '—');
 
   const downloadCsv = () => {
@@ -199,6 +199,13 @@ export default function HoursReportPage({ token }: HoursReportPageProps) {
                 <th>{t('reports.logged')}</th>
                 <th>{t('reports.approved')}</th>
                 <th>{t('reports.billable')}</th>
+                {byPerson && report.totals.attendance && (
+                  <>
+                    <th>{t('reports.clocked')}</th>
+                    <th>{t('reports.late')}</th>
+                    <th>{t('reports.absent')}</th>
+                  </>
+                )}
                 {report.withCost && <th>{t('reports.cost')}</th>}
                 {canInvoice && <th aria-label={t('reports.invoice')} />}
               </tr>
@@ -218,6 +225,13 @@ export default function HoursReportPage({ token }: HoursReportPageProps) {
                   <td>{dash(r.minutes)}</td>
                   <td>{dash(r.approvedMinutes)}</td>
                   <td>{dash(r.billableMinutes)}</td>
+                  {byPerson && report.totals.attendance && (
+                    <>
+                      <td>{dash(r.attendance?.clockedMinutes ?? 0)}</td>
+                      <td className={r.attendance?.late ? 'text-amber-700 dark:text-amber-300' : ''}>{r.attendance?.late || '—'}</td>
+                      <td className={r.attendance?.absent ? 'text-red-700 dark:text-red-300' : ''}>{r.attendance?.absent || '—'}</td>
+                    </>
+                  )}
                   {report.withCost && (
                     <td>
                       {costText(r.cost)}

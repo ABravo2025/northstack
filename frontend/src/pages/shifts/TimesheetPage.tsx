@@ -267,7 +267,17 @@ export default function TimesheetPage({ token }: TimesheetPageProps) {
                     <div className="truncate font-medium" title={s.title}>
                       {s.title}
                     </div>
-                    <small className="text-ink-muted dark:text-dark-ink-muted">{[sourceLabel(s.sourceType), s.detail].filter(Boolean).join(' · ')}</small>
+                    <small className="text-ink-muted dark:text-dark-ink-muted">
+                      {[
+                        sourceLabel(s.sourceType),
+                        s.detail,
+                        s.clockedMinutes != null && s.plannedMinutes != null
+                          ? t('timesheet.clockedVsPlanned', { clocked: formatDuration(s.clockedMinutes), planned: formatDuration(s.plannedMinutes) })
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </small>
                   </div>
                   <input
                     type="number"

@@ -187,7 +187,9 @@
     "clock": {
       "overtime": "{{name}} clocked in at {{location}} without a shift: {{hours}} added as overtime",
       "autoClosed": "{{name}} didn't clock out at {{location}}: the punch was closed at the shift's end — please review",
-      "autoClosedOwn": "You didn't clock out at {{location}}: we closed it at the shift's end. Your manager will review it."
+      "autoClosedOwn": "You didn't clock out at {{location}}: we closed it at the shift's end. Your manager will review it.",
+      "summary": "Yesterday's attendance — missed: {{absent}} · late: {{late}} · punches to review: {{review}}",
+      "summaryLine": "{{location}} — missed: {{absent}} · late: {{late}}"
     },
     "request": {
       "swapAsk": "{{name}} wants to swap: their shift on {{when}} for yours on {{otherWhen}}",

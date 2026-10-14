@@ -306,6 +306,7 @@ timesheetsRouter.get('/api/shifts/timesheet/reports', async (req, res) => {
   if ((Date.parse(to) - Date.parse(from)) / 86_400_000 > MAX_REPORT_DAYS) return res.status(400).json({ error: 'Pick a range of a year or less', field: 'to' });
   const groupBy = GROUPS.includes(req.query.groupBy as ReportGroup) ? (req.query.groupBy as ReportGroup) : 'person';
   const withCost = ctx.settings.showScheduleCost && canManagePayroll(ctx.user.roleContext) && getPlanLimits(ctx.user.tenant).payrollEnabled;
-  const report = await buildHoursReport(ctx.user.tenantId!, { from, to, groupBy, withCost });
+  const attendance = getPlanLimits(ctx.user.tenant).clockInEnabled ? { lateToleranceMinutes: ctx.settings.lateToleranceMinutes } : null;
+  const report = await buildHoursReport(ctx.user.tenantId!, { from, to, groupBy, withCost, attendance });
   return res.json({ ...report, withCost, groupBy });
 });

@@ -21,6 +21,9 @@ export interface TimeSuggestion {
   minutes: number | null;
   title: string;
   detail: string | null;
+  // Shifts only: the clocked time (when there was a punch) and the planned length.
+  clockedMinutes?: number | null;
+  plannedMinutes?: number;
   companyId: string | null;
   projectId: string | null;
 }
@@ -59,15 +62,33 @@ export async function computeSuggestions(
     },
     include: { shift: { include: { location: { select: { name: true } } } } },
   });
+  // Phase 2, block B: when the shift was clocked, the suggestion is the clocked time (in − out −
+  // breaks), with the planned time next to it.
+  const punches = assignments.length
+    ? await prisma.clockEntry.findMany({
+        where: { shiftAssignmentId: { in: assignments.map((a) => a.id) }, status: { in: ['closed', 'auto_closed'] } },
+        select: { shiftAssignmentId: true, clockInAt: true, clockOutAt: true, breakMinutes: true },
+      })
+    : [];
+  const clocked = new Map<string, number>();
+  for (const p of punches) {
+    if (!p.shiftAssignmentId || !p.clockOutAt) continue;
+    const minutes = Math.max(0, Math.round((p.clockOutAt.getTime() - p.clockInAt.getTime()) / 60_000) - p.breakMinutes);
+    clocked.set(p.shiftAssignmentId, (clocked.get(p.shiftAssignmentId) ?? 0) + minutes);
+  }
   for (const a of assignments) {
     const s = a.shift;
+    const planned = shiftDurationMinutes(s.startMinute, s.endMinute);
+    const fromClock = clocked.get(a.id);
     push({
       sourceType: 'shift',
       sourceId: a.id,
       date: s.date.toISOString().slice(0, 10),
-      minutes: shiftDurationMinutes(s.startMinute, s.endMinute),
+      minutes: fromClock !== undefined ? Math.min(fromClock, MINUTES_PER_DAY) : planned,
       title: s.position ?? s.location.name,
       detail: `${formatMinute(s.startMinute)}–${formatMinute(s.endMinute)} · ${s.location.name}`,
+      clockedMinutes: fromClock ?? null,
+      plannedMinutes: planned,
       companyId: null,
       projectId: null,
     });

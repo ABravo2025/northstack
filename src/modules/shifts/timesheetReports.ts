@@ -72,6 +72,15 @@ export interface ReportRow {
   // Planned (published shifts, accepted or still waiting for an answer). Per person only (a shift
   // has no company or project), and always in the totals.
   planned: PlannedMinutes | null;
+  // Phase 2, block B (Growth): clocked time, late clock-ins and missed shifts. Per person and in
+  // the totals; null without clock-in.
+  attendance: Attendance | null;
+}
+
+export interface Attendance {
+  clockedMinutes: number;
+  late: number;
+  absent: number;
 }
 
 export interface PlannedMinutes {
@@ -101,7 +110,7 @@ const emptyPlanned = (): PlannedMinutes => ({ total: 0, past: 0, upcoming: 0, un
 // (past / upcoming / still unconfirmed) next to what was logged (all of it, and the approved part).
 export async function buildHoursReport(
   tenantId: string,
-  opts: { from: string; to: string; groupBy: ReportGroup; withCost: boolean; now?: Date },
+  opts: { from: string; to: string; groupBy: ReportGroup; withCost: boolean; now?: Date; attendance?: { lateToleranceMinutes: number } | null },
 ) {
   const now = opts.now ?? new Date();
   const range = { gte: new Date(`${opts.from}T00:00:00Z`), lte: new Date(`${opts.to}T00:00:00Z`) };
@@ -145,6 +154,7 @@ export async function buildHoursReport(
     cost: opts.withCost ? {} : null,
     minutesWithoutRate: 0,
     planned: byPerson ? emptyPlanned() : null,
+    attendance: byPerson && opts.attendance ? { clockedMinutes: 0, late: 0, absent: 0 } : null,
   });
   const rows = new Map<string, ReportRow>();
   const rowFor = (key: string | null, name: string | null) => {
@@ -153,7 +163,7 @@ export async function buildHoursReport(
     rows.set(k, row);
     return row;
   };
-  const totals: ReportRow = { ...newRow(null, null), planned: emptyPlanned() };
+  const totals: ReportRow = { ...newRow(null, null), planned: emptyPlanned(), attendance: opts.attendance ? { clockedMinutes: 0, late: 0, absent: 0 } : null };
   const plannedCost: CostTotals | null = opts.withCost ? {} : null;
 
   for (const e of entries) {
@@ -193,6 +203,43 @@ export async function buildHoursReport(
     if (plannedCost) {
       const rate = rateOn(rates, a.employee.id, a.shift.date.toISOString().slice(0, 10));
       if (rate && rate.compensationType === 'hourly') addCost(plannedCost, rate.currency, costCents(rate.rateCents, minutes));
+    }
+  }
+
+  if (opts.attendance) {
+    const punches = await prisma.clockEntry.findMany({
+      where: { tenantId, clockInAt: { gte: new Date(`${opts.from}T00:00:00Z`), lt: new Date(new Date(`${opts.to}T00:00:00Z`).getTime() + 86_400_000) } },
+      select: { employeeId: true, clockInAt: true, clockOutAt: true, breakMinutes: true, status: true, shiftAssignmentId: true, employee: { select: { firstName: true, lastName: true } } },
+    });
+    const linked = await prisma.shiftAssignment.findMany({
+      where: { id: { in: punches.map((p) => p.shiftAssignmentId).filter((x): x is string => !!x) } },
+      select: { id: true, shift: { select: { startsAt: true, isOvertime: true } } },
+    });
+    const startOf = new Map(linked.map((a) => [a.id, a.shift]));
+    for (const p of punches) {
+      const targets = [totals.attendance!];
+      if (byPerson) targets.push(rowFor(p.employeeId, `${p.employee.firstName} ${p.employee.lastName}`).attendance!);
+      const minutes = p.clockOutAt ? Math.max(0, Math.round((p.clockOutAt.getTime() - p.clockInAt.getTime()) / 60_000) - p.breakMinutes) : 0;
+      const shift = p.shiftAssignmentId ? startOf.get(p.shiftAssignmentId) : undefined;
+      const late = !!shift && !shift.isOvertime && p.clockInAt.getTime() > shift.startsAt.getTime() + opts.attendance.lateToleranceMinutes * 60_000;
+      for (const t of targets) {
+        t.clockedMinutes += minutes;
+        if (late) t.late += 1;
+      }
+    }
+    // Missed: accepted, ended shifts at locations that use clock-in, with no punch at all.
+    const clockedIds = new Set(punches.map((p) => p.shiftAssignmentId).filter(Boolean));
+    const ended = await prisma.shiftAssignment.findMany({
+      where: { tenantId, status: 'accepted', shift: { status: 'published', isOvertime: false, date: range, endsAt: { lte: now }, location: { clockMethod: { not: 'off' } } } },
+      select: { id: true, employee: { select: { id: true, firstName: true, lastName: true } } },
+    });
+    const anyPunch = new Set(
+      (await prisma.clockEntry.findMany({ where: { shiftAssignmentId: { in: ended.map((a) => a.id) } }, select: { shiftAssignmentId: true } })).map((e) => e.shiftAssignmentId),
+    );
+    for (const a of ended) {
+      if (clockedIds.has(a.id) || anyPunch.has(a.id)) continue;
+      totals.attendance!.absent += 1;
+      if (byPerson) rowFor(a.employee.id, `${a.employee.firstName} ${a.employee.lastName}`).attendance!.absent += 1;
     }
   }
 

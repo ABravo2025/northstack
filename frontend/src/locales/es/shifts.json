@@ -439,7 +439,8 @@
         "add": "Sumar",
         "remove": "Restar"
       }
-    }
+    },
+    "clockedVsPlanned": "fichado {{clocked}} · planificado {{planned}}"
   },
   "approvals": {
     "title": "Aprobaciones",
@@ -508,7 +509,10 @@
     "approved": "Aprobado",
     "approvedHint": "{{hours}} aprobadas",
     "plannedCost": "{{cost}} planificado",
-    "emptyBody": "No hay nada planificado ni cargado este mes."
+    "emptyBody": "No hay nada planificado ni cargado este mes.",
+    "clocked": "Fichado",
+    "late": "Tardanzas",
+    "absent": "Ausencias"
   },
   "requests": {
     "title": "Pedidos",

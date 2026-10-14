@@ -187,7 +187,9 @@
     "clock": {
       "overtime": "{{name}} fichó en {{location}} sin turno: se agregaron {{hours}} como tiempo extra",
       "autoClosed": "{{name}} no fichó la salida en {{location}}: se cerró al terminar el turno, revisalo",
-      "autoClosedOwn": "No fichaste la salida en {{location}}: la cerramos al terminar el turno. Quien arma los turnos lo va a revisar."
+      "autoClosedOwn": "No fichaste la salida en {{location}}: la cerramos al terminar el turno. Quien arma los turnos lo va a revisar.",
+      "summary": "Asistencia de ayer — ausencias: {{absent}} · tardanzas: {{late}} · fichajes para revisar: {{review}}",
+      "summaryLine": "{{location}} — ausencias: {{absent}} · tardanzas: {{late}}"
     },
     "request": {
       "swapAsk": "{{name}} te propone cambiar: su turno del {{when}} por el tuyo del {{otherWhen}}",

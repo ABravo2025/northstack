@@ -13,7 +13,7 @@ import { weekStartFor } from './timesheetService.js';
 import { expireStartedRequests } from './shiftRequestService.js';
 import { notifyExpired } from './shiftRequestNotifier.js';
 import { autoCloseOpenEntries } from './clockService.js';
-import { notifyAutoClosed } from './clockNotifier.js';
+import { notifyAutoClosed, sendAttendanceSummaries } from './clockNotifier.js';
 
 // Shifts module, Unidad 8 (spec-shifts.md §0.4) — the one daily run (Vercel Hobby = crons once a
 // day). In order:
@@ -352,6 +352,7 @@ export interface ShiftReminderRunResult {
   timesheet: number;
   expiredRequests: number;
   autoClosedPunches: number;
+  attendanceSummaries: number;
 }
 
 export async function runShiftReminders(now: Date = new Date(), only?: string): Promise<ShiftReminderRunResult> {
@@ -389,5 +390,7 @@ export async function runShiftReminders(now: Date = new Date(), only?: string): 
     },
     0,
   );
-  return { tomorrow, unanswered, skillHolders: skills.holders, skillManagers: skills.managers, timesheet, expiredRequests, autoClosedPunches };
+  // After auto-closing, so today's review count includes them.
+  const attendanceSummaries = await step('attendance summaries', () => sendAttendanceSummaries(now, only), 0);
+  return { tomorrow, unanswered, skillHolders: skills.holders, skillManagers: skills.managers, timesheet, expiredRequests, autoClosedPunches, attendanceSummaries };
 }

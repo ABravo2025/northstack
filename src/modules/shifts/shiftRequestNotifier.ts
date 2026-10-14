@@ -38,7 +38,9 @@ async function managers(r: LoadedRequest): Promise<Recipient[]> {
   return [...new Map(all.filter((u) => !skip.has(u.id)).map((u) => [u.id, u])).values()];
 }
 
-async function tell(r: LoadedRequest, to: Recipient[], type: NotificationType, key: string, url: string) {
+// `onShift`: link the bell to the recipient's shift instead of the request (a colleague's swap
+// proposal is answered from My shifts, not from the schedulers' Requests page).
+async function tell(r: LoadedRequest, to: Recipient[], type: NotificationType, key: string, url: string, onShift = false) {
   for (const u of to) {
     const vars = {
       name: name(r.requestedBy),
@@ -48,7 +50,14 @@ async function tell(r: LoadedRequest, to: Recipient[], type: NotificationType, k
       location: r.shift.location.name,
     };
     const message = t(u.locale, key, vars);
-    await createNotification({ tenantId: r.tenantId, userId: u.id, type, entityType: 'shiftRequest', entityId: r.id, message }).catch((err) =>
+    await createNotification({
+      tenantId: r.tenantId,
+      userId: u.id,
+      type,
+      entityType: onShift ? 'shift' : 'shiftRequest',
+      entityId: onShift ? (r.targetShiftId ?? r.shiftId) : r.id,
+      message,
+    }).catch((err) =>
       console.error('Failed to create shift request notification:', err),
     );
     await sendShiftRequestEmail({ to: u.email, locale: u.locale, firstName: u.firstName, message, note: r.decisionNote ?? r.reason, url });
@@ -64,7 +73,7 @@ export async function notifyRequest(outcome: RequestOutcome): Promise<void> {
     const requester = await userOf(r.requestedByEmployeeId);
     const target = await userOf(r.targetEmployeeId);
     if (outcome.notice === 'peer' && target) {
-      await tell(r, [target], 'shift_request', 'swapAsk', mineUrl());
+      await tell(r, [target], 'shift_request', 'swapAsk', mineUrl(), true);
     } else if (outcome.notice === 'manager') {
       const key = r.type === 'claim' ? 'managerClaim' : r.type === 'give' ? 'managerCover' : 'managerSwap';
       await tell(r, await managers(r), 'shift_request', key, requestsUrl());

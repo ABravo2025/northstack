@@ -288,6 +288,26 @@ export default function ShiftsSettingsPage({ token }: ShiftsSettingsPageProps) {
       </div>
 
       <section className="card rules-card">
+        <h3 className="card-title">{t('settings.swaps.title')}</h3>
+        <p className="rules-lead">{t('settings.swaps.lead')}</p>
+        <label className="rules-switch">
+          <input type="checkbox" checked={settings.allowSwaps} onChange={() => save({ allowSwaps: !settings.allowSwaps })} />
+          {t('settings.swaps.allow')}
+        </label>
+        {settings.allowSwaps && (
+          <label className="rules-switch">
+            <input type="checkbox" checked={settings.swapNeedsApproval} onChange={() => save({ swapNeedsApproval: !settings.swapNeedsApproval })} />
+            {t('settings.swaps.swapApproval')}
+          </label>
+        )}
+        <label className="rules-switch">
+          <input type="checkbox" checked={settings.openShiftNeedsApproval} onChange={() => save({ openShiftNeedsApproval: !settings.openShiftNeedsApproval })} />
+          {t('settings.swaps.openApproval')}
+        </label>
+        <p className="rules-hint">{t('settings.swaps.hint')}</p>
+      </section>
+
+      <section className="card rules-card">
         <h3 className="card-title">{t('settings.timesheet.title')}</h3>
         <p className="rules-lead">{t('settings.timesheet.lead')}</p>
         <label className="rules-switch">

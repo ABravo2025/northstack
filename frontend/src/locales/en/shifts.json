@@ -105,6 +105,14 @@
       "cost": "Show schedule cost",
       "costHint": "Hours × each person's hourly rate from Payroll. Only people with Payroll access see it.",
       "costGrowth": "Schedule cost is part of the Growth plan (it uses Payroll rates)."
+    },
+    "swaps": {
+      "title": "Changes between people",
+      "lead": "People can take free places on open shifts, hand their shift to whoever covers it, or swap with a colleague.",
+      "allow": "Let people hand over and swap their shifts",
+      "swapApproval": "Hand-overs and swaps need a scheduler's approval",
+      "openApproval": "Taking a free place on an open shift needs a scheduler's approval",
+      "hint": "When someone coming in has a warning (rest, availability, time off, skills), a scheduler always approves it."
     }
   },
   "nav": {
@@ -115,7 +123,8 @@
     "settings": "Settings",
     "timesheet": "Timesheet",
     "approvals": "Approvals",
-    "reports": "Reports"
+    "reports": "Reports",
+    "requests": "Requests"
   },
   "status": {
     "draft": "Draft",
@@ -496,5 +505,76 @@
     "approvedHint": "{{hours}} approved",
     "plannedCost": "{{cost}} planned",
     "emptyBody": "Nothing planned or logged this month."
+  },
+  "requests": {
+    "title": "Requests",
+    "subtitle": "Open-shift claims, hand-overs and swaps waiting for your approval.",
+    "notScheduler": "You don't schedule any location, so there's nothing to approve here.",
+    "col": {
+      "what": "Request",
+      "warnings": "Warnings",
+      "asked": "Asked",
+      "actions": "Actions"
+    },
+    "emptyPending": "Nothing waiting for approval",
+    "recentTitle": "Decided in the last 30 days",
+    "approve": "Approve",
+    "decline": "Decline",
+    "accept": "Accept",
+    "cancel": "Cancel request",
+    "declineTitle": "Decline request",
+    "declineGiveHint": "The shift stays with the person who handed it over and goes back to the available list.",
+    "noteLabel": "Note (optional)",
+    "approvedToast": "Approved",
+    "declinedToast": "Declined",
+    "failed": "Couldn't do it: {{message}}",
+    "status": {
+      "open": "Looking for cover",
+      "pending_peer": "Waiting for the colleague",
+      "pending_manager": "Waiting for approval",
+      "approved": "Done",
+      "declined": "Declined",
+      "cancelled": "Cancelled",
+      "expired": "Expired"
+    },
+    "text": {
+      "claim": "{{name}} takes the open shift {{shift}}",
+      "give": "{{name}} is looking for cover for {{shift}}",
+      "giveTaken": "{{other}} covers {{name}}'s shift {{shift}}",
+      "swap": "{{name}} swaps {{shift}} with {{other}} for {{otherShift}}"
+    },
+    "reason": "Reason: {{reason}}",
+    "note": "Note: {{note}}",
+    "availableTitle": "Available to take",
+    "availableLead": "Free places on open shifts and shifts colleagues are handing over.",
+    "availableEmpty": "Nothing available right now.",
+    "places": "{{free}} of {{total}} places free",
+    "handedOverBy": "Handed over by {{name}}",
+    "needsApproval": "Needs a scheduler's approval",
+    "take": "Take it",
+    "taken": "It's yours",
+    "sentForApproval": "Sent: waiting for a scheduler's approval",
+    "mineTitle": "My requests",
+    "answered": "Answer sent",
+    "cancelled": "Request cancelled",
+    "giveAction": "Find someone to cover",
+    "swapAction": "Swap with someone",
+    "giveTitle": "Find someone to cover",
+    "giveBody": "{{shift}} shows up as available to your colleagues. You stay on it until someone takes it and it's approved.",
+    "giveConfirm": "Offer it",
+    "giveHint": "You'll get a notice when someone covers it.",
+    "giveSent": "Your shift is offered to your colleagues",
+    "swapTitle": "Swap with someone",
+    "swapBody": "Your shift {{shift}} for one of a colleague's, at the same location.",
+    "pickTarget": "Their shift",
+    "pickTargetPlaceholder": "Pick a shift",
+    "noTargets": "No colleague has a shift at this location in the next 30 days.",
+    "swapConfirm": "Propose the swap",
+    "swapHint": "Your colleague accepts first; then it may need a scheduler's approval.",
+    "swapSent": "Swap proposed",
+    "reasonLabel": "Reason (optional)",
+    "reasonPlaceholder": "e.g. Medical appointment",
+    "openToClaim": "Open to colleagues: anyone eligible can take a free place",
+    "openToClaimHint": "Free places show up in everyone's My shifts → Available to take."
   }
 }

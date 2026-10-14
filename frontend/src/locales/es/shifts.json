@@ -105,6 +105,14 @@
       "cost": "Mostrar el costo del cronograma",
       "costHint": "Horas × la tarifa por hora de cada persona en Payroll. Solo lo ven quienes tienen acceso a Payroll.",
       "costGrowth": "El costo del cronograma es parte del plan Growth (usa las tarifas de Payroll)."
+    },
+    "swaps": {
+      "title": "Cambios entre personas",
+      "lead": "Las personas pueden tomar lugares libres de turnos abiertos, ceder su turno a quien lo cubra o intercambiarlo con una compañera.",
+      "allow": "Permitir ceder e intercambiar turnos",
+      "swapApproval": "Ceder e intercambiar necesita la aprobación de quien arma los turnos",
+      "openApproval": "Tomar un lugar libre de un turno abierto necesita aprobación",
+      "hint": "Si quien entra tiene un aviso (descanso, disponibilidad, ausencia, habilidades), siempre lo aprueba quien arma los turnos."
     }
   },
   "nav": {
@@ -115,7 +123,8 @@
     "settings": "Configuración",
     "timesheet": "Timesheet",
     "approvals": "Aprobaciones",
-    "reports": "Reportes"
+    "reports": "Reportes",
+    "requests": "Pedidos"
   },
   "status": {
     "draft": "Borrador",
@@ -496,5 +505,76 @@
     "approvedHint": "{{hours}} aprobadas",
     "plannedCost": "{{cost}} planificado",
     "emptyBody": "No hay nada planificado ni cargado este mes."
+  },
+  "requests": {
+    "title": "Pedidos",
+    "subtitle": "Turnos abiertos que alguien quiere tomar, turnos cedidos e intercambios que esperan tu aprobación.",
+    "notScheduler": "No armás los turnos de ninguna locación, así que no hay nada para aprobar.",
+    "col": {
+      "what": "Pedido",
+      "warnings": "Avisos",
+      "asked": "Pedido el",
+      "actions": "Acciones"
+    },
+    "emptyPending": "Nada esperando aprobación",
+    "recentTitle": "Decididos en los últimos 30 días",
+    "approve": "Aprobar",
+    "decline": "Rechazar",
+    "accept": "Aceptar",
+    "cancel": "Cancelar pedido",
+    "declineTitle": "Rechazar pedido",
+    "declineGiveHint": "El turno sigue siendo de quien lo cedió y vuelve a la lista de disponibles.",
+    "noteLabel": "Nota (opcional)",
+    "approvedToast": "Aprobado",
+    "declinedToast": "Rechazado",
+    "failed": "No se pudo: {{message}}",
+    "status": {
+      "open": "Buscando quien cubra",
+      "pending_peer": "Esperando a la compañera",
+      "pending_manager": "Esperando aprobación",
+      "approved": "Hecho",
+      "declined": "Rechazado",
+      "cancelled": "Cancelado",
+      "expired": "Vencido"
+    },
+    "text": {
+      "claim": "{{name}} toma el turno abierto {{shift}}",
+      "give": "{{name}} busca quien cubra {{shift}}",
+      "giveTaken": "{{other}} cubre el turno de {{name}} {{shift}}",
+      "swap": "{{name}} cambia {{shift}} con {{other}} por {{otherShift}}"
+    },
+    "reason": "Motivo: {{reason}}",
+    "note": "Nota: {{note}}",
+    "availableTitle": "Para tomar",
+    "availableLead": "Lugares libres de turnos abiertos y turnos que tus compañeros ceden.",
+    "availableEmpty": "No hay nada disponible ahora.",
+    "places": "{{free}} de {{total}} lugares libres",
+    "handedOverBy": "Lo cede {{name}}",
+    "needsApproval": "Necesita aprobación",
+    "take": "Lo tomo",
+    "taken": "Es tuyo",
+    "sentForApproval": "Enviado: espera la aprobación de quien arma los turnos",
+    "mineTitle": "Mis pedidos",
+    "answered": "Respuesta enviada",
+    "cancelled": "Pedido cancelado",
+    "giveAction": "Buscar quien me cubra",
+    "swapAction": "Cambiar con alguien",
+    "giveTitle": "Buscar quien te cubra",
+    "giveBody": "{{shift}} aparece como disponible para tus compañeros. Seguís en el turno hasta que alguien lo tome y se apruebe.",
+    "giveConfirm": "Ofrecerlo",
+    "giveHint": "Te avisamos cuando alguien lo cubra.",
+    "giveSent": "Tu turno quedó ofrecido a tus compañeros",
+    "swapTitle": "Cambiar con alguien",
+    "swapBody": "Tu turno {{shift}} por uno de una compañera, en la misma locación.",
+    "pickTarget": "Su turno",
+    "pickTargetPlaceholder": "Elegí un turno",
+    "noTargets": "Ninguna compañera tiene turnos en esta locación en los próximos 30 días.",
+    "swapConfirm": "Proponer el cambio",
+    "swapHint": "Primero acepta tu compañera; después puede necesitar aprobación.",
+    "swapSent": "Cambio propuesto",
+    "reasonLabel": "Motivo (opcional)",
+    "reasonPlaceholder": "p. ej. Turno médico",
+    "openToClaim": "Abierto a compañeros: cualquiera que pueda toma un lugar libre",
+    "openToClaimHint": "Los lugares libres aparecen en Mis turnos → Para tomar de todos."
   }
 }

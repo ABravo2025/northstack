@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../api';
-import { CalendarIcon, CheckIcon, ChevronLeftIcon, ClockIcon, DashboardIcon, GearIcon, ListIcon, XIcon } from '../common/Icons';
+import { CalendarIcon, CheckIcon, ChevronLeftIcon, ClockIcon, CopyIcon, DashboardIcon, GearIcon, ListIcon, XIcon } from '../common/Icons';
 import { usePermissions } from '../../contexts/PermissionsContext';
 
 interface ShiftsSidebarProps {
@@ -35,6 +35,15 @@ export default function ShiftsSidebar({ token, mobileOpen, onMobileClose }: Shif
   const navigate = useNavigate();
   const permissions = usePermissions();
   const canSchedule = useCanSchedule(token);
+  // Phase 2: requests waiting for a scheduler's approval.
+  const [pendingRequests, setPendingRequests] = useState(0);
+  useEffect(() => {
+    if (!canSchedule) return;
+    api
+      .listShiftRequests(token, 'manage')
+      .then((r) => setPendingRequests(r.requests.filter((x) => x.status === 'pending_manager').length))
+      .catch(() => setPendingRequests(0));
+  }, [token, canSchedule]);
   // Timesheet (Unidad 11): only when the company uses it; Approvals for whoever approves anyone
   // (the permission, or having direct reports), with how many weeks wait for them.
   const [timesheet, setTimesheet] = useState<{ enabled: boolean; canApprove: boolean; pending: number }>({ enabled: false, canApprove: false, pending: 0 });
@@ -71,6 +80,13 @@ export default function ShiftsSidebar({ token, mobileOpen, onMobileClose }: Shif
             <NavLink to="/shifts" end className={linkClass} onClick={onMobileClose}>
               <CalendarIcon className="h-4 w-4 shrink-0" />
               {t('nav.schedule')}
+            </NavLink>
+          )}
+          {canSchedule && (
+            <NavLink to="/shifts/requests" className={linkClass} onClick={onMobileClose}>
+              <CopyIcon className="h-4 w-4 shrink-0" />
+              {t('nav.requests')}
+              {pendingRequests > 0 && <span className="ml-auto rounded-full bg-accent px-1.5 text-[11px] leading-5 font-semibold text-white dark:bg-brand-blue-light dark:text-dark-page">{pendingRequests}</span>}
             </NavLink>
           )}
           <NavLink to="/shifts/mine" className={linkClass} onClick={onMobileClose}>

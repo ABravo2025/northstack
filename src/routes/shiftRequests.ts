@@ -71,7 +71,7 @@ shiftRequestsRouter.get('/api/shifts/requests', async (req, res) => {
     if (locationIds && locationIds.length === 0) return res.json({ canManage: false, requests: [] });
     return res.json({ canManage: true, requests: await listRequests(ctx.user.tenantId!, { scope: 'manage', locationIds }) });
   }
-  return res.json({ requests: ctx.employeeId ? await listRequests(ctx.user.tenantId!, { scope: 'mine', employeeId: ctx.employeeId }) : [] });
+  return res.json({ employeeId: ctx.employeeId, requests: ctx.employeeId ? await listRequests(ctx.user.tenantId!, { scope: 'mine', employeeId: ctx.employeeId }) : [] });
 });
 
 // Scheduler: open (or close) a published shift's free places to anyone eligible.

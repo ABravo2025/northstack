@@ -148,6 +148,18 @@ export default function ShiftDetailModal({ token, shift, canManage, onClose, onC
         <div className="sh-detail">
           {shift.status === 'draft' && <p className="sh-note-box">{t('detail.draftHint')}</p>}
           {shift.status === 'cancelled' && <p className="sh-note-box">{t('detail.cancelledHint')}</p>}
+          {editable && shift.status === 'published' && (
+            <label className="rules-switch">
+              <input
+                type="checkbox"
+                checked={!!shift.openToClaim}
+                disabled={busy}
+                onChange={() => run(async () => onChanged(await api.setShiftOpen(token, shift.id, !shift.openToClaim)))}
+              />
+              {t('requests.openToClaim')}
+            </label>
+          )}
+          {shift.openToClaim && shift.status === 'published' && <p className="rules-hint m-0">{t('requests.openToClaimHint')}</p>}
           <dl className="sh-detail-meta">
             <dt>{t('form.date')}</dt>
             <dd className="capitalize">{date}</dd>

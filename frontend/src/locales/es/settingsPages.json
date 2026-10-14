@@ -994,6 +994,7 @@
     "category": {
       "shifts": "Turnos nuevos, modificados o cancelados",
       "shiftReminders": "Recordatorios: turnos de mañana y turnos que esperan mi respuesta",
+      "shiftSwaps": "Turnos cedidos e intercambios: pedidos, aprobaciones y resultados",
       "shiftDeclined": "Alguien no puede cubrir un turno que armé",
       "skillsExpiring": "Habilidades y habilitaciones por vencer",
       "timesheet": "Mi timesheet: semanas devueltas o reabiertas, horas sin cargar",

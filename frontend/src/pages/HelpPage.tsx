@@ -247,6 +247,26 @@ const FAQ_CATEGORIES: FaqCategory[] = [
         q: 'How many locations can I have?',
         a: 'Starter allows 1 active location; Growth has no limit. A location with shifts can\'t be deleted, but it can be deactivated, which keeps its history.',
       },
+      {
+        q: 'Who approves my timesheet?',
+        a: 'Your direct manager, or anyone whose role can approve timesheets. Once approved the week is closed: to fix it, request an adjustment from your timesheet, or ask for it to be reopened.',
+      },
+      {
+        q: 'Are the suggested hours logged automatically?',
+        a: 'No. Shifts, completed tasks, meetings and Google Calendar events only show up as suggestions. You check the time and add them; nothing is logged until you do.',
+      },
+      {
+        q: 'Why doesn\'t a shift appear in my timesheet yet?',
+        a: 'Shifts are suggested once they end, and only if you accepted them. Upcoming and unconfirmed shifts are counted in Shifts → Reports as planned hours.',
+      },
+      {
+        q: 'Who can see the schedule cost?',
+        a: 'Only people with Payroll access, and only if the company turned on "Show schedule cost" in Settings → Shifts (Growth). It uses each person\'s hourly rate from Payroll; fixed salaries are shown as hours without a rate.',
+      },
+      {
+        q: 'Can I stop getting some emails?',
+        a: 'Yes. In Settings → Profile → Email notifications, turn off the ones you don\'t want. The bell keeps showing everything, and account emails always arrive.',
+      },
     ],
   },
   {
@@ -536,6 +556,26 @@ const FAQ_CATEGORIES_ES: FaqCategory[] = [
       {
         q: '¿Cuántas locaciones puedo tener?',
         a: 'Starter permite 1 locación activa; Growth no tiene límite. Una locación con turnos no se puede eliminar, pero sí desactivar, y conserva su historial.',
+      },
+      {
+        q: '¿Quién aprueba mi timesheet?',
+        a: 'Tu manager directo, o quien tenga un rol que pueda aprobar timesheets. Una vez aprobada, la semana queda cerrada: para corregirla, pedí un ajuste desde tu timesheet o que te la reabran.',
+      },
+      {
+        q: '¿Las horas sugeridas se cargan solas?',
+        a: 'No. Los turnos, las tareas completadas, las reuniones y los eventos de Google Calendar aparecen como sugerencias. Revisás el tiempo y las agregás; no se carga nada hasta que lo hagas.',
+      },
+      {
+        q: '¿Por qué un turno todavía no aparece en mi timesheet?',
+        a: 'Los turnos se sugieren cuando terminan, y solo si los aceptaste. Los que vienen y los sin confirmar se cuentan en Turnos → Reportes como horas planificadas.',
+      },
+      {
+        q: '¿Quién puede ver el costo del cronograma?',
+        a: 'Solo quienes tienen acceso a Payroll, y solo si la empresa activó "Mostrar el costo del cronograma" en Configuración → Turnos (Growth). Usa la tarifa por hora de cada persona en Payroll; los sueldos fijos se muestran como horas sin tarifa.',
+      },
+      {
+        q: '¿Puedo dejar de recibir algunos emails?',
+        a: 'Sí. En Configuración → Perfil → Notificaciones por email, apagá los que no quieras. La campana sigue mostrando todo, y los emails de la cuenta siempre llegan.',
       },
     ],
   },

@@ -102,7 +102,7 @@ const MODULE_MAP: { id: string; label: string; blurb: string; icon: JSX.Element 
   { id: 'g-payroll', label: 'Payroll', blurb: 'Compensation, pay runs, payslips.', icon: <BriefcaseIcon /> },
   { id: 'g-tasks', label: 'Tasks & notes', blurb: 'Follow-ups on any record.', icon: <ListIcon /> },
   { id: 'g-projects', label: 'Projects', blurb: 'Phases, tasks and teams, blank or from a template.', icon: <FolderIcon /> },
-  { id: 'g-shifts', label: 'Shifts', blurb: 'Schedule shifts by location; people confirm by app or email.', icon: <ClockIcon /> },
+  { id: 'g-shifts', label: 'Shifts', blurb: 'Shifts by location, timesheets, approvals and hours reports.', icon: <ClockIcon /> },
   { id: 'g-forms', label: 'Public forms', blurb: 'No-login intake for hiring and leads.', icon: <FormIcon /> },
   { id: 'g-integrations', label: 'Integrations & API', blurb: 'Google Calendar, Stripe, API keys.', icon: <PlugIcon /> },
   { id: 'g-settings', label: 'Settings', blurb: 'Company profile, logo, currency, theme.', icon: <GearIcon /> },
@@ -167,7 +167,7 @@ const MODULE_MAP_ES: { id: string; label: string; blurb: string; icon: JSX.Eleme
   { id: 'g-payroll', label: 'Nómina', blurb: 'Compensación, corridas de pago, recibos de sueldo.', icon: <BriefcaseIcon /> },
   { id: 'g-tasks', label: 'Tareas y notas', blurb: 'Seguimientos sobre cualquier registro.', icon: <ListIcon /> },
   { id: 'g-projects', label: 'Proyectos', blurb: 'Fases, tareas y equipos, en blanco o desde un template.', icon: <FolderIcon /> },
-  { id: 'g-shifts', label: 'Turnos', blurb: 'Turnos por locación; cada persona confirma por app o email.', icon: <ClockIcon /> },
+  { id: 'g-shifts', label: 'Turnos', blurb: 'Turnos por locación, timesheet, aprobaciones y reportes de horas.', icon: <ClockIcon /> },
   { id: 'g-forms', label: 'Formularios públicos', blurb: 'Carga sin login para reclutamiento y leads.', icon: <FormIcon /> },
   { id: 'g-integrations', label: 'Integraciones y API', blurb: 'Google Calendar, Stripe, claves de API.', icon: <PlugIcon /> },
   { id: 'g-settings', label: 'Configuración', blurb: 'Datos de la empresa, logo, moneda, tema.', icon: <GearIcon /> },
@@ -1837,9 +1837,81 @@ export default function GuidePage() {
             </div>
 
             <div className="help-sub">
+              <h3>Habilidades y habilitaciones (Growth)</h3>
+              <p>
+                En <strong>Configuración → Turnos → Habilidades y habilitaciones</strong> cargás lo que un turno puede
+                requerir (por ejemplo, "Manejo de reactivos") y quién lo tiene, con fecha de vencimiento si corresponde.
+                En el formulario del turno marcás las habilidades requeridas: al asignar, quien no la tiene o la tiene
+                vencida muestra un aviso, y podés asignarlo igual.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Recordatorios</h3>
+              <p>
+                Una vez por día, a la mañana, Northstack recuerda los turnos del día siguiente, los turnos que todavía
+                esperan respuesta, las habilidades que vencen (a los 30 días, a los 7 y el último día) y las horas de
+                turnos de ayer que no se cargaron en el timesheet. Cada recordatorio se activa o desactiva en
+                Configuración → Turnos.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Timesheet: registrar las horas</h3>
+              <ol className="help-steps">
+                <li>
+                  Abrí <strong>Turnos → Timesheet</strong>. Arriba ves lo cargado, lo planificado en turnos y cada día
+                  de la semana.
+                </li>
+                <li>
+                  En <strong>Sugeridas por tu actividad</strong> aparece lo que probablemente trabajaste: turnos que ya
+                  terminaron, tareas completadas, reuniones con videollamada y eventos de tu Google Calendar. Revisá los
+                  minutos y tocá <strong>Agregar</strong>, o <strong>Descartar</strong>. Nada se carga solo.
+                </li>
+                <li>
+                  Para algo que no aparece, <strong>+ Agregar horas</strong>: día, tiempo, descripción, proyecto,
+                  empresa y, en Growth, si es facturable.
+                </li>
+                <li>
+                  Cuando la semana está completa, <strong>Enviar semana</strong>. Tu manager directo (o quien tenga el
+                  permiso de aprobar timesheets) la aprueba o te la devuelve con un comentario.
+                </li>
+              </ol>
+              <p>
+                Una semana aprobada queda cerrada. Si hay que corregirla, usá <strong>Pedir un ajuste</strong> (sumar o
+                restar tiempo, con motivo): queda en tu semana actual y se aprueba con ella. Quien aprueba también puede
+                reabrirla con un motivo. Al completar una tarea, Northstack te pregunta <strong>¿Cuánto te llevó?</strong>,
+                y el detalle de cada tarea tiene un <strong>timer</strong>: ese tiempo se usa en la sugerencia.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Aprobaciones y reportes</h3>
+              <p>
+                <strong>Turnos → Aprobaciones</strong> lista las semanas que esperan tu decisión (con el número en el
+                menú). Cada una abre el timesheet de esa persona con <strong>Aprobar</strong>, <strong>Devolver</strong>
+                o <strong>Reabrir</strong>. <strong>Turnos → Reportes</strong> muestra todo el mes por persona, empresa
+                o proyecto: turnos planificados (los que ya pasaron, los que vienen y los sin confirmar), horas
+                cargadas, aprobadas y facturables, con descarga en CSV. Si activás <strong>Mostrar el costo del
+                cronograma</strong> (Growth), quienes tienen acceso a Payroll ven el costo según la tarifa por hora de
+                cada persona, también en el Cronograma. Agrupando por empresa, <strong>Facturar horas</strong> arma la
+                factura de Stripe con las horas facturables por tu tarifa, para revisarla antes de enviarla.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Qué emails recibís</h3>
+              <p>
+                En <strong>Configuración → Perfil → Notificaciones por email</strong> cada persona elige qué emails
+                recibe (turnos, recordatorios, timesheet, ausencias, ventas). La campana sigue mostrando todo, y los
+                emails de la cuenta (contraseña, invitaciones, facturación) siempre llegan.
+              </p>
+            </div>
+
+            <div className="help-sub">
               <h3>Permisos y planes</h3>
               <p>
-                Cada persona ve y responde sus propios turnos. <strong>Ver el cronograma completo</strong> deja ver
+                Cada persona ve y responde sus propios turnos y carga su timesheet. <strong>Aprobar timesheets</strong> deja aprobar el de cualquiera y ver los reportes. <strong>Ver el cronograma completo</strong> deja ver
                 todos los turnos, y <strong>Gestionar turnos</strong> deja armarlos y configurar el módulo
                 (Configuración → Roles y permisos). Para recibir turnos, la persona necesita acceso a Northstack. En el
                 plan <strong>Starter</strong> podés tener 1 locación activa; <strong>Growth</strong> no tiene límite.
@@ -1913,9 +1985,81 @@ export default function GuidePage() {
             </div>
 
             <div className="help-sub">
+              <h3>Skills and certifications (Growth)</h3>
+              <p>
+                In <strong>Settings → Shifts → Skills and certifications</strong> you list what a shift can require (for
+                example, "Reagent handling") and who holds it, with an expiry date if it has one. Mark the required
+                skills in the shift form: when assigning, anyone who lacks one or has it expired shows a warning, and
+                you can still assign them.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Reminders</h3>
+              <p>
+                Once a day, in the morning, Northstack reminds people of tomorrow's shifts, shifts still waiting for an
+                answer, skills about to expire (30 days, 7 days and the last day) and yesterday's shift hours not yet
+                logged in the timesheet. Each reminder can be turned on or off in Settings → Shifts.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Timesheet: logging hours</h3>
+              <ol className="help-steps">
+                <li>
+                  Open <strong>Shifts → Timesheet</strong>. At the top you see what you logged, what your shifts
+                  planned, and each day of the week.
+                </li>
+                <li>
+                  <strong>Suggested from your activity</strong> lists what you probably worked on: shifts that ended,
+                  completed tasks, video-call meetings and your Google Calendar events. Check the minutes and tap
+                  <strong> Add</strong>, or <strong>Dismiss</strong>. Nothing is logged on its own.
+                </li>
+                <li>
+                  For anything missing, <strong>+ Add hours</strong>: day, time, description, project, company and, on
+                  Growth, whether it's billable.
+                </li>
+                <li>
+                  When the week is complete, <strong>Send week</strong>. Your direct manager (or anyone allowed to
+                  approve timesheets) approves it or sends it back with a note.
+                </li>
+              </ol>
+              <p>
+                An approved week is closed. To correct it, use <strong>Request adjustment</strong> (add or remove time,
+                with a reason): it goes into your current week and is approved with it. Approvers can also reopen it
+                with a reason. When you complete a task, Northstack asks <strong>How long did it take?</strong>, and
+                each task's detail has a <strong>timer</strong>: that time is used in the suggestion.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Approvals and reports</h3>
+              <p>
+                <strong>Shifts → Approvals</strong> lists the weeks waiting for your decision (with a count in the
+                menu). Each opens that person's timesheet with <strong>Approve</strong>, <strong>Send back</strong> or
+                <strong> Reopen</strong>. <strong>Shifts → Reports</strong> shows the whole month by person, company or
+                project: planned shifts (done, upcoming and unconfirmed), logged, approved and billable hours, with a
+                CSV download. If you turn on <strong>Show schedule cost</strong> (Growth), people with Payroll access see
+                the cost at each person's hourly rate, on the schedule too. Grouped by company, <strong>Invoice
+                hours</strong> fills in the Stripe invoice with the billable hours at your rate, for you to review
+                before sending.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Which emails you get</h3>
+              <p>
+                In <strong>Settings → Profile → Email notifications</strong> each person picks which emails they get
+                (shifts, reminders, timesheet, time off, sales). The bell still shows everything, and account emails
+                (password, invitations, billing) always arrive.
+              </p>
+            </div>
+
+            <div className="help-sub">
               <h3>Permissions and plans</h3>
               <p>
-                Everyone sees and answers their own shifts. <strong>View the whole schedule</strong> shows every
+                Everyone sees and answers their own shifts and fills in their own timesheet. <strong>Approve
+                timesheets</strong> lets someone approve anyone's week and see the reports. <strong>View the whole schedule</strong> shows every
                 shift, and <strong>Manage shifts</strong> lets someone build them and set up the module (Settings →
                 Roles &amp; Permissions). To get shifts, a person needs access to Northstack. The
                 <strong> Starter</strong> plan allows 1 active location; <strong>Growth</strong> has no limit.

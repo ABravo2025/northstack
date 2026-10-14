@@ -1,23 +1,24 @@
-# Post 02 · A customer asked for shifts (EN)
+# Post 02 · A question that became a module (EN)
 **Publish:** Friday Oct 16, 8–10 am · **Where:** Alejandro's personal profile ·
-**Pillar:** founder / behind the scenes · **Visual:** a photo of Alejandro at work or a screenshot
-of the Shifts screen. A real photo of the person usually beats a screenshot.
+**Pillar:** founder / behind the scenes · **Visual:** a photo of Alejandro at work (beats a
+screenshot) or, failing that, `../gif/turnos-en.gif`.
 
-> ⚠️ Check before publishing: that the lab is fine with being mentioned (unnamed, as it is now) and
-> that the timeline is accurate.
+> The lab asked but isn't a customer yet: the text says so and doesn't name them.
 
 ---
 
-A few weeks ago, a lab that uses Northstack sent me a message:
+A few weeks ago, a lab sent us a question:
 
-"We have people across several sites, with hours that change every week. Can we manage shifts here too?"
+"We have people across several sites, with hours that change every week. Can Northstack handle shift scheduling?"
 
-It wasn't on our roadmap. But what they described wasn't a lab problem. It's the same problem a clinic, a store, a security company or a cleaning crew has.
+The honest answer was no. It wasn't on our roadmap.
 
-So we built it. And this week, Shifts went live for every customer.
+But what they described wasn't just a lab problem. It's the same one a clinic, a store, a security company or a cleaning crew has: plan the week, tell everyone, then chase each person on WhatsApp until they confirm.
 
-That's what I love most about building for small businesses: feedback doesn't go through five committees. A customer tells you what hurts and, if it makes sense for many, you build it.
+So we built it. And this week, Shifts went live in Northstack.
 
-If you run a team of 5 to 50 and there's something you still handle with spreadsheets and group chats, tell me what it is. Send me a DM: I'll show you Northstack in 20 minutes and, if something's missing, let's talk about it.
+That's what I love most about building for small businesses: there aren't five committees between a good idea and the product. Someone tells you what hurts and, if it makes sense for many, you build it.
 
-#Startups #SmallBusiness #BuildInPublic
+If you run a team of 5 to 50 and there's something you still handle with spreadsheets and group chats, tell me in the comments or send me a DM. I'll show you Northstack in 20 minutes and, if something's missing, let's talk.
+
+#Startups #SmallBusiness #Entrepreneurship

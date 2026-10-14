@@ -1,25 +1,24 @@
 # Post 02 · Proyectos: el cierre de mes (ES)
-**Publicar:** miércoles 21/10, 8–10 h · **Dónde:** página de Northstack (Alejandro lo comparte) ·
-**Pilar:** producto · **Visual:** captura de la vista previa de la plantilla "Cierre mensual"
-(estudio contable) con las tareas por rol, en la empresa demo "Acme Latam".
+**Publicar:** miércoles 21/10, 8–10 h · **Dónde:** página de Northstack (Alejandro lo comparte con
+una línea propia) · **Pilar:** producto · **Visual:** `../../semana-03/gif/proyectos-es.gif` (botón de **foto**).
 
 ---
 
-Todos los meses, el mismo cierre. Y todos los meses, arrancar de cero.
+Todos los meses, el mismo cierre. Y todos los meses, empezar de cero.
 
-En un estudio contable, el cierre de mes son las mismas tareas una y otra vez: pedir comprobantes, conciliar, liquidar impuestos, revisar y enviar al cliente. Cambia el cliente y el mes, pero no el proceso.
+En un estudio contable, el cierre de mes son las mismas tareas una y otra vez: pedir comprobantes, conciliar, liquidar impuestos, revisar y presentar. Cambian el cliente y el mes, pero no el proceso.
 
 Con Proyectos en Northstack, eso se arma en un clic:
 
-📋 Elegís una plantilla de tu rubro (estudios contables, agencias, consultoras o proyectos internos).
+📋 Eliges una plantilla de tu rubro (estudios contables, agencias, consultoras o proyectos internos).
 👥 Las tareas ya vienen repartidas por rol: quién pide, quién concilia, quién revisa.
 📊 Ves el avance de cada cliente y qué está trabado, sin preguntar por chat.
-💬 Cada tarea tiene su propia conversación con @menciones, así nada se pierde en el mail.
+💬 Cada tarea tiene su propia conversación con @menciones, así nada se pierde en el correo.
 
-Y si tu forma de trabajar es distinta, guardás tu propio proyecto como plantilla y lo reutilizás (plan Growth).
+Y si trabajas de otra forma, guardas tu propio proyecto como plantilla y lo reutilizas (plan Growth).
 
 ¿Cuánto tiempo pierde tu equipo armando lo mismo todos los meses? 👇
 
-¿Querés verlo con tus clientes y tu proceso? Escribinos a info@joinnorthstack.com o por privado y te lo mostramos en 20 minutos.
+¿Quieres verlo con tus clientes y tu proceso? Comenta "CIERRE" o escríbenos a info@joinnorthstack.com y te lo mostramos en 20 minutos.
 
-#EstudiosContables #Pymes #GestiónDeProyectos
+#EstudiosContables #Contadores #GestiónDeProyectos

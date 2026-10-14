@@ -1,7 +1,7 @@
 # Post 01 · 5 signs your team has outgrown spreadsheets (EN)
-**Publish:** Tuesday Oct 20, 8–10 am · **Where:** Northstack page (Alejandro reshares) ·
-**Pillar:** tips · **Visual:** 6-slide carousel (PDF): cover + one sign per slide. Carousels get
-saved and shared more than a single image.
+**Publish:** Tuesday Oct 20, 8–10 am · **Where:** Alejandro's profile (the page reshares) ·
+**Pillar:** tips · **Visual:** 6-slide PDF carousel (cover + one sign per slide). Documents/carousels
+are the highest-engagement format on LinkedIn.
 
 ---
 
@@ -23,6 +23,11 @@ If you checked two or more, it isn't a tidiness problem. Your team grew and your
 
 What would you add to the list? 👇
 
-Northstack brings people, time off, shifts, projects and sales into one place, with permissions so everyone sees only what they should. Try it free for 15 days 👉 joinnorthstack.com
+Northstack brings people, time off, shifts, projects and sales into one place, with permissions so everyone sees only what they should. The free trial link is in the first comment.
 
 #SmallBusiness #Startups #HR
+
+---
+
+## First comment
+Free 15-day trial, no credit card: joinnorthstack.com

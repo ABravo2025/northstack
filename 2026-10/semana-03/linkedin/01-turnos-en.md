@@ -1,7 +1,7 @@
 # Post 01 · Shifts (EN)
-**Publish:** Wednesday Oct 14, 8–10 am · **Where:** Northstack page (Alejandro reshares) ·
-**Pillar:** pain + product · **Visual:** screenshot of the Shifts calendar (Week view, several
-locations) or a short GIF of confirming a shift from the email.
+**Publish:** Wednesday Oct 14, 8–10 am · **Where:** Alejandro's profile (the Northstack page
+reshares) · **Pillar:** pain + product · **Visual:** `../gif/turnos-en.gif` (upload with the **photo**
+button, not the video one, so it animates).
 
 ---
 
@@ -18,18 +18,15 @@ That's why we built Shifts in Northstack:
 
 And if someone is on time off or it's a public holiday, you get a warning before you assign them.
 
-Built for labs, clinics, retail, security, cleaning crews: any team with more than one site or hours that keep changing.
+Built for labs, clinics, retail, security and cleaning crews: any team with more than one site or hours that keep changing.
 
 How does your team confirm shifts today? 👇
 
-Try it free for 15 days, no credit card 👉 joinnorthstack.com
+Want to see it with your own locations and hours? Comment "SHIFTS" and I'll send you a DM.
 
-#SmallBusiness #WorkforceManagement #HR
+#ShiftScheduling #SmallBusiness #HR
 
 ---
 
-## First comment
-Prefer to see it with your own locations and hours? Send me a DM or write to info@joinnorthstack.com and I'll walk you through it in 20 minutes.
-
-## Line for Alejandro's reshare
-This came from a specific customer request. If your team works in shifts, I'd love to hear what's missing.
+## First comment (right after publishing)
+Free 15-day trial, no credit card: joinnorthstack.com

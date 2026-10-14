@@ -1,7 +1,6 @@
 # Post 03 · Time off (EN)
-**Publish:** Thursday Oct 22, 8–10 am · **Where:** Northstack page (Alejandro reshares) ·
-**Pillar:** pain + product · **Visual:** screenshot of "My time off" with balances, or the Team
-view calendar. Alternative: the 1:1 demo video in `2026-10/semana-01/video/`.
+**Publish:** Thursday Oct 22, 8–10 am · **Where:** Alejandro's profile (the page reshares) ·
+**Pillar:** pain + product · **Visual:** `../../semana-03/gif/vacaciones-en.gif` (**photo** button).
 
 ---
 
@@ -11,7 +10,7 @@ If answering means opening a spreadsheet, counting public holidays and digging u
 
 In Northstack, time off is counted the way your company counts it:
 
-🗓️ Your country's public holidays loaded automatically, and you can edit them.
+🗓️ Your country's public holidays load automatically, and you can edit them.
 📆 Business days or calendar days, per policy.
 ⚖️ Live balances that never go negative.
 🔁 Unused days carry over or expire at year end, your call.
@@ -21,6 +20,11 @@ Everyone sees their own balance without asking anyone. And you stop being the te
 
 How does your company track time off today? 👇
 
-Try it free for 15 days, no credit card 👉 joinnorthstack.com
+The link to try it free for 15 days is in the first comment.
 
 #HR #SmallBusiness #PTO
+
+---
+
+## First comment
+Free 15-day trial, no credit card: joinnorthstack.com/time-off-software

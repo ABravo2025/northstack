@@ -110,12 +110,42 @@ first for the full reasoning and the code citations). Summary as it applies to t
   the code's real behavior now, not a promise ahead of a fix that hadn't happened yet.
 - Rewrote 6.1 to point at self-service deletion instead of "contact us," matching 9.1 of the
   Terms.
+
+2026-10-13 — Shifts/Timesheet (spec-shifts.md, 13 units) is now fully live on main — units
+1-6 (schedule, locations, shift notifications incl. Google Calendar sync) had been live since
+2026-10-07ish; units 7-13 (skills/certifications, timesheet backend, time-spent-on-tasks
+timer, approvals, hours/cost reports, notification prefs) landed on main mid-session today
+(commit ec6a9fd). This supersedes terms-of-service.md's 2026-10-06 note calling Timesheet
+"confirmed zero code anywhere" — that was true then, not now; see that file's matching note
+for the correction. Checked the actual schema (Shift, ShiftAssignment, EmployeeAvailability,
+Skill/EmployeeSkill, Timesheet/TimeEntry) and code for anything needing new disclosure:
+- No geolocation, biometric, or health data: shift clock-in/scheduling has no GPS, no photo,
+  no fingerprint. The task timer (Unit 10) is a self-started/stopped stopwatch the assignee
+  runs on their own tasks, not activity/screen monitoring.
+- Free-text fields (decline reasons, availability notes, timesheet entry descriptions) can
+  incidentally contain sensitive information the same way a Time Off reason or Task
+  description already can — already governed by the existing blanket Section 3.4 of the
+  Terms ("must not submit... health or medical information..."), which applies to anything
+  submitted to the Service, not just configured custom fields. No new carve-out needed.
+- Decided NOT to add a new Section 2.2 bullet for shift/timesheet data, on the same reasoning
+  terms-of-service.md's note already gives for Projects: this is an ordinary feature module
+  (schedules, availability, skills, hours) with no payment/liability angle like Payroll's, and
+  giving it its own bullet would be new precedent this doc doesn't otherwise follow for
+  Sales/CRM/Tasks/Projects. The existing broad Processed Data / Customer Data definition
+  already covers it.
+- Real gap found and fixed: Section 4.5 said Google Calendar syncs "Tasks and Time Off" —
+  factually incomplete since shift notifications (Unit 4) also create events on the
+  assignee's connected Google Calendar (ShiftCalendarSync model). Added Shifts to that list.
+  This is a sharing-accuracy fix, not a new-category decision, so it doesn't follow the
+  Projects "no new precedent" reasoning above — same standard as the Dodo/Paddle and Stripe
+  scope corrections earlier in this file.
+Bumped Effective Date to October 13, 2026 for this real, substantive (if narrow) correction.
 -->
 
 
 # Northstack Privacy Policy
 
-**Effective Date:** October 6, 2026
+**Effective Date:** October 13, 2026
 
 This Privacy Policy explains how Northstack ("**Northstack**," "**we**," "**us**," or
 "**our**"), operated by Alejandro Bravo, an individual based in Buenos Aires, Argentina,
@@ -264,8 +294,8 @@ subject to a different privacy policy.
 ### 4.5 Integrations you choose to connect
 
 The Service offers integrations that a Tenant may choose, at its own option, to connect to
-its own third-party accounts — currently Google Calendar (to sync Tasks and Time Off as
-calendar events) and Stripe. For Stripe: a Tenant connects its own Stripe account by
+its own third-party accounts — currently Google Calendar (to sync Tasks, Time Off, and
+Shifts as calendar events) and Stripe. For Stripe: a Tenant connects its own Stripe account by
 providing its own Stripe API key, and the Service only does what that key's own
 permissions allow — read-only if the Tenant's key is read-only, or, if the key grants write
 access, the Service can also create and send Stripe-hosted invoices to that Tenant's own

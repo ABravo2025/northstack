@@ -269,6 +269,16 @@ agent. Don't use support access with real clients until it's published."):
   staging) — just a plan/prototype artifact. Nothing to write; flagged to Alejandro rather
   than inventing forward-looking language he didn't ask for here (unlike MCP/2FA, which he
   explicitly asked to be announced as upcoming).
+
+2026-10-13 — Correction to the note directly above: that was true on 2026-10-06, not now.
+The full Shifts/Timesheet module (13 units) is live on main as of today (ec6a9fd) — see
+privacy-policy.md's matching dated note for the full data review (schema, free-text fields,
+the task timer). Same conclusion as Projects got here: its data (shift schedules, locations,
+availability, skills/certifications, logged hours) already falls under the existing, broad
+Section 3.1 Customer Data definition, same as every other module — no ToS text change. The
+one real gap (Google Calendar's integration description in Privacy Policy's Section 4.5
+being factually incomplete) was fixed there, not here, since this file doesn't itemize
+integrations.
 -->
 
 

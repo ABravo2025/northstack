@@ -12,7 +12,7 @@
 //   [data-ns-reg="starter|growth"]  regular price (struck through, only during the launch)
 //   [data-ns-off="starter|growth"]  "-40%" badge (hidden outside the launch)
 //   [data-ns-launch]                launch line; template in the attribute value ({date}, {pct})
-//   [data-pricing="min-users"|"trial-cap"]
+//   [data-pricing="min-users"|"trial-cap"|"trial-days"|"starter-projects"|...]  numbers from pricing.limits
 (function () {
   var APP = 'https://app.joinnorthstack.com';
 
@@ -74,6 +74,18 @@
       });
 
       var values = { 'min-users': String(pricing.minUsers || ''), 'trial-cap': String(pricing.freeTrialSeatCap || '') };
+      // 2026-10-14 plan review: trial length + the plan limits the comparison quotes. Older API
+      // responses don't carry them — the value stays empty and the static number in the HTML is kept.
+      var lim = pricing.limits || {}, st = lim.starter || {}, gr = lim.growth || {};
+      var num = function (n) { return typeof n === 'number' ? String(n) : ''; };
+      values['trial-days'] = num(pricing.trialDays);
+      values['starter-projects'] = num(st.maxActiveProjects);
+      values['starter-locations'] = num(st.maxActiveLocations);
+      values['starter-pipelines'] = num(st.maxPipelines);
+      values['starter-policies'] = num(st.maxTimeOffPolicies);
+      values['starter-roles'] = num(st.maxCustomRoles);
+      values['starter-log-days'] = num(st.activityLogRetentionDays);
+      values['growth-log-days'] = num(gr.activityLogRetentionDays);
       document.querySelectorAll('[data-pricing]').forEach(function (el) {
         var value = values[el.getAttribute('data-pricing')];
         if (value) el.textContent = value;

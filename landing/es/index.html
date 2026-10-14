@@ -202,6 +202,29 @@ section.block { padding-block: 84px; }
 .head { display: grid; gap: 14px; margin-bottom: 40px; max-width: 760px; }
 .pillars { display: grid; gap: 18px; grid-template-columns: 1fr; }
 @media (min-width: 860px) { .pillars { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 860px) {
+  .pillars { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .pillars .card { grid-column: span 2; }
+  .pillars .card:nth-child(n+4) { grid-column: span 3; }
+}
+/* Plans comparison (2026-10-14 plan review) */
+.cmp { margin-top: 26px; }
+.cmp summary { cursor: pointer; list-style: none; text-align: center; font-weight: 600; color: var(--violet); padding: 10px; }
+.cmp summary::-webkit-details-marker { display: none; }
+.cmp summary::after { content: " ↓"; }
+.cmp[open] summary::after { content: " ↑"; }
+.cmp-note { text-align: center; color: var(--ink-3); font-size: 14px; margin: 0 0 12px; }
+.cmp-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); }
+.cmp table { width: 100%; min-width: 520px; border-collapse: collapse; font-size: 14.5px; }
+.cmp th, .cmp td { padding: 10px 16px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+.cmp thead th { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); font-weight: 600; }
+.cmp .c { text-align: center; width: 22%; }
+.cmp tr.g td { background: var(--surface-2); font-size: 12.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-2); }
+.cmp tbody tr:last-child td { border-bottom: 0; }
+.cmp td small { display: block; color: var(--ink-3); font-size: 12.5px; }
+.cmp .y { color: var(--violet); font-weight: 700; }
+.cmp .n { color: var(--ink-3); }
+.cmp td b { font-weight: 600; font-variant-numeric: tabular-nums; }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 24px; box-shadow: var(--shadow); transition: transform .2s, box-shadow .2s, border-color .2s; }
 .card:hover { transform: translateY(-4px); border-color: color-mix(in srgb, var(--lilac) 60%, var(--line)); box-shadow: var(--shadow-lg); }
 .ico { width: 44px; height: 44px; border-radius: 12px; background: var(--lilac-soft); color: var(--violet); display: grid; place-items: center; margin-bottom: 16px; }
@@ -377,7 +400,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div>
       <span class="pill"><b>Nuevo</b> Calendarios de feriados en Ausencias</span>
       <h1><span class="kicker">Software de RR.HH. y CRM para pymes</span>Todo tu equipo, en <em class="s">un solo</em> lugar.</h1>
-      <p class="lede">Personas, ausencias, ventas y seguimiento de nómina en un mismo espacio — pensado para equipos de 5 a 50 que ya superaron las planillas, no para empresas grandes.</p>
+      <p class="lede">Personas, ausencias, ventas, proyectos, turnos y seguimiento de nómina en un mismo espacio — pensado para equipos de 5 a 50 que ya superaron las planillas, no para empresas grandes.</p>
       <div class="ctas">
         <a class="btn btn-p" href="https://app.joinnorthstack.com/register">Empezar gratis — 15 días <span class="arrow">→</span></a>
         <a class="btn btn-g" href="#product">Ver qué incluye</a>
@@ -442,11 +465,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
 <section class="block" id="product">
   <div class="wrap">
-    <div class="head"><span class="eyebrow">Qué incluye</span><h2>Todo lo que usa un equipo que crece, <em class="s">conectado</em>.</h2><p class="lede">Legajo digital, control de vacaciones, CRM de ventas y registro de sueldos. Empezá con lo que necesitás hoy: todos los módulos comparten las mismas personas, así que nada se carga dos veces.</p></div>
+    <div class="head"><span class="eyebrow">Qué incluye</span><h2>Todo lo que usa un equipo que crece, <em class="s">conectado</em>.</h2><p class="lede">Legajo digital, control de vacaciones, CRM de ventas, proyectos, turnos y registro de sueldos. Empezá con lo que necesitás hoy: todos los módulos comparten las mismas personas, así que nada se carga dos veces.</p></div>
     <div class="pillars">
       <article class="card"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c.6-3.3 3-5 6-5s5.4 1.7 6 5"/><circle cx="17.5" cy="9" r="2.4"/><path d="M16 14.2c2.6.2 4.3 1.8 4.8 4.8"/></svg></div><h3>Personas y RR.HH.</h3><p>Un legajo por persona, con los campos que tu empresa realmente usa.</p><ul><li>Perfiles, áreas y campos personalizados</li><li>Autogestión para cada empleado</li><li>Roles y permisos personalizados</li></ul></article>
       <article class="card"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h10M4 18h6"/><circle cx="18" cy="16" r="3"/></svg></div><h3>CRM de ventas</h3><p>Empresas, contactos y oportunidades avanzando por las etapas que vos definís.</p><ul><li>Pipelines con tus propias etapas</li><li>Vistas en grilla y Kanban</li><li>Tareas, notas y seguimientos</li></ul></article>
       <article class="card"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 10h18M7 15h4"/></svg></div><h3>Seguimiento de nómina</h3><p>Un registro claro de compensaciones, liquidaciones y recibos.</p><ul><li>Liquidaciones e historial</li><li>Recibos de sueldo para tu equipo</li><li>Solo registro — seguís pagando como hoy</li></ul></article>
+      <article class="card"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M9 4v16M15 4v9"/></svg></div><h3>Proyectos</h3><p>Fases, tareas y responsables, desde un template o de cero.</p><ul><li>Templates para arrancar rápido</li><li>Chat en tareas con menciones</li><li>Avance de un vistazo</li></ul></article>
+      <article class="card"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg></div><h3>Turnos y horas</h3><p>Cronogramas, disponibilidad y horas para equipos que trabajan por turnos.</p><ul><li>Vistas por día, semana y mes</li><li>Confirmaciones y recordatorios de turnos</li><li>Timesheet y horas facturables</li></ul></article>
     </div>
     <div class="marquee" aria-label="Más funciones">
       <div class="row"><span>Ausencias con aprobaciones</span><span>Calendarios de feriados</span><span>Sincronización con Google Calendar</span><span>Links de Google Meet en tareas</span><span>Registro de actividad</span><span>Importar y exportar CSV</span><span>Roles personalizados</span><span>Dashboards</span><span aria-hidden="true">Ausencias con aprobaciones</span><span aria-hidden="true">Calendarios de feriados</span><span aria-hidden="true">Sincronización con Google Calendar</span><span aria-hidden="true">Links de Google Meet en tareas</span><span aria-hidden="true">Registro de actividad</span><span aria-hidden="true">Importar y exportar CSV</span><span aria-hidden="true">Roles personalizados</span><span aria-hidden="true">Dashboards</span></div>
@@ -489,7 +514,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
 <section class="block" id="pricing" style="padding-top:20px">
   <div class="wrap">
-    <div class="head"><span class="eyebrow">Precios</span><h2>Precios simples que <em class="s">crecen con vos</em>.</h2><p class="lede">Mové el control para ver cuánto pagaría tu equipo. Empezá gratis por 15 días en cualquier plan.</p>
+    <div class="head"><span class="eyebrow">Precios</span><h2>Precios simples que <em class="s">crecen con vos</em>.</h2><p class="lede">Mové el control para ver cuánto pagaría tu equipo. Empezá gratis por <span data-pricing="trial-days">15</span> días en cualquier plan.</p>
       <span class="launch" id="launch" hidden><b>Lanzamiento</b><span id="launch-text"></span></span></div>
     <div class="seats">
       <label for="team">Tamaño del equipo</label>
@@ -500,10 +525,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="plans">
       <div class="plan">
         <h3>Prueba gratis</h3><div class="for">Todas las funciones, sin compromiso</div>
-        <div class="price"><b id="p-free">0</b><span>por 15 días</span></div>
+        <div class="price"><b id="p-free">0</b><span>por <span data-pricing="trial-days">15</span> días</span></div>
         
-        <div class="calcnote">Hasta <span data-pricing="trial-cap">5</span> usuarios mientras lo probás.</div>
-        <ul><li>Acceso completo a todos los módulos</li><li>Pipelines ilimitados</li><li>Seguimiento de nómina incluido</li><li>Sincronización con Google Calendar</li></ul>
+        <div class="calcnote">Hasta <span data-pricing="trial-cap">3</span> usuarios mientras lo probás.</div>
+        <ul><li>Acceso completo a todos los módulos</li><li>Proyectos, Turnos y Timesheet</li><li>Seguimiento de nómina incluido</li><li>Sin tarjeta de crédito</li></ul>
         <a class="btn btn-g" href="https://app.joinnorthstack.com/register">Empezar gratis</a>
       </div>
       <div class="plan">
@@ -511,19 +536,59 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="price"><s class="reg" id="r-starter"></s><b id="p-starter">—</b><span>/ usuario / mes</span></div>
         <span class="off" id="o-starter" hidden></span>
         <div class="calcnote" id="n-starter">&nbsp;</div>
-        <ul><li>CRM de ventas, hasta 2 pipelines</li><li>RR.HH. + Ausencias, hasta 3 políticas</li><li>Tareas, notas y Registro de actividad</li><li>Hasta 2 roles personalizados</li><li>Soporte por correo</li><li class="no">Seguimiento de nómina</li><li class="no">Asistentes de IA</li></ul>
+        <ul><li>RR.HH., Ausencias y CRM de ventas</li><li><span>Proyectos: hasta <span data-pricing="starter-projects">5</span> abiertos</span></li><li><span>Turnos y timesheet en <span data-pricing="starter-locations">1</span> sede</span></li><li><span><span data-pricing="starter-pipelines">2</span> pipelines, <span data-pricing="starter-policies">3</span> políticas, <span data-pricing="starter-roles">2</span> roles</span></li><li>Soporte por correo</li></ul>
         <a class="btn btn-g" href="https://app.joinnorthstack.com/register">Empezar gratis</a>
       </div>
       <div class="plan hot"><span class="badge">El más elegido</span>
-        <h3>Growth</h3><div class="for">Para equipos listos para escalar</div>
+        <h3>Growth</h3><div class="for">Sin límites, con nómina, horas facturables e integraciones</div>
         <div class="price"><s class="reg" id="r-growth"></s><b id="p-growth">—</b><span>/ usuario / mes</span></div>
         <span class="off" id="o-growth" hidden></span>
         <div class="calcnote" id="n-growth">&nbsp;</div>
-        <ul><li>Todo lo de Starter</li><li>Pipelines y políticas ilimitados</li><li>Seguimiento de nómina</li><li>Roles personalizados ilimitados</li><li>Asistentes de IA (Claude, ChatGPT…)</li><li>Soporte prioritario</li></ul>
+        <ul><li>Todo lo de Starter, sin límites</li><li>Sedes y proyectos ilimitados</li><li>Seguimiento de nómina</li><li>Horas facturables e informe por cliente</li><li>API y webhooks</li><li>Asistentes de IA (Claude, ChatGPT…)</li><li>Soporte prioritario</li></ul>
         <a class="btn btn-p" href="https://app.joinnorthstack.com/register">Empezar gratis <span class="arrow">→</span></a>
       </div>
     </div>
     <p class="lock">Si te sumás durante el lanzamiento, <b>mantenés ese precio</b> mientras sigas suscripto.</p>
+    <details class="cmp">
+      <summary>Ver la comparación completa</summary>
+      <p class="cmp-note">La prueba gratis incluye todo lo de Growth.</p>
+      <div class="cmp-wrap">
+        <table>
+          <thead><tr><th>Función</th><th class="c">Starter</th><th class="c">Growth</th></tr></thead>
+          <tbody>
+          <tr class="g"><td colspan="3">Personas y RR.HH.</td></tr>
+          <tr><td>Legajos, áreas y campos personalizados</td><td class="c"><span class="y" aria-label="Incluido">✓</span></td><td class="c"><span class="y" aria-label="Incluido">✓</span></td></tr>
+          <tr><td>Autogestión para cada empleado</td><td class="c"><span class="y" aria-label="Incluido">✓</span></td><td class="c"><span class="y" aria-label="Incluido">✓</span></td></tr>
+          <tr><td>Roles y permisos personalizados</td><td class="c"><b>Hasta <span data-pricing="starter-roles">2</span></b></td><td class="c"><b>Ilimitados</b></td></tr>
+          <tr class="g"><td colspan="3">Ausencias</td></tr>
+          <tr><td>Políticas de ausencia</td><td class="c"><b>Hasta <span data-pricing="starter-policies">3</span></b></td><td class="c"><b>Ilimitadas</b></td></tr>
+          <tr><td>Calendarios de feriados y días de la empresa</td><td class="c"><span class="y" aria-label="Incluido">✓</span></td><td class="c"><span class="y" aria-label="Incluido">✓</span></td></tr>
+          <tr><td>Sincronización con Google Calendar</td><td class="c"><span class="y" aria-label="Incluido">✓</span></td><td class="c"><span class="y" aria-label="Incluido">✓</span></td></tr>
+          <tr class="g"><td colspan="3">CRM de ventas</td></tr>
+          <tr><td>Pipelines de ventas</td><td class="c"><b>Hasta <span data-pricing="starter-pipelines">2</span></b></td><td class="c"><b>Ilimitados</b></td></tr>
+          <tr><td>Empresas, contactos y oportunidades</td><td class="c"><span class="y" aria-label="Incluido">✓</span></td><td class="c"><span class="y" aria-label="Incluido">✓</span></td></tr>
+          <tr><td>Formularios públicos e importación/exportación CSV</td><td class="c"><span class="y" aria-label="Incluido">✓</span></td><td class="c"><span class="y" aria-label="Incluido">✓</span></td></tr>
+          <tr class="g"><td colspan="3">Proyectos</td></tr>
+          <tr><td>Proyectos abiertos a la vez<small>Los completados y cancelados no cuentan</small></td><td class="c"><b>Hasta <span data-pricing="starter-projects">5</span></b></td><td class="c"><b>Ilimitados</b></td></tr>
+          <tr><td>Tareas con chat, menciones y links de Meet</td><td class="c"><span class="y" aria-label="Incluido">✓</span></td><td class="c"><span class="y" aria-label="Incluido">✓</span></td></tr>
+          <tr><td>Guardar tus propios templates de proyecto</td><td class="c"><span class="n" aria-label="No incluido">—</span></td><td class="c"><span class="y" aria-label="Incluido">✓</span></td></tr>
+          <tr class="g"><td colspan="3">Turnos y horas</td></tr>
+          <tr><td>Sedes activas</td><td class="c"><b>Hasta <span data-pricing="starter-locations">1</span></b></td><td class="c"><b>Ilimitadas</b></td></tr>
+          <tr><td>Turnos, disponibilidad y confirmaciones</td><td class="c"><span class="y" aria-label="Incluido">✓</span></td><td class="c"><span class="y" aria-label="Incluido">✓</span></td></tr>
+          <tr><td>Timesheet y tiempo en tareas</td><td class="c"><span class="y" aria-label="Incluido">✓</span></td><td class="c"><span class="y" aria-label="Incluido">✓</span></td></tr>
+          <tr><td>Habilidades y certificaciones con vencimiento</td><td class="c"><span class="n" aria-label="No incluido">—</span></td><td class="c"><span class="y" aria-label="Incluido">✓</span></td></tr>
+          <tr><td>Horas facturables e informe de horas por cliente</td><td class="c"><span class="n" aria-label="No incluido">—</span></td><td class="c"><span class="y" aria-label="Incluido">✓</span></td></tr>
+          <tr class="g"><td colspan="3">Nómina</td></tr>
+          <tr><td>Seguimiento de nómina<small>Solo registro: Northstack nunca mueve dinero</small></td><td class="c"><span class="n" aria-label="No incluido">—</span></td><td class="c"><span class="y" aria-label="Incluido">✓</span></td></tr>
+          <tr class="g"><td colspan="3">Integraciones</td></tr>
+          <tr><td>API privada y webhooks</td><td class="c"><span class="n" aria-label="No incluido">—</span></td><td class="c"><span class="y" aria-label="Incluido">✓</span></td></tr>
+          <tr class="g"><td colspan="3">Control y soporte</td></tr>
+          <tr><td>Historial del registro de actividad</td><td class="c"><b><span data-pricing="starter-log-days">7</span> días</b></td><td class="c"><b><span data-pricing="growth-log-days">30</span> días</b></td></tr>
+          <tr><td>Soporte</td><td class="c"><b>Por correo</b></td><td class="c"><b>Prioritario por correo</b></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
   </div>
 </section>
 

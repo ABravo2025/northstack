@@ -1,5 +1,8 @@
 import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
 import type {
+  AvailableShift,
+  ShiftRequest,
+  SwapTarget,
   PublicShiftResponseView,
   Shift,
   ShiftAssignmentStatus,
@@ -190,6 +193,24 @@ export const shiftsApi = {
     call<{ canApprove: boolean; timesheets: TimesheetApprovalRow[] }>(token, `/api/shifts/timesheet/approvals?status=${status}`),
   decideTimesheet: (token: string, timesheetId: string, decision: 'approve' | 'return', note?: string) =>
     call<{ status: TimesheetStatus }>(token, `/api/shifts/timesheet/${timesheetId}/decision`, { method: 'POST', body: JSON.stringify({ decision, note }) }),
+  // Phase 2, block A: open shifts, hand-overs and swaps.
+  listAvailableShifts: (token: string) => call<{ items: AvailableShift[] }>(token, '/api/shifts/available'),
+  listShiftRequests: (token: string, scope: 'mine' | 'manage' = 'mine') =>
+    call<{ canManage?: boolean; employeeId?: string | null; requests: ShiftRequest[] }>(token, `/api/shifts/requests${scope === 'manage' ? '?scope=manage' : ''}`),
+  setShiftOpen: (token: string, shiftId: string, open: boolean) =>
+    call<Shift>(token, `/api/shifts/${shiftId}/open`, { method: 'POST', body: JSON.stringify({ open }) }),
+  claimShift: (token: string, shiftId: string) => call<ShiftRequest>(token, `/api/shifts/${shiftId}/claim`, { method: 'POST' }),
+  giveShift: (token: string, assignmentId: string, reason?: string) =>
+    call<ShiftRequest>(token, `/api/shifts/assignments/${assignmentId}/give`, { method: 'POST', body: JSON.stringify({ reason }) }),
+  takeShift: (token: string, requestId: string) => call<ShiftRequest>(token, `/api/shifts/requests/${requestId}/take`, { method: 'POST' }),
+  listSwapTargets: (token: string, assignmentId: string) => call<{ targets: SwapTarget[] }>(token, `/api/shifts/assignments/${assignmentId}/swap-targets`),
+  proposeSwap: (token: string, assignmentId: string, targetAssignmentId: string, reason?: string) =>
+    call<ShiftRequest>(token, `/api/shifts/assignments/${assignmentId}/swap`, { method: 'POST', body: JSON.stringify({ targetAssignmentId, reason }) }),
+  answerSwap: (token: string, requestId: string, accept: boolean) =>
+    call<ShiftRequest>(token, `/api/shifts/requests/${requestId}/answer`, { method: 'POST', body: JSON.stringify({ accept }) }),
+  decideShiftRequest: (token: string, requestId: string, approve: boolean, note?: string) =>
+    call<ShiftRequest>(token, `/api/shifts/requests/${requestId}/decide`, { method: 'POST', body: JSON.stringify({ approve, note }) }),
+  cancelShiftRequest: (token: string, requestId: string) => call<void>(token, `/api/shifts/requests/${requestId}/cancel`, { method: 'POST' }),
   getScheduleCost: (token: string, from: string, to: string, locationId?: string) =>
     call<ScheduleCost | null>(token, `/api/shifts/cost?from=${from}&to=${to}${locationId ? `&locationId=${locationId}` : ''}`),
   getHoursReport: (token: string, params: { from: string; to: string; groupBy: HoursReport['groupBy'] }) =>

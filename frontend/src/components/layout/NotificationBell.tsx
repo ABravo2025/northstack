@@ -106,6 +106,12 @@ export default function NotificationBell({ token }: NotificationBellProps) {
       setOpen(false);
       navigate(notification.type === 'shift_declined' ? '/shifts' : '/shifts/mine');
     }
+    // Phase 2 requests: waiting for a scheduler opens Requests; outcomes open My shifts. (A colleague's
+    // swap proposal is linked to the shift, so it opens My shifts through the branch above.)
+    if (notification.entityType === 'shiftRequest') {
+      setOpen(false);
+      navigate(notification.type === 'shift_request' ? '/shifts/requests' : '/shifts/mine');
+    }
     // Timesheets: a week to approve opens Approvals; your own week's news opens your timesheet.
     if (notification.entityType === 'timesheet') {
       setOpen(false);

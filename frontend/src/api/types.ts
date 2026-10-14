@@ -648,7 +648,8 @@ export type ActivityEntityType =
   | 'projectPhase'
   | 'projectTemplate'
   | 'timesheet'
-  | 'timeEntry';
+  | 'timeEntry'
+  | 'shiftRequest';
 
 export interface ActivityChange {
   field: string;
@@ -720,6 +721,8 @@ export type NotificationType =
   | 'timesheet_submitted'
   | 'timesheet_decided'
   | 'timesheet_reminder'
+  | 'shift_request'
+  | 'shift_request_decided'
   | 'task_mention';
 
 export interface Notification {
@@ -1363,6 +1366,10 @@ export interface ShiftsSettings {
   timesheetEnabled: boolean;
   timesheetReminder: boolean;
   showScheduleCost: boolean;
+  // Phase 2, block A.
+  allowSwaps: boolean;
+  swapNeedsApproval: boolean;
+  openShiftNeedsApproval: boolean;
 }
 
 export interface ShiftLocation {
@@ -1409,6 +1416,8 @@ export interface Shift {
   publishedAt: string | null;
   requiredSkillIds: string[];
   assignments: ShiftAssignment[];
+  // Phase 2: free places anyone eligible can take.
+  openToClaim?: boolean;
 }
 
 export type ShiftBlock = 'no_user' | 'overlap' | 'already_assigned';
@@ -1582,6 +1591,7 @@ export type EmailCategory =
   | 'shifts'
   | 'shiftReminders'
   | 'shiftDeclined'
+  | 'shiftSwaps'
   | 'skillsExpiring'
   | 'timesheet'
   | 'timeOff'
@@ -1591,4 +1601,47 @@ export type EmailCategory =
 export interface EmailPreference {
   key: EmailCategory;
   email: boolean;
+}
+
+// Shifts phase 2, block A: claims, hand-overs and swaps.
+export type ShiftRequestType = 'claim' | 'give' | 'swap';
+export type ShiftRequestStatus = 'open' | 'pending_peer' | 'pending_manager' | 'approved' | 'declined' | 'cancelled' | 'expired';
+
+export interface ShiftRequestShift {
+  id: string;
+  date: string;
+  startMinute: number;
+  endMinute: number;
+  startsAt: string;
+  position: string | null;
+  location: { id: string; name: string };
+}
+
+export interface ShiftRequest {
+  id: string;
+  type: ShiftRequestType;
+  status: ShiftRequestStatus;
+  shift: ShiftRequestShift;
+  targetShift: ShiftRequestShift | null;
+  requestedBy: { id: string; firstName: string; lastName: string };
+  targetEmployee: { id: string; firstName: string; lastName: string } | null;
+  reason: string | null;
+  warnings: ShiftWarning[];
+  decisionNote: string | null;
+  decidedAt: string | null;
+  createdAt: string;
+}
+
+export interface AvailableShift {
+  kind: 'open' | 'give';
+  request: ShiftRequest | null;
+  shift: ShiftRequestShift & { headcount: number; filled: number };
+  blocks: ShiftBlock[];
+  warnings: ShiftWarning[];
+}
+
+export interface SwapTarget {
+  assignmentId: string;
+  employee: { id: string; firstName: string; lastName: string };
+  shift: ShiftRequestShift;
 }

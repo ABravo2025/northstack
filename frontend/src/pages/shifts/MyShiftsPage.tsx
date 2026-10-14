@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { api, type Shift } from '../../api';
+import { api, type Shift, type SwapTarget } from '../../api';
 import { useToast } from '../../components/common/ToastProvider';
 import TableSkeleton from '../../components/common/TableSkeleton';
 import AvailabilityEditor from '../../components/shifts/AvailabilityEditor';
+import Modal from '../../components/common/Modal';
+import ShiftMarketplace from '../../components/shifts/ShiftMarketplace';
+import { useShiftLabel } from '../../components/shifts/ShiftRequestText';
 import { addDays, formatDay, formatDuration, formatMinute, shiftDurationMinutes, todayString } from '../../lib/shiftDates';
 
 interface MyShiftsPageProps {
@@ -22,6 +25,58 @@ export default function MyShiftsPage({ token }: MyShiftsPageProps) {
   const [declining, setDeclining] = useState<string | null>(null);
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
+  // Phase 2, block A: hand over or swap one of my shifts.
+  const [allowSwaps, setAllowSwaps] = useState(false);
+  const [change, setChange] = useState<{ type: 'give' | 'swap'; shift: Shift; assignmentId: string } | null>(null);
+  const [changeReason, setChangeReason] = useState('');
+  const [targets, setTargets] = useState<SwapTarget[] | null>(null);
+  const [target, setTarget] = useState('');
+  const [version, setVersion] = useState(0);
+  const label = useShiftLabel();
+
+  useEffect(() => {
+    api
+      .getShiftsSettings(token)
+      .then((s) => setAllowSwaps(s.allowSwaps))
+      .catch(() => setAllowSwaps(false));
+  }, [token]);
+
+  const reload = () => {
+    const from = todayString();
+    api
+      .listMyShifts(token, from, addDays(from, RANGE_DAYS))
+      .then(setShifts)
+      .catch(() => undefined);
+  };
+
+  const openChange = (type: 'give' | 'swap', shift: Shift, assignmentId: string) => {
+    setChange({ type, shift, assignmentId });
+    setChangeReason('');
+    setTarget('');
+    setTargets(null);
+    if (type === 'swap') {
+      api
+        .listSwapTargets(token, assignmentId)
+        .then((r) => setTargets(r.targets))
+        .catch(() => setTargets([]));
+    }
+  };
+
+  const sendChange = async () => {
+    if (!change) return;
+    setBusy(true);
+    try {
+      if (change.type === 'give') await api.giveShift(token, change.assignmentId, changeReason.trim() || undefined);
+      else await api.proposeSwap(token, change.assignmentId, target, changeReason.trim() || undefined);
+      toast.success(change.type === 'give' ? t('requests.giveSent') : t('requests.swapSent'));
+      setChange(null);
+      setVersion((v) => v + 1);
+    } catch (error) {
+      toast.error(t('requests.failed', { message: (error as Error).message }));
+    } finally {
+      setBusy(false);
+    }
+  };
 
   useEffect(() => {
     const from = todayString();
@@ -110,6 +165,16 @@ export default function MyShiftsPage({ token }: MyShiftsPageProps) {
                         )}
                       </div>
                     )}
+                    {!cancelled && mine && !started && allowSwaps && mine.status !== 'declined' && (
+                      <div className="mt-1 flex flex-wrap gap-3">
+                        <button type="button" className="to-link text-xs" onClick={() => openChange('give', s, mine.id)}>
+                          {t('requests.giveAction')}
+                        </button>
+                        <button type="button" className="to-link text-xs" onClick={() => openChange('swap', s, mine.id)}>
+                          {t('requests.swapAction')}
+                        </button>
+                      </div>
+                    )}
                     {!cancelled && started && <small>{t('mine.startsSoon')}</small>}
                     {declining === s.id && (
                       <div className="mt-2 flex flex-wrap gap-2">
@@ -139,7 +204,56 @@ export default function MyShiftsPage({ token }: MyShiftsPageProps) {
         )}
       </section>
 
+      <ShiftMarketplace token={token} version={version} onChanged={reload} />
+
       <AvailabilityEditor token={token} />
+
+      <Modal
+        open={change !== null}
+        title={change?.type === 'give' ? t('requests.giveTitle') : t('requests.swapTitle')}
+        onClose={() => setChange(null)}
+        footer={
+          <>
+            <button type="button" className="btn-secondary" onClick={() => setChange(null)}>
+              {t('form.cancel')}
+            </button>
+            <button type="button" className="btn-primary" disabled={busy || (change?.type === 'swap' && !target)} onClick={sendChange}>
+              {change?.type === 'give' ? t('requests.giveConfirm') : t('requests.swapConfirm')}
+            </button>
+          </>
+        }
+      >
+        {change && (
+          <div className="flex flex-col gap-3">
+            <p className="m-0">
+              {change.type === 'give'
+                ? t('requests.giveBody', { shift: label({ ...change.shift, location: change.shift.location }) })
+                : t('requests.swapBody', { shift: label({ ...change.shift, location: change.shift.location }) })}
+            </p>
+            {change.type === 'swap' &&
+              (targets === null ? null : targets.length === 0 ? (
+                <p className="to-hint m-0">{t('requests.noTargets')}</p>
+              ) : (
+                <div className="form-group !mb-0">
+                  <label htmlFor="swap-target">{t('requests.pickTarget')}</label>
+                  <select id="swap-target" value={target} onChange={(e) => setTarget(e.target.value)}>
+                    <option value="">{t('requests.pickTargetPlaceholder')}</option>
+                    {targets.map((x) => (
+                      <option key={x.assignmentId} value={x.assignmentId}>
+                        {x.employee.firstName} {x.employee.lastName} — {label(x.shift)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            <div className="form-group !mb-0">
+              <label htmlFor="change-reason">{t('requests.reasonLabel')}</label>
+              <input id="change-reason" value={changeReason} maxLength={300} placeholder={t('requests.reasonPlaceholder')} onChange={(e) => setChangeReason(e.target.value)} />
+            </div>
+            <p className="rules-hint m-0">{change.type === 'give' ? t('requests.giveHint') : t('requests.swapHint')}</p>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

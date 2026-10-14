@@ -5194,3 +5194,17 @@ Resuelve el pendiente de agosto ("un área en el perfil de las notificaciones qu
 1. Apagar "Recordatorios" y disparar el cron de recordatorios: llega la campana, no el email.
 2. Como dueño de una oportunidad, apagar "cambió de etapa": mover la etapa no manda email.
 3. El link del pie de un email abre Perfil en la tarjeta de notificaciones.
+
+## QA-114 — Turnos fase 2, bloque A: bolsa, ceder e intercambiar turnos (2026-10-14, en `staging`)
+
+### Qué cambió
+
+- **Turno abierto:** en el detalle de un turno publicado, quien arma los turnos activa **"Abierto a compañeros"**. Los lugares libres aparecen en **Mis turnos → Para tomar** de todos; **Lo tomo** lo asigna en el momento (por defecto, el primero que llega).
+- **Ceder:** en Mis turnos, **Buscar quien me cubra** (motivo opcional). El turno aparece en "Para tomar" de los demás; la persona sigue en el turno hasta que alguien lo toma y se aprueba.
+- **Intercambiar:** **Cambiar con alguien** → elegís un turno de una compañera en la misma locación (próximos 30 días). Ella acepta o rechaza desde Mis turnos → Mis pedidos.
+- **Aprobación:** ceder e intercambiar los aprueba quien arma los turnos (Turnos → **Pedidos**, con el número en el menú; rechazar admite una nota; rechazar a quien quería cubrir devuelve el turno a la bolsa). Si quien entra tiene un aviso (descanso, disponibilidad, ausencia, habilidades) siempre requiere aprobación; los bloqueos (superposición, sin usuario, turno empezado) rechazan.
+- Al concretarse: cambian las asignaciones, el calendario (Google / `.ics`) de los dos, y avisos por campana + email (nueva categoría "Turnos cedidos e intercambios" en Preferencias de email). Un pedido vence cuando empieza el turno (cron diario).
+- **Configuración → Turnos → Cambios entre personas:** permitir ceder/intercambiar, aprobación para ceder/intercambiar, aprobación para tomar turnos abiertos.
+- Schema: `Shift.openToClaim`, `ShiftChangeRequest`, ajustes `swapNeedsApproval`/`openShiftNeedsApproval` (`allowSwaps` pasa a encendido por defecto), aplicados en `staging`.
+
+**Verificado en esta sesión:** API contra `staging` (29/29): abrir (Member no puede), tomar al instante, no dos veces, ceder → bolsa, no tomar el propio, tomar → aprobación, Member no aprueba, aprobado y asignaciones cambiadas; intercambio rechazado por la compañera, aceptado → manager rechaza con nota, nuevo intercambio aprobado y lugares cambiados; superposición bloquea; avisos en el idioma de cada uno; el cron vence un pedido de un turno empezado; con "permitir ceder" apagado → 403. Navegador (español oscuro e inglés claro, 8/8 cada uno): tomar, ceder, proponer intercambio, el Owner toma la cesión (va a aprobación) y acepta el intercambio, Pedidos con 2 y el contador en el menú, aprobar uno y rechazar otro con nota, tarjeta de configuración; sin errores de consola.

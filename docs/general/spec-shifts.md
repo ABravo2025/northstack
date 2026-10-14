@@ -1,6 +1,6 @@
 # Spec Shifts (Turnos y horas)
 
-**Estado:** Unidades 1-13 **en producción**: 1-6 desde el 2026-10-12, 7-13 desde el 2026-10-13 (habilidades, recordatorios diarios, timesheet con aprobaciones, tiempo en tareas, reportes con costo y facturar horas, preferencias de email). Promovidas solas con cherry-pick sobre `main`. Schema de 7-13 aplicado con SQL aditivo filtrado (30 sentencias; se dejó afuera una diferencia ajena en `Invoice`); backfill de `approve_timesheets` en 14 roles Admin. Help Center actualizado (guía + FAQ, EN/ES). Fase 2 (fichaje con QR, intercambio de turnos) fuera de esta spec.
+**Estado:** Unidades 1-13 **en producción**: 1-6 desde el 2026-10-12, 7-13 desde el 2026-10-13 (habilidades, recordatorios diarios, timesheet con aprobaciones, tiempo en tareas, reportes con costo y facturar horas, preferencias de email). Promovidas solas con cherry-pick sobre `main`. Schema de 7-13 aplicado con SQL aditivo filtrado (30 sentencias; se dejó afuera una diferencia ajena en `Invoice`); backfill de `approve_timesheets` en 14 roles Admin. Help Center actualizado (guía + FAQ, EN/ES). La fase 2 (intercambio de turnos, fichaje, presupuesto por proyecto, informe para el cliente, cronograma sugerido) está en `spec-shifts-fase2.md`.
 **Fecha:** 2026-10-04.
 **Contexto:** un laboratorio químico preguntó si Northstack puede manejar personal en distintos horarios
 y sedes, con turnos que no son bloques fijos, y que avisar y hacer el seguimiento es complicado.

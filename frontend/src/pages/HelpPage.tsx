@@ -8,6 +8,7 @@ import {
   BriefcaseIcon,
   ChevronDownIcon,
   CreditCardIcon,
+  ClockIcon,
   FolderIcon,
   FormIcon,
   LockIcon,
@@ -214,6 +215,77 @@ const FAQ_CATEGORIES: FaqCategory[] = [
       {
         q: 'Do project tasks show up in My Tasks and Google Calendar?',
         a: 'Yes. A project task is an ordinary task: it appears in My Tasks, on the Overview calendar, and in Google Calendar for whoever it\'s assigned to, if they connected it.',
+      },
+    ],
+  },
+  {
+    id: 'f-shifts',
+    label: 'Shifts',
+    icon: <ClockIcon />,
+    items: [
+      {
+        q: 'How do people find out about their shifts?',
+        a: 'When you publish, each person gets a notification and an email with buttons to accept or say they can\'t make it (no sign-in needed), plus a file that adds the shift to their calendar. If they connected Google Calendar, the shift appears there on its own.',
+      },
+      {
+        q: 'Do drafts reach anyone?',
+        a: 'No. A new shift is a draft (dashed on the schedule) until you publish it. Only then are people told and asked to confirm.',
+      },
+      {
+        q: 'What happens if I change a shift that was already published?',
+        a: 'If you change its date, time or location, everyone on it is asked to confirm again, and their calendar event moves. Changing only the notes, position or people needed just lets them know.',
+      },
+      {
+        q: 'Can someone without a Northstack login get shifts?',
+        a: 'No. Shifts go to people with access to Northstack, so they can see them in My shifts and answer from the app or the email.',
+      },
+      {
+        q: 'Why can\'t I assign someone?',
+        a: 'Because they already have another shift at that time. Approved time off, holidays, availability and minimum rest only show a warning: you can assign them anyway.',
+      },
+      {
+        q: 'How many locations can I have?',
+        a: 'Starter allows 1 active location; Growth has no limit. A location with shifts can\'t be deleted, but it can be deactivated, which keeps its history.',
+      },
+      {
+        q: 'Who approves my timesheet?',
+        a: 'Your direct manager, or anyone whose role can approve timesheets. Once approved the week is closed: to fix it, request an adjustment from your timesheet, or ask for it to be reopened.',
+      },
+      {
+        q: 'Are the suggested hours logged automatically?',
+        a: 'No. Shifts, completed tasks, meetings and Google Calendar events only show up as suggestions. You check the time and add them; nothing is logged until you do.',
+      },
+      {
+        q: 'Why doesn\'t a shift appear in my timesheet yet?',
+        a: 'Shifts are suggested once they end, and only if you accepted them. Upcoming and unconfirmed shifts are counted in Shifts → Reports as planned hours.',
+      },
+      {
+        q: 'Who can see the schedule cost?',
+        a: 'Only people with Payroll access, and only if the company turned on "Show schedule cost" in Settings → Shifts (Growth). It uses each person\'s hourly rate from Payroll; fixed salaries are shown as hours without a rate.',
+      },
+      {
+        q: 'If I give away a shift, is it still mine until someone takes it?',
+        a: 'Yes. You keep it until a colleague takes it and, if your company asks for it, a scheduler approves. If nobody takes it before it starts, the request expires and the shift stays yours.',
+      },
+      {
+        q: 'What if someone clocks in without a shift?',
+        a: 'It\'s allowed: Northstack adds an overtime shift at that location to the schedule (amber border) and tells the scheduler, who can review it in Shifts → Today.',
+      },
+      {
+        q: 'Does the clock-in QR change?',
+        a: 'No, each location has one fixed QR. If it gets copied or shared, regenerate it in Settings → Shifts → Clock-in and print the new one; the old one stops working.',
+      },
+      {
+        q: 'What does the client see in the hours report?',
+        a: 'Only approved weeks for their company in that month: date, details, hours and whether each line is billable, plus totals. Names are optional. The link needs no login and expires after 30 days.',
+      },
+      {
+        q: 'Does the suggested schedule publish shifts?',
+        a: 'Never. It only fills draft shifts with free places, and only with what you keep ticked. Nobody hears about it until you publish the week.',
+      },
+      {
+        q: 'Can I stop getting some emails?',
+        a: 'Yes. In Settings → Profile → Email notifications, turn off the ones you don\'t want. The bell keeps showing everything, and account emails always arrive.',
       },
     ],
   },
@@ -481,6 +553,77 @@ const FAQ_CATEGORIES_ES: FaqCategory[] = [
       {
         q: '¿Las tareas de un proyecto aparecen en Mis tareas y en Google Calendar?',
         a: 'Sí. Una tarea de proyecto es una tarea común: aparece en Mis tareas, en el calendario del Resumen y en el Google Calendar de la persona asignada, si lo conectó.',
+      },
+    ],
+  },
+  {
+    id: 'f-shifts',
+    label: 'Turnos',
+    icon: <ClockIcon />,
+    items: [
+      {
+        q: '¿Cómo se enteran las personas de sus turnos?',
+        a: 'Al publicar, cada persona recibe una notificación y un email con botones para aceptar o avisar que no puede (sin iniciar sesión), más un archivo que agrega el turno a su calendario. Si conectó Google Calendar, el turno aparece ahí solo.',
+      },
+      {
+        q: '¿Los borradores le llegan a alguien?',
+        a: 'No. Un turno nuevo es un borrador (punteado en el cronograma) hasta que lo publicás. Recién ahí se les avisa y se les pide que confirmen.',
+      },
+      {
+        q: '¿Qué pasa si cambio un turno ya publicado?',
+        a: 'Si cambiás la fecha, la hora o la locación, se le pide a cada persona del turno que lo confirme de nuevo, y se mueve el evento de su calendario. Si solo cambiás las indicaciones, el puesto o la cantidad de personas, solo se les avisa.',
+      },
+      {
+        q: '¿Alguien sin usuario de Northstack puede recibir turnos?',
+        a: 'No. Los turnos van a personas con acceso a Northstack, así los ven en Mis turnos y pueden responder desde la app o desde el email.',
+      },
+      {
+        q: '¿Por qué no puedo asignar a alguien?',
+        a: 'Porque ya tiene otro turno en ese horario. Las ausencias aprobadas, los feriados, la disponibilidad y el descanso mínimo solo muestran un aviso: podés asignarlo igual.',
+      },
+      {
+        q: '¿Cuántas locaciones puedo tener?',
+        a: 'Starter permite 1 locación activa; Growth no tiene límite. Una locación con turnos no se puede eliminar, pero sí desactivar, y conserva su historial.',
+      },
+      {
+        q: '¿Quién aprueba mi timesheet?',
+        a: 'Tu manager directo, o quien tenga un rol que pueda aprobar timesheets. Una vez aprobada, la semana queda cerrada: para corregirla, pedí un ajuste desde tu timesheet o que te la reabran.',
+      },
+      {
+        q: '¿Las horas sugeridas se cargan solas?',
+        a: 'No. Los turnos, las tareas completadas, las reuniones y los eventos de Google Calendar aparecen como sugerencias. Revisás el tiempo y las agregás; no se carga nada hasta que lo hagas.',
+      },
+      {
+        q: '¿Por qué un turno todavía no aparece en mi timesheet?',
+        a: 'Los turnos se sugieren cuando terminan, y solo si los aceptaste. Los que vienen y los sin confirmar se cuentan en Turnos → Reportes como horas planificadas.',
+      },
+      {
+        q: '¿Quién puede ver el costo del cronograma?',
+        a: 'Solo quienes tienen acceso a Payroll, y solo si la empresa activó "Mostrar el costo del cronograma" en Configuración → Turnos (Growth). Usa la tarifa por hora de cada persona en Payroll; los sueldos fijos se muestran como horas sin tarifa.',
+      },
+      {
+        q: 'Si cedo un turno, ¿sigue siendo mío hasta que alguien lo tome?',
+        a: 'Sí. Lo tenés vos hasta que un compañero lo toma y, si tu empresa lo pide, lo aprueba quien arma turnos. Si nadie lo toma antes de que empiece, el pedido vence y el turno sigue siendo tuyo.',
+      },
+      {
+        q: '¿Qué pasa si alguien ficha sin tener turno?',
+        a: 'Se puede: Northstack agrega un turno de tiempo extra en esa locación al cronograma (borde ámbar) y le avisa a quien arma turnos, que lo revisa en Turnos → Hoy.',
+      },
+      {
+        q: '¿El QR para fichar cambia?',
+        a: 'No, cada locación tiene un QR fijo. Si se copió o se compartió, regeneralo en Configuración → Turnos → Fichaje e imprimí el nuevo; el anterior deja de funcionar.',
+      },
+      {
+        q: '¿Qué ve el cliente en el informe de horas?',
+        a: 'Solo las semanas aprobadas de su empresa en ese mes: fecha, detalle, horas y si cada línea es facturable, más los totales. Los nombres son opcionales. El link no pide login y vence a los 30 días.',
+      },
+      {
+        q: '¿El cronograma sugerido publica turnos?',
+        a: 'Nunca. Solo completa turnos en borrador con lugares libres, y solo con lo que dejes tildado. Nadie se entera hasta que publiques la semana.',
+      },
+      {
+        q: '¿Puedo dejar de recibir algunos emails?',
+        a: 'Sí. En Configuración → Perfil → Notificaciones por email, apagá los que no quieras. La campana sigue mostrando todo, y los emails de la cuenta siempre llegan.',
       },
     ],
   },

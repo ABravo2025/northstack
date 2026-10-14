@@ -12,6 +12,7 @@ import {
   BuildingIcon,
   CreditCardIcon,
   DeviceIcon,
+  ClockIcon,
   FolderIcon,
   DownloadIcon,
   FormIcon,
@@ -37,6 +38,7 @@ const SECTION_IDS = [
   'g-payroll',
   'g-tasks',
   'g-projects',
+  'g-shifts',
   'g-forms',
   'g-integrations',
   'g-settings',
@@ -69,6 +71,7 @@ const NAV_GROUPS: { label: string; items: { id: string; label: string; icon: JSX
       { id: 'g-payroll', label: 'Payroll', icon: <BriefcaseIcon /> },
       { id: 'g-tasks', label: 'Tasks & notes', icon: <ListIcon /> },
       { id: 'g-projects', label: 'Projects', icon: <FolderIcon /> },
+      { id: 'g-shifts', label: 'Shifts', icon: <ClockIcon /> },
     ],
   },
   {
@@ -99,6 +102,7 @@ const MODULE_MAP: { id: string; label: string; blurb: string; icon: JSX.Element 
   { id: 'g-payroll', label: 'Payroll', blurb: 'Compensation, pay runs, payslips.', icon: <BriefcaseIcon /> },
   { id: 'g-tasks', label: 'Tasks & notes', blurb: 'Follow-ups on any record.', icon: <ListIcon /> },
   { id: 'g-projects', label: 'Projects', blurb: 'Phases, tasks and teams, blank or from a template.', icon: <FolderIcon /> },
+  { id: 'g-shifts', label: 'Shifts', blurb: 'Shifts by location, swaps, clock-in, timesheets, approvals and hours reports.', icon: <ClockIcon /> },
   { id: 'g-forms', label: 'Public forms', blurb: 'No-login intake for hiring and leads.', icon: <FormIcon /> },
   { id: 'g-integrations', label: 'Integrations & API', blurb: 'Google Calendar, Stripe, API keys.', icon: <PlugIcon /> },
   { id: 'g-settings', label: 'Settings', blurb: 'Company profile, logo, currency, theme.', icon: <GearIcon /> },
@@ -132,6 +136,7 @@ const NAV_GROUPS_ES: { label: string; items: { id: string; label: string; icon: 
       { id: 'g-payroll', label: 'Nómina', icon: <BriefcaseIcon /> },
       { id: 'g-tasks', label: 'Tareas y notas', icon: <ListIcon /> },
       { id: 'g-projects', label: 'Proyectos', icon: <FolderIcon /> },
+      { id: 'g-shifts', label: 'Turnos', icon: <ClockIcon /> },
     ],
   },
   {
@@ -162,6 +167,7 @@ const MODULE_MAP_ES: { id: string; label: string; blurb: string; icon: JSX.Eleme
   { id: 'g-payroll', label: 'Nómina', blurb: 'Compensación, corridas de pago, recibos de sueldo.', icon: <BriefcaseIcon /> },
   { id: 'g-tasks', label: 'Tareas y notas', blurb: 'Seguimientos sobre cualquier registro.', icon: <ListIcon /> },
   { id: 'g-projects', label: 'Proyectos', blurb: 'Fases, tareas y equipos, en blanco o desde un template.', icon: <FolderIcon /> },
+  { id: 'g-shifts', label: 'Turnos', blurb: 'Turnos por locación, cambios, fichaje, timesheet, aprobaciones y reportes de horas.', icon: <ClockIcon /> },
   { id: 'g-forms', label: 'Formularios públicos', blurb: 'Carga sin login para reclutamiento y leads.', icon: <FormIcon /> },
   { id: 'g-integrations', label: 'Integraciones y API', blurb: 'Google Calendar, Stripe, claves de API.', icon: <PlugIcon /> },
   { id: 'g-settings', label: 'Configuración', blurb: 'Datos de la empresa, logo, moneda, tema.', icon: <GearIcon /> },
@@ -1767,6 +1773,416 @@ export default function GuidePage() {
                 or on hold; completed, cancelled and archived ones don't count) and use the system templates.
                 <strong> Growth</strong> has no limit and adds your own templates. Projects aren't deleted: they're
                 <strong> archived</strong>, and can be restored from the Archived filter.
+              </p>
+            </div>
+          </section>
+          )}
+
+          {/* ===== Shifts ===== */}
+          {isSpanish ? (
+          <section className="help-section" id="g-shifts">
+            <div className="help-eyebrow">
+              <ClockIcon />
+              Trabajo en equipo
+            </div>
+            <h2>Turnos</h2>
+            <p className="help-intro">
+              Armá los turnos de tu equipo en una o varias locaciones, con horarios libres (también nocturnos), y
+              pedile a cada persona que confirme. Está en la barra lateral, en Recursos Humanos.
+            </p>
+
+            <div className="help-sub">
+              <h3>Antes de empezar: locaciones y reglas</h3>
+              <p>
+                En <strong>Configuración → Turnos</strong> cargás las <strong>locaciones</strong> donde trabaja tu
+                equipo (un laboratorio, una sucursal, un depósito), cada una con su zona horaria y, si querés, un
+                <strong> responsable</strong>: el responsable puede armar los turnos de su locación aunque no tenga el
+                permiso de gestionar turnos. Ahí también elegís si cada persona tiene que aceptar sus turnos, el
+                descanso mínimo entre dos turnos de la misma persona y el día en que empieza la semana. Las
+                <strong> plantillas</strong> de horario se guardan desde el formulario del turno y se borran desde ahí.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Armar el cronograma</h3>
+              <ol className="help-steps">
+                <li>
+                  Abrí <strong>Turnos → Cronograma</strong> y elegí la vista: <strong>Día</strong>,
+                  <strong> Semana</strong> o <strong>Mes</strong> (como un calendario), o <strong>Por persona</strong>.
+                  Arriba elegís una locación o "Todas las locaciones".
+                </li>
+                <li>
+                  Hacé clic en un hueco del calendario para crear un turno en ese día y hora (o usá
+                  <strong> + Agregar turno</strong>). Elegís la locación, el horario, el puesto, cuántas personas hacen
+                  falta y las indicaciones. Un turno de 22:00 a 06:00 termina al día siguiente.
+                </li>
+                <li>
+                  En el detalle del turno, <strong>Agregar personas</strong>. Si alguien ya tiene otro turno en ese
+                  horario no se puede asignar. Si tiene una ausencia aprobada, es feriado, avisó que no está disponible
+                  o le queda poco descanso, ves el aviso y podés asignarlo igual.
+                </li>
+                <li>
+                  Los turnos nuevos son <strong>borradores</strong> (línea punteada): nadie se entera todavía.
+                  Cuando la semana está lista, <strong>Publicar</strong>. Para repetir una semana, usá
+                  <strong> Copiar semana anterior</strong>.
+                </li>
+              </ol>
+            </div>
+
+            <div className="help-sub">
+              <h3>Cómo se enteran y cómo confirman</h3>
+              <p>
+                Al publicar, cada persona recibe una notificación y un email con los botones
+                <strong> Acepto el turno</strong> y <strong>No puedo</strong> (funcionan sin iniciar sesión) y un
+                archivo que agrega el turno a Google, Outlook o Apple Calendar. Si conectó Google Calendar, el turno
+                aparece solo en su calendario. También puede responder desde <strong>Turnos → Mis turnos</strong>,
+                donde además carga su <strong>disponibilidad</strong> (semanal o por fecha).
+              </p>
+              <p>
+                En el cronograma, el color de cada turno dice cómo va: verde, todos confirmaron; ámbar, falta que
+                alguien responda; rojo, alguien no puede o falta gente. Si cambiás la fecha, la hora o la locación de un
+                turno publicado, se le pide a cada persona que lo confirme de nuevo; si lo cancelás, se les avisa y
+                desaparece de su calendario.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Habilidades y habilitaciones (Growth)</h3>
+              <p>
+                En <strong>Configuración → Turnos → Habilidades y habilitaciones</strong> cargás lo que un turno puede
+                requerir (por ejemplo, "Manejo de reactivos") y quién lo tiene, con fecha de vencimiento si corresponde.
+                En el formulario del turno marcás las habilidades requeridas: al asignar, quien no la tiene o la tiene
+                vencida muestra un aviso, y podés asignarlo igual.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Recordatorios</h3>
+              <p>
+                Una vez por día, a la mañana, Northstack recuerda los turnos del día siguiente, los turnos que todavía
+                esperan respuesta, las habilidades que vencen (a los 30 días, a los 7 y el último día) y las horas de
+                turnos de ayer que no se cargaron en el timesheet. Cada recordatorio se activa o desactiva en
+                Configuración → Turnos.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Timesheet: registrar las horas</h3>
+              <ol className="help-steps">
+                <li>
+                  Abrí <strong>Turnos → Timesheet</strong>. Arriba ves lo cargado, lo planificado en turnos y cada día
+                  de la semana.
+                </li>
+                <li>
+                  En <strong>Sugeridas por tu actividad</strong> aparece lo que probablemente trabajaste: turnos que ya
+                  terminaron, tareas completadas, reuniones con videollamada y eventos de tu Google Calendar. Revisá los
+                  minutos y tocá <strong>Agregar</strong>, o <strong>Descartar</strong>. Nada se carga solo.
+                </li>
+                <li>
+                  Para algo que no aparece, <strong>+ Agregar horas</strong>: día, tiempo, descripción, proyecto,
+                  empresa y, en Growth, si es facturable.
+                </li>
+                <li>
+                  Cuando la semana está completa, <strong>Enviar semana</strong>. Tu manager directo (o quien tenga el
+                  permiso de aprobar timesheets) la aprueba o te la devuelve con un comentario.
+                </li>
+              </ol>
+              <p>
+                Una semana aprobada queda cerrada. Si hay que corregirla, usá <strong>Pedir un ajuste</strong> (sumar o
+                restar tiempo, con motivo): queda en tu semana actual y se aprueba con ella. Quien aprueba también puede
+                reabrirla con un motivo. Al completar una tarea, Northstack te pregunta <strong>¿Cuánto te llevó?</strong>,
+                y el detalle de cada tarea tiene un <strong>timer</strong>: ese tiempo se usa en la sugerencia.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Aprobaciones y reportes</h3>
+              <p>
+                <strong>Turnos → Aprobaciones</strong> lista las semanas que esperan tu decisión (con el número en el
+                menú). Cada una abre el timesheet de esa persona con <strong>Aprobar</strong>, <strong>Devolver</strong>
+                o <strong>Reabrir</strong>. <strong>Turnos → Reportes</strong> muestra todo el mes por persona, empresa
+                o proyecto: turnos planificados (los que ya pasaron, los que vienen y los sin confirmar), horas
+                cargadas, aprobadas y facturables, con descarga en CSV. Si activás <strong>Mostrar el costo del
+                cronograma</strong> (Growth), quienes tienen acceso a Payroll ven el costo según la tarifa por hora de
+                cada persona, también en el Cronograma. Agrupando por empresa, <strong>Facturar horas</strong> arma la
+                factura de Stripe con las horas facturables por tu tarifa, para revisarla antes de enviarla.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Cambios, cesiones y turnos abiertos</h3>
+              <p>
+                En <strong>Mis turnos</strong>, cada turno que viene tiene <strong>Buscar quien me cubra</strong>
+                (ofrecérselo a tus compañeros) y <strong>Cambiar con alguien</strong> (elegís un turno de un compañero
+                en la misma locación; acepta o rechaza). En <strong>Para tomar</strong> ves los turnos que otros
+                cedieron y los turnos publicados con lugares libres que quien arma turnos marcó <strong>Abierto a
+                compañeros</strong>: <strong>Lo tomo</strong>. Nada cambia hasta que se aprueba: de entrada, los
+                cambios necesitan la aprobación de quien arma turnos y los turnos abiertos son del primero que los
+                toma; las dos cosas se cambian en Configuración → Turnos. Quien arma turnos decide en
+                <strong> Turnos → Pedidos</strong> (con el número en el menú). Alguien bloqueado (otro turno a esa
+                hora) nunca puede tomarlo.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Fichaje de entrada y salida (Growth)</h3>
+              <p>
+                En <strong>Configuración → Turnos → Fichaje</strong> elegís, para cada locación, cómo se ficha:
+                escaneando el <strong>QR</strong> de la locación (lo imprimís y lo ponés en la entrada; se escanea con
+                el propio celular), desde la app, o las dos. También podés pedir la ubicación, dentro de un radio que
+                definís. Se ficha la entrada, las pausas y la salida desde la página del QR o desde
+                <strong> Mis turnos</strong>. Fichar sin turno agrega un turno de <strong>tiempo extra</strong> al
+                cronograma (borde ámbar). A quien sigue adentro al final del día se le cierra solo y queda para revisar.
+              </p>
+              <p>
+                <strong>Turnos → Hoy</strong> muestra, por locación, quién está, en pausa, se fue, llegó tarde o
+                falta, y <strong>Para revisar</strong> lista los fichajes a controlar; las correcciones piden motivo y
+                quedan registradas. Lo fichado es lo que el timesheet sugiere para esos turnos, y Reportes por persona
+                suma horas fichadas, llegadas tarde y ausencias. Quien arma turnos recibe un resumen diario de
+                asistencia.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Horas presupuestadas e informes para clientes (Growth)</h3>
+              <p>
+                En el detalle de un proyecto, <strong>Definir horas presupuestadas</strong>: una barra compara las
+                horas cargadas en timesheets con el presupuesto (ámbar desde 80 %, roja si se pasa), el dueño del
+                proyecto recibe un aviso al 80 % y al 100 %, y Reportes por proyecto muestra el presupuesto.
+                Agrupando por empresa, <strong>Informe cliente</strong> arma las horas <strong>aprobadas</strong> del
+                mes de esa empresa (un proyecto o todos, con o sin nombres) como PDF, como link privado que no pide
+                login y vence a los 30 días, o como email al cliente con las dos cosas.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Cronograma sugerido (Growth)</h3>
+              <p>
+                En la vista Semana o Por persona, <strong>Sugerir semana</strong> propone quién podría cubrir los
+                turnos en borrador de la semana que tienen lugares libres. Nunca sugiere a alguien bloqueado, de
+                licencia, en feriado, no disponible, sin el descanso mínimo o sin una habilidad, y reparte las horas de
+                forma pareja. Destildá lo que no quieras y asigná: los turnos siguen en borrador hasta que publiques.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Qué emails recibís</h3>
+              <p>
+                En <strong>Configuración → Perfil → Notificaciones por email</strong> cada persona elige qué emails
+                recibe (turnos, recordatorios, cambios, asistencia, timesheet, proyectos, ausencias, ventas). La campana sigue mostrando todo, y los
+                emails de la cuenta (contraseña, invitaciones, facturación) siempre llegan.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Permisos y planes</h3>
+              <p>
+                Cada persona ve y responde sus propios turnos y carga su timesheet. <strong>Aprobar timesheets</strong> deja aprobar el de cualquiera y ver los reportes. <strong>Ver el cronograma completo</strong> deja ver
+                todos los turnos, y <strong>Gestionar turnos</strong> deja armarlos y configurar el módulo
+                (Configuración → Roles y permisos). Para recibir turnos, la persona necesita acceso a Northstack. En el
+                plan <strong>Starter</strong> podés tener 1 locación activa; <strong>Growth</strong> no tiene límite.
+              </p>
+            </div>
+          </section>
+          ) : (
+          <section className="help-section" id="g-shifts">
+            <div className="help-eyebrow">
+              <ClockIcon />
+              Teamwork
+            </div>
+            <h2>Shifts</h2>
+            <p className="help-intro">
+              Schedule your team's shifts at one or more locations, with any hours (overnight too), and ask each
+              person to confirm. It's in the sidebar, under Human Resources.
+            </p>
+
+            <div className="help-sub">
+              <h3>Before you start: locations and rules</h3>
+              <p>
+                In <strong>Settings → Shifts</strong> you add the <strong>locations</strong> where your team works (a
+                lab, a branch, a warehouse), each with its time zone and, optionally, a <strong>manager</strong>: the
+                manager can schedule that location even without the Manage shifts permission. There you also choose
+                whether people have to accept their shifts, the minimum rest between two shifts of the same person,
+                and the day the week starts. Time <strong>templates</strong> are saved from the shift form and can be
+                deleted there.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Building the schedule</h3>
+              <ol className="help-steps">
+                <li>
+                  Open <strong>Shifts → Schedule</strong> and pick a view: <strong>Day</strong>, <strong>Week</strong> or
+                  <strong> Month</strong> (like a calendar), or <strong>By person</strong>. At the top, pick a location
+                  or "All locations".
+                </li>
+                <li>
+                  Click an empty slot in the calendar to create a shift at that day and time (or use
+                  <strong> + Add shift</strong>). Choose the location, the hours, the position, how many people are
+                  needed and any notes. A 22:00–06:00 shift ends the next day.
+                </li>
+                <li>
+                  In the shift's detail, <strong>Add people</strong>. Someone who already has a shift at that time
+                  can't be added. If they have approved time off, it's a holiday, they said they're unavailable or
+                  they'd get too little rest, you see a warning and can assign them anyway.
+                </li>
+                <li>
+                  New shifts are <strong>drafts</strong> (dashed): nobody is told yet. When the week is ready,
+                  <strong> Publish</strong>. To repeat a week, use <strong>Copy last week</strong>.
+                </li>
+              </ol>
+            </div>
+
+            <div className="help-sub">
+              <h3>How people find out and confirm</h3>
+              <p>
+                When you publish, each person gets a notification and an email with <strong>I'll be there</strong>{' '}
+                and <strong>I can't make it</strong> buttons (they work without signing in) and a file that adds the
+                shift to Google, Outlook or Apple Calendar. If they connected Google Calendar, the shift shows up there
+                on its own. They can also answer from <strong>Shifts → My shifts</strong>, where they set their
+                <strong> availability</strong> too (weekly or for specific dates).
+              </p>
+              <p>
+                On the schedule, each shift's color tells you where it stands: green, everyone confirmed; amber,
+                someone still has to answer; red, someone can't make it or people are missing. Changing a published
+                shift's date, time or location asks everyone to confirm again; cancelling it tells them and removes it
+                from their calendar.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Skills and certifications (Growth)</h3>
+              <p>
+                In <strong>Settings → Shifts → Skills and certifications</strong> you list what a shift can require (for
+                example, "Reagent handling") and who holds it, with an expiry date if it has one. Mark the required
+                skills in the shift form: when assigning, anyone who lacks one or has it expired shows a warning, and
+                you can still assign them.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Reminders</h3>
+              <p>
+                Once a day, in the morning, Northstack reminds people of tomorrow's shifts, shifts still waiting for an
+                answer, skills about to expire (30 days, 7 days and the last day) and yesterday's shift hours not yet
+                logged in the timesheet. Each reminder can be turned on or off in Settings → Shifts.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Timesheet: logging hours</h3>
+              <ol className="help-steps">
+                <li>
+                  Open <strong>Shifts → Timesheet</strong>. At the top you see what you logged, what your shifts
+                  planned, and each day of the week.
+                </li>
+                <li>
+                  <strong>Suggested from your activity</strong> lists what you probably worked on: shifts that ended,
+                  completed tasks, video-call meetings and your Google Calendar events. Check the minutes and tap
+                  <strong> Add</strong>, or <strong>Dismiss</strong>. Nothing is logged on its own.
+                </li>
+                <li>
+                  For anything missing, <strong>+ Add hours</strong>: day, time, description, project, company and, on
+                  Growth, whether it's billable.
+                </li>
+                <li>
+                  When the week is complete, <strong>Send week</strong>. Your direct manager (or anyone allowed to
+                  approve timesheets) approves it or sends it back with a note.
+                </li>
+              </ol>
+              <p>
+                An approved week is closed. To correct it, use <strong>Request adjustment</strong> (add or remove time,
+                with a reason): it goes into your current week and is approved with it. Approvers can also reopen it
+                with a reason. When you complete a task, Northstack asks <strong>How long did it take?</strong>, and
+                each task's detail has a <strong>timer</strong>: that time is used in the suggestion.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Approvals and reports</h3>
+              <p>
+                <strong>Shifts → Approvals</strong> lists the weeks waiting for your decision (with a count in the
+                menu). Each opens that person's timesheet with <strong>Approve</strong>, <strong>Send back</strong> or
+                <strong> Reopen</strong>. <strong>Shifts → Reports</strong> shows the whole month by person, company or
+                project: planned shifts (done, upcoming and unconfirmed), logged, approved and billable hours, with a
+                CSV download. If you turn on <strong>Show schedule cost</strong> (Growth), people with Payroll access see
+                the cost at each person's hourly rate, on the schedule too. Grouped by company, <strong>Invoice
+                hours</strong> fills in the Stripe invoice with the billable hours at your rate, for you to review
+                before sending.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Swaps, hand-overs and open shifts</h3>
+              <p>
+                In <strong>My shifts</strong>, each upcoming shift has <strong>Find someone to cover</strong> (offer
+                it to your colleagues) and <strong>Swap with someone</strong> (pick a colleague's shift at the same
+                location; they accept or decline). Under <strong>Available to take</strong> you see shifts others
+                handed over and published shifts with free places that the scheduler marked <strong>Open to
+                colleagues</strong>: <strong>Take it</strong>. Nothing changes until it's approved: by default swaps
+                need a scheduler's approval and open shifts go to whoever takes them first; both can be changed in
+                Settings → Shifts. Schedulers decide in <strong>Shifts → Requests</strong> (with a count in the menu).
+                Someone blocked (another shift at that time) can never take it.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Clocking in and out (Growth)</h3>
+              <p>
+                In <strong>Settings → Shifts → Clock-in</strong> choose, for each location, how people clock in: by
+                scanning the location's <strong>QR</strong> (print it and put it at the entrance; they scan it with
+                their own phone), from the app, or both. You can also ask for their position, within a radius you
+                set. People clock in, take breaks and clock out from the QR page or from <strong>My shifts</strong>.
+                Clocking in without a shift adds an <strong>overtime</strong> shift to the schedule (amber border).
+                Anyone still in at the end of the day is closed automatically and marked for review.
+              </p>
+              <p>
+                <strong>Shifts → Today</strong> shows, for each location, who is in, on a break, gone, late or still
+                missing, and <strong>To review</strong> lists punches to check; corrections need a reason and are
+                recorded. Clocked time is what the timesheet suggests for those shifts, and Reports by person add
+                clocked hours, late arrivals and absences. Schedulers get a daily attendance summary.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Hour budgets and reports for clients (Growth)</h3>
+              <p>
+                In a project's detail, <strong>Set an hour budget</strong>: a bar compares the hours logged in
+                timesheets with the budget (amber from 80 %, red when over), the project owner is notified at 80 % and
+                100 %, and Reports by project show the budget. Grouped by company, <strong>Client report</strong>
+                creates the month's <strong>approved</strong> hours for that company (one project or all, with or
+                without names) as a PDF, a private link that needs no login and expires in 30 days, or an email to the
+                client with both.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Suggested schedule (Growth)</h3>
+              <p>
+                In the Week or By person view, <strong>Suggest week</strong> proposes who could cover the week's draft
+                shifts with free places. It never suggests anyone blocked, on time off, on a holiday, unavailable,
+                short on rest or missing a skill, and spreads the hours evenly. Untick what you don't want and assign:
+                the shifts stay drafts until you publish.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Which emails you get</h3>
+              <p>
+                In <strong>Settings → Profile → Email notifications</strong> each person picks which emails they get
+                (shifts, reminders, swaps, attendance, timesheet, projects, time off, sales). The bell still shows everything, and account emails
+                (password, invitations, billing) always arrive.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Permissions and plans</h3>
+              <p>
+                Everyone sees and answers their own shifts and fills in their own timesheet. <strong>Approve
+                timesheets</strong> lets someone approve anyone's week and see the reports. <strong>View the whole schedule</strong> shows every
+                shift, and <strong>Manage shifts</strong> lets someone build them and set up the module (Settings →
+                Roles &amp; Permissions). To get shifts, a person needs access to Northstack. The
+                <strong> Starter</strong> plan allows 1 active location; <strong>Growth</strong> has no limit.
               </p>
             </div>
           </section>

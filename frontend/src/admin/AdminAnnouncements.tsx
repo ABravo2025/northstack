@@ -184,7 +184,7 @@ function AnnouncementDialog({ initial, countries, clients, session, onClose, onD
       onClose={onClose}
       footer={
         <>
-          {initial && !confirmDelete && <button type="button" className="btn-secondary mr-auto text-rose-600" onClick={() => setConfirmDelete(true)}>Borrar</button>}
+          {initial && !confirmDelete && <button type="button" className="btn-secondary mr-auto text-rose-600 dark:text-rose-400" onClick={() => setConfirmDelete(true)}>Borrar</button>}
           {confirmDelete && (
             <span className="mr-auto flex items-center gap-2 text-sm">
               ¿Borrarlo? Deja de verse en la app.
@@ -260,7 +260,7 @@ function AnnouncementDialog({ initial, countries, clients, session, onClose, onD
             )}
           </div>
         </fieldset>
-        {error && <p className="m-0 text-sm text-rose-600">{error}</p>}
+        {error && <p className="m-0 text-sm text-rose-600 dark:text-rose-400">{error}</p>}
       </form>
     </Modal>
   );

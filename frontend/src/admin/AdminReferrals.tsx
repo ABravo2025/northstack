@@ -468,7 +468,7 @@ function PayModal({ session, member, currency, onClose, onDone }: { session: Adm
           {file ? `✓ ${file.name}` : 'Subí el comprobante · PDF, JPG o PNG · máx. 2 MB · obligatorio'}
           <input id="pay-file" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" className="sr-only" onChange={(e) => pickFile(e.target.files?.[0] ?? null)} />
         </label>
-        {error && <p className="text-sm text-rose-600">{error}</p>}
+        {error && <p className="text-sm text-rose-600 dark:text-rose-400">{error}</p>}
       </form>
     </Modal>
   );
@@ -516,7 +516,7 @@ function VoidModal({ session, commission, onClose, onDone }: { session: AdminSes
           Motivo
           <input id="void-reason" type="text" value={reason} onChange={(e) => setReason(e.target.value)} className="mt-1 w-full" placeholder="Ej.: reembolso del pago" maxLength={300} />
         </label>
-        {error && <p className="text-sm text-rose-600">{error}</p>}
+        {error && <p className="text-sm text-rose-600 dark:text-rose-400">{error}</p>}
       </form>
     </Modal>
   );

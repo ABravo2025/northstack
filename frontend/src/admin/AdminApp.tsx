@@ -59,7 +59,7 @@ export default function AdminApp() {
       .finally(() => setChecking(false));
   }, [token]);
 
-  if (checking) return <div className="grid min-h-screen place-items-center bg-surface-0 text-sm text-ink-faint dark:bg-dark-page">Cargando…</div>;
+  if (checking) return <div className="grid min-h-screen place-items-center bg-surface-0 text-sm text-ink-faint dark:text-dark-ink-faint dark:bg-dark-page">Cargando…</div>;
   if (!token || !me) return <AdminLogin onLoggedIn={(t) => { localStorage.setItem(ADMIN_TOKEN_KEY, t); setToken(t); }} />;
 
   const session: AdminSession = { token, name: me.name, role: me.role, onUnauthorized: logout };
@@ -168,7 +168,7 @@ function AdminLogin({ onLoggedIn }: { onLoggedIn: (token: string) => void }) {
             <PasswordInput id="admin-password" autoComplete="current-password" required value={password} onChange={setPassword} />
           </div>
         </label>
-        {error && <p className="mb-3 text-sm text-rose-600">{error}</p>}
+        {error && <p className="mb-3 text-sm text-rose-600 dark:text-rose-400">{error}</p>}
         <button type="submit" className="btn-primary w-full justify-center" disabled={busy}>
           {busy ? 'Entrando…' : 'Entrar'}
         </button>

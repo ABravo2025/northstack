@@ -191,7 +191,7 @@ export default function AgreementTab({ c, session, onDone }: { c: ClientDetail; 
               Deshabilitar un módulo lo saca del menú del cliente y bloquea su API; los datos quedan guardados y vuelven si se habilita otra vez.
               Al vencer, el cliente vuelve solo a lo que da su plan. El acuerdo no cambia lo que se cobra.
             </p>
-            {error && <p className="m-0 text-sm text-rose-600">{error}</p>}
+            {error && <p className="m-0 text-sm text-rose-600 dark:text-rose-400">{error}</p>}
             <div className="flex flex-wrap gap-2">
               <button type="submit" className="btn-primary" disabled={busy}>{busy ? 'Guardando…' : 'Guardar acuerdo'}</button>
               {a && !confirmClear && <button type="button" className="btn-secondary" onClick={() => setConfirmClear(true)}>Quitar acuerdo</button>}

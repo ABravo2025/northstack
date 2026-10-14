@@ -58,7 +58,7 @@ export default function SupportAccessPanel({ client, session, refreshKey, onDone
       <div className="flex flex-wrap items-center gap-3 rounded-lg bg-sky-50 px-4 py-2.5 text-sm text-sky-900 dark:bg-sky-950/50 dark:text-sky-200">
         <span><b>Acceso de soporte pendiente.</b> Esperando que {current.target.name} ({current.target.email}) acepte · {current.mode === 'edit' ? 'ver y editar' : 'solo lectura'} · {DURATION[current.durationMinutes]}. Vence {fmt(current.requestExpiresAt)}.</span>
         <button type="button" className="btn-secondary ml-auto" disabled={busy} onClick={() => end(current)}>Cancelar pedido</button>
-        {error && <span className="w-full text-rose-600">{error}</span>}
+        {error && <span className="w-full text-rose-600 dark:text-rose-400">{error}</span>}
       </div>
     );
   }
@@ -70,7 +70,7 @@ export default function SupportAccessPanel({ client, session, refreshKey, onDone
           <button type="button" className="btn-primary" disabled={busy} onClick={() => enter(current)}>Entrar como soporte</button>
           <button type="button" className="btn-secondary" disabled={busy} onClick={() => end(current)}>Terminar acceso</button>
         </span>
-        {error && <span className="w-full text-rose-600">{error}</span>}
+        {error && <span className="w-full text-rose-600 dark:text-rose-400">{error}</span>}
       </div>
     );
   }

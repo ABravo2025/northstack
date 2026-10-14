@@ -43,7 +43,7 @@ export default function ClientActions({ client, session, onDone }: Props) {
     { key: 'export', label: 'Exportar datos del cliente', hint: 'ZIP con un CSV por módulo', show: isAdmin },
     { key: 'suspend', label: 'Suspender cuenta', hint: 'Queda en solo lectura', show: isAdmin && client.status !== 'suspended' && client.status !== 'cancelled', tone: 'text-amber-700 dark:text-amber-300' },
     { key: 'reactivate', label: 'Reactivar cuenta', hint: 'Vuelven a poder trabajar', show: isAdmin && client.status === 'suspended' },
-    { key: 'delete', label: 'Eliminar cliente', hint: 'Bloquea ya; borra los datos a los 10 días', show: isAdmin && !deleting, tone: 'text-rose-600' },
+    { key: 'delete', label: 'Eliminar cliente', hint: 'Bloquea ya; borra los datos a los 10 días', show: isAdmin && !deleting, tone: 'text-rose-600 dark:text-rose-400' },
     { key: 'cancelDelete', label: 'Cancelar eliminación', hint: 'El cliente vuelve a poder entrar', show: isAdmin && deleting },
   ];
 
@@ -292,7 +292,7 @@ function ActionDialog({ action, client, session, onClose, onDone }: { action: Ac
           Motivo (queda en el registro)
           <input id="act-reason" autoFocus value={reason} onChange={(e) => { setReason(e.target.value); setError(null); }} placeholder="Ej.: lo pidió el cliente por mail" />
         </label>
-        {error && <p className="text-sm text-rose-600">{error}</p>}
+        {error && <p className="text-sm text-rose-600 dark:text-rose-400">{error}</p>}
       </form>
     </Modal>
   );
@@ -343,7 +343,7 @@ export function ResetPasswordButton({ client, user, session, onDone }: { client:
               Motivo (queda en el registro)
               <input id="reset-reason" autoFocus value={reason} onChange={(e) => { setReason(e.target.value); setError(null); }} placeholder="Ej.: no puede entrar, lo pidió por WhatsApp" />
             </label>
-            {error && <p className="text-sm text-rose-600">{error}</p>}
+            {error && <p className="text-sm text-rose-600 dark:text-rose-400">{error}</p>}
           </form>
         </Modal>
       )}

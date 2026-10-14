@@ -52,6 +52,7 @@ import ShiftRequestsPage from './pages/shifts/ShiftRequestsPage';
 import TodayBoardPage from './pages/shifts/TodayBoardPage';
 import ClockPage from './pages/shifts/ClockPage';
 import ShiftResponsePage from './pages/shifts/ShiftResponsePage';
+import ClientReportPage from './pages/shifts/ClientReportPage';
 import { useCanSchedule } from './components/layout/ShiftsSidebar';
 import CompanyUsersPage from './pages/CompanyUsersPage';
 import PublicFormsSettingsPage from './pages/PublicFormsSettingsPage';
@@ -341,6 +342,8 @@ export default function App() {
       />
       {/* Shifts: the emailed one-click answer page — public, the token is the credential. */}
       <Route path="/shift-response/:token" element={<ShiftResponsePage />} />
+      {/* Shifts phase 2: the hours report shared with a client — public, the token is the credential. */}
+      <Route path="/client-report/:token" element={<ClientReportPage />} />
       <Route
         path="/apply/:tenantSlug/:formSlug"
         element={

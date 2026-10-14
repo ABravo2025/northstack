@@ -238,4 +238,43 @@ export const shiftsApi = {
     call<HoursReport>(token, `/api/shifts/timesheet/reports?from=${params.from}&to=${params.to}&groupBy=${params.groupBy}`),
   reopenTimesheet: (token: string, timesheetId: string, reason: string) =>
     call<{ status: TimesheetStatus }>(token, `/api/shifts/timesheet/${timesheetId}/reopen`, { method: 'POST', body: JSON.stringify({ reason }) }),
+
+  // Phase 2, block D: hours report for a client (PDF, private link, email).
+  getClientReportDefaults: (token: string, companyId: string) =>
+    call<{ projects: { id: string; name: string }[]; email: string | null }>(token, `/api/shifts/client-reports/defaults?companyId=${encodeURIComponent(companyId)}`),
+  createClientReport: (token: string, input: ClientReportInput & { email: string | null }) =>
+    call<{ url: string; expiresAt: string; emailedTo: string | null }>(token, '/api/shifts/client-reports', { method: 'POST', body: JSON.stringify(input) }),
+  downloadClientReportPdf: async (token: string, input: ClientReportInput): Promise<Blob> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/shifts/client-reports/pdf`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.blob();
+  },
+  getPublicClientReport: (reportToken: string) => publicCall<PublicClientReport>(`/api/public/client-reports/${encodeURIComponent(reportToken)}/view`),
+  publicClientReportPdfUrl: (reportToken: string, lang: string) => `${API_BASE_URL}/api/public/client-reports/${encodeURIComponent(reportToken)}/pdf?lang=${lang}`,
 };
+
+export interface ClientReportInput {
+  companyId: string;
+  projectId: string | null;
+  from: string;
+  to: string;
+  showPeople: boolean;
+  lang: string;
+}
+
+export interface PublicClientReport {
+  tenantName: string;
+  company: { id: string; name: string };
+  project: { id: string; name: string } | null;
+  from: string;
+  to: string;
+  showPeople: boolean;
+  lines: { date: string; person: string | null; description: string | null; project: string | null; minutes: number; billable: boolean }[];
+  totalMinutes: number;
+  billableMinutes: number;
+  expiresAt: string;
+}

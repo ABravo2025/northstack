@@ -122,6 +122,13 @@
     "undo": "Si fue un error, respondé este mail antes de esa fecha y la recuperamos."
   },
   "shifts": {
+    "clientReport": {
+      "subject": "Informe de horas de {{tenantName}}: {{period}}",
+      "greeting": "Hola,",
+      "intro": "{{tenantName}} compartió las horas aprobadas de {{companyName}} del período {{period}}. Adjuntamos el PDF.",
+      "open": "Ver el informe online",
+      "expires": "El link funciona durante 30 días."
+    },
     "subjectAssignedOne": "Nuevo turno: {{when}}",
     "subjectAssignedMany": "Tenés {{count}} turnos nuevos",
     "subjectReconfirm": "Cambió un turno: {{when}} — confirmalo de nuevo",

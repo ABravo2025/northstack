@@ -514,7 +514,8 @@
     "late": "Tardanzas",
     "absent": "Ausencias",
     "budget": "Presupuesto",
-    "budgetOf": "{{budget}} · {{pct}}%"
+    "budgetOf": "{{budget}} · {{pct}}%",
+    "actions": "Acciones"
   },
   "requests": {
     "title": "Pedidos",
@@ -680,5 +681,36 @@
       "radius": "Radio",
       "popupBlocked": "El navegador bloqueó la ventana de impresión. Permití las ventanas emergentes y probá de nuevo."
     }
+  },
+  "clientReport": {
+    "open": "Informe cliente",
+    "title": "Informe de horas de {{name}}",
+    "body": "Solo las horas aprobadas de {{month}}. Las semanas sin aprobar quedan afuera.",
+    "project": "Proyecto",
+    "allProjects": "Todos los proyectos",
+    "showPeople": "Mostrar quién trabajó cada línea",
+    "email": "Email del cliente",
+    "pdf": "Descargar PDF",
+    "link": "Crear link",
+    "send": "Enviar por email",
+    "copy": "Copiar",
+    "copied": "Link copiado",
+    "sent": "Informe enviado a {{email}}",
+    "failed": "No se pudo crear el informe: {{message}}",
+    "hint": "El link es de solo lectura, no pide login y vence a los 30 días. El email lleva el PDF y el link.",
+    "loading": "Cargando informe…",
+    "invalid": "Este link venció o no existe",
+    "invalidBody": "Pedile uno nuevo a quien te lo mandó.",
+    "publicTitle": "Informe de horas · {{company}}",
+    "publicFrom": "De {{tenant}} · {{from}} – {{to}}",
+    "total": "Horas totales",
+    "billable": "Facturables",
+    "date": "Fecha",
+    "person": "Persona",
+    "details": "Detalle",
+    "hours": "Horas",
+    "none": "No hay horas aprobadas en este período.",
+    "notBillable": "(no facturable)",
+    "expires": "Este link funciona hasta el {{date}}."
   }
 }

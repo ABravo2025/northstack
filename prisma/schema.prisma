@@ -451,6 +451,7 @@ model Tenant {
   timesheets                Timesheet[]
   shiftChangeRequests       ShiftChangeRequest[]
   clockEntries              ClockEntry[]
+  clientHoursReports        ClientHoursReport[]
   timeEntries               TimeEntry[]
   timeSuggestionDismissals  TimeSuggestionDismissal[]
 }
@@ -2100,6 +2101,27 @@ model ClockCorrection {
   createdAt     DateTime   @default(now())
 
   @@index([clockEntryId])
+}
+
+// Phase 2, block D (spec-shifts-fase2.md §D, Growth): hours report for a client — approved
+// timesheet hours logged to a company (optionally one project) in a period. Shared as a PDF by email
+// or through a private read-only link that expires; only the token's hash is stored.
+model ClientHoursReport {
+  id          String    @id @default(uuid())
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  companyId   String
+  projectId   String?
+  from        DateTime  @db.Date
+  to          DateTime  @db.Date
+  showPeople  Boolean   @default(true)
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  emailedTo   String?
+  createdById String
+  createdAt   DateTime  @default(now())
+
+  @@index([tenantId, companyId])
 }
 
 // Phase 2, block A (spec-shifts-fase2.md): someone takes an open place (claim), hands their shift to

@@ -6,6 +6,7 @@ import Modal from '../../components/common/Modal';
 import TableBody from '../../components/common/TableBody';
 import TableSkeleton from '../../components/common/TableSkeleton';
 import SendStripeInvoiceModal from '../../components/crm/SendStripeInvoiceModal';
+import ClientReportModal from '../../components/shifts/ClientReportModal';
 import { ChevronLeftIcon, ChevronRightIcon, ClockIcon } from '../../components/common/Icons';
 import { usePermissions } from '../../contexts/PermissionsContext';
 import { formatDuration, todayString } from '../../lib/shiftDates';
@@ -67,14 +68,20 @@ export default function HoursReportPage({ token }: HoursReportPageProps) {
   const [invoiceFor, setInvoiceFor] = useState<HoursReportRow | null>(null);
   const [rate, setRate] = useState('');
   const [invoice, setInvoice] = useState<{ row: HoursReportRow; amount: string } | null>(null);
+  const [clientReportFor, setClientReportFor] = useState<{ id: string; name: string } | null>(null);
   const to = monthEnd(from);
 
   useEffect(() => {
+    // Switching month or grouping quickly: only the latest request may fill the table.
+    let current = true;
     setReport(null);
     api
       .getHoursReport(token, { from, to, groupBy })
-      .then(setReport)
-      .catch((error) => toast.error(t('reports.loadFailed', { message: (error as Error).message })));
+      .then((r) => current && setReport(r))
+      .catch((error) => current && toast.error(t('reports.loadFailed', { message: (error as Error).message })));
+    return () => {
+      current = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, from, to, groupBy]);
 
@@ -89,8 +96,10 @@ export default function HoursReportPage({ token }: HoursReportPageProps) {
   // "octubre de 2026" → "Octubre de 2026" (only the first letter).
   const monthLabel = monthText.charAt(0).toUpperCase() + monthText.slice(1);
   const canInvoice = features.payments && groupBy === 'company';
+  const canClientReport = features.billableHours && groupBy === 'company';
+  const rowActions = canInvoice || canClientReport;
   const byPerson = groupBy === 'person';
-  const cols = 1 + (byPerson ? 4 : 0) + 3 + (byPerson && report?.totals.attendance ? 3 : 0) + (groupBy === 'project' ? 1 : 0) + (report?.withCost ? 1 : 0) + (canInvoice ? 1 : 0);
+  const cols = 1 + (byPerson ? 4 : 0) + 3 + (byPerson && report?.totals.attendance ? 3 : 0) + (groupBy === 'project' ? 1 : 0) + (report?.withCost ? 1 : 0) + (rowActions ? 1 : 0);
   const dash = (m: number) => (m ? formatDuration(m) : '—');
 
   const downloadCsv = () => {
@@ -208,7 +217,7 @@ export default function HoursReportPage({ token }: HoursReportPageProps) {
                 )}
                 {groupBy === 'project' && <th>{t('reports.budget')}</th>}
                 {report.withCost && <th>{t('reports.cost')}</th>}
-                {canInvoice && <th aria-label={t('reports.invoice')} />}
+                {rowActions && <th aria-label={t('reports.actions')} />}
               </tr>
             </thead>
             <TableBody colSpan={cols} isEmpty={report.rows.length === 0} empty={{ icon: <ClockIcon />, title: t('reports.emptyTitle'), body: t('reports.emptyBody') }}>
@@ -244,10 +253,15 @@ export default function HoursReportPage({ token }: HoursReportPageProps) {
                       {r.minutesWithoutRate > 0 && <small className="block text-ink-faint dark:text-dark-ink-faint">{t('reports.withoutRate', { hours: formatDuration(r.minutesWithoutRate) })}</small>}
                     </td>
                   )}
-                  {canInvoice && (
+                  {rowActions && (
                     <td>
-                      {r.key && r.billableMinutes > 0 && (
-                        <div className="flex justify-end">
+                      <div className="flex justify-end gap-3 whitespace-nowrap">
+                        {canClientReport && r.key && r.minutes > 0 && (
+                          <button type="button" className="to-link text-xs" onClick={() => setClientReportFor({ id: r.key!, name: r.name ?? '' })}>
+                            {t('clientReport.open')}
+                          </button>
+                        )}
+                        {canInvoice && r.key && r.billableMinutes > 0 && (
                           <button
                             type="button"
                             className="to-link text-xs"
@@ -258,8 +272,8 @@ export default function HoursReportPage({ token }: HoursReportPageProps) {
                           >
                             {t('reports.invoice')}
                           </button>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </td>
                   )}
                 </tr>
@@ -308,6 +322,8 @@ export default function HoursReportPage({ token }: HoursReportPageProps) {
           </div>
         )}
       </Modal>
+
+      <ClientReportModal token={token} company={clientReportFor} from={from} to={to} monthLabel={monthLabel} onClose={() => setClientReportFor(null)} />
 
       {invoice && (
         <SendStripeInvoiceModal

@@ -122,6 +122,13 @@
     "undo": "If this was a mistake, reply to this email before that date and we will restore it."
   },
   "shifts": {
+    "clientReport": {
+      "subject": "Hours report from {{tenantName}}: {{period}}",
+      "greeting": "Hello,",
+      "intro": "{{tenantName}} shared the approved hours for {{companyName}} for {{period}}. The PDF is attached.",
+      "open": "View the report online",
+      "expires": "The link works for 30 days."
+    },
     "subjectAssignedOne": "New shift: {{when}}",
     "subjectAssignedMany": "You have {{count}} new shifts",
     "subjectReconfirm": "Shift changed: {{when}} — please confirm again",

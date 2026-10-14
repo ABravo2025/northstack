@@ -5234,6 +5234,17 @@ Resuelve el pendiente de agosto ("un área en el perfil de las notificaciones qu
 
 **Verificado** (servicios contra `staging`, 6/6): turno fichado 10 min tarde con 15 min de pausa → sugerencia 220 min (planificado 240); turno sin fichaje → 120 planificados; reporte: fichado 220, 1 tardanza, 1 ausencia; sin fichaje en el plan no hay columnas; resumen al Owner y no dos veces el mismo día. 790/790 tests.
 
+## QA-118 — Turnos fase 2, bloque D: informe de horas para el cliente (2026-10-14, en `staging`, Growth)
+
+- Reportes → agrupar por **Empresa** → **Informe cliente** en la fila. Modal: proyecto opcional (los de esa empresa), "Mostrar quién trabajó cada línea", email del cliente (arranca con el contacto principal de la empresa).
+- **Descargar PDF**, **Crear link** (solo lectura, sin login, vence a los 30 días, botón Copiar) o **Enviar por email** (PDF adjunto + link).
+- Solo cuentan las semanas **aprobadas** del mes elegido. Lo ven quienes aprueban timesheets o administran proyectos.
+- Página pública `/client-report/<token>`: totales, líneas (tarjetas en celular), PDF, fecha de vencimiento; link vencido o inválido → mensaje.
+- Arreglo de paso: en Reportes, cambiar rápido de agrupación podía mostrar la respuesta anterior (filas de personas bajo "Empresa").
+- Schema: modelo `ClientHoursReport`, aplicado en `staging`.
+
+**Verificado** contra `staging`: API 16/16 (contacto principal, permisos, empresa de otro tenant, PDF, email inválido, proyecto de otra empresa, link, vista pública sin login, solo semanas aprobadas y de esa empresa, filtro de proyecto + personas ocultas, envío registrado, token guardado como hash, token inválido y vencido → 404); navegador EN y ES oscuro 7/7 (email precargado, PDF, link, página pública en escritorio y 390 px, link inválido, sin errores).
+
 ## QA-117 — Turnos fase 2, bloque C: horas presupuestadas por proyecto (2026-10-14, en `staging`, Growth)
 
 - En el detalle del proyecto: **Definir horas presupuestadas** (quien edita el proyecto). Barra de horas cargadas en timesheets contra presupuestadas: verde, ámbar desde 80 %, roja al pasarse. Sin presupuesto muestra solo las horas cargadas.

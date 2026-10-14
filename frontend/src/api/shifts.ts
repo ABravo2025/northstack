@@ -253,6 +253,11 @@ export const shiftsApi = {
     if (!res.ok) await throwApiError(res);
     return res.blob();
   },
+  // Phase 2, block E: suggested schedule (drafts only).
+  suggestWeek: (token: string, weekStart: string, locationId?: string) =>
+    call<ScheduleSuggestions>(token, '/api/shifts/suggestions', { method: 'POST', body: JSON.stringify({ weekStart, locationId }) }),
+  applySuggestions: (token: string, items: { shiftId: string; employeeId: string }[], locationId?: string) =>
+    call<{ applied: number; skipped: number }>(token, '/api/shifts/suggestions/apply', { method: 'POST', body: JSON.stringify({ items, locationId }) }),
   getPublicClientReport: (reportToken: string) => publicCall<PublicClientReport>(`/api/public/client-reports/${encodeURIComponent(reportToken)}/view`),
   publicClientReportPdfUrl: (reportToken: string, lang: string) => `${API_BASE_URL}/api/public/client-reports/${encodeURIComponent(reportToken)}/pdf?lang=${lang}`,
 };
@@ -277,4 +282,19 @@ export interface PublicClientReport {
   totalMinutes: number;
   billableMinutes: number;
   expiresAt: string;
+}
+
+export interface SuggestedShift {
+  id: string;
+  date: string;
+  startMinute: number;
+  endMinute: number;
+  position: string | null;
+  location: { id: string; name: string };
+}
+
+export interface ScheduleSuggestions {
+  shifts: number;
+  suggestions: { shift: SuggestedShift; employee: { id: string; name: string }; warnings: string[] }[];
+  unfilled: { shift: SuggestedShift; places: number }[];
 }

@@ -5,7 +5,9 @@ import { api, type ScheduleCost, type Shift, type ShiftLocation, type ShiftsSett
 import { useToast } from '../../components/common/ToastProvider';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import TableSkeleton from '../../components/common/TableSkeleton';
-import { BuildingIcon, ChevronLeftIcon, ChevronRightIcon, CopyIcon } from '../../components/common/Icons';
+import { BuildingIcon, ChevronLeftIcon, ChevronRightIcon, CopyIcon, SparklesIcon } from '../../components/common/Icons';
+import SuggestWeekModal from '../../components/shifts/SuggestWeekModal';
+import { usePermissions } from '../../contexts/PermissionsContext';
 import ShiftCard, { filledSlots } from '../../components/shifts/ShiftCard';
 import ShiftDetailModal from '../../components/shifts/ShiftDetailModal';
 import ShiftFormModal from '../../components/shifts/ShiftFormModal';
@@ -71,6 +73,8 @@ export default function ShiftsSchedulePage({ token }: ShiftsSchedulePageProps) {
   const [detail, setDetail] = useState<Shift | null>(null);
   const [form, setForm] = useState<{ shift: Shift | null; locationId: string; date: string; startMinute?: number } | null>(null);
   const [confirm, setConfirm] = useState<'publish' | 'copy' | null>(null);
+  const [suggesting, setSuggesting] = useState(false);
+  const { features } = usePermissions();
   const [busy, setBusy] = useState(false);
 
   const fail = (error: unknown) => toast.error(t('schedule.loadFailed', { message: (error as Error).message }));
@@ -386,6 +390,12 @@ export default function ShiftsSchedulePage({ token }: ShiftsSchedulePageProps) {
                 {t('schedule.copyWeek')}
               </button>
             )}
+            {features.shiftSkills && (view === 'week' || view === 'person') && (
+              <button type="button" className="btn-secondary inline-flex items-center gap-1.5" disabled={busy} onClick={() => setSuggesting(true)}>
+                <SparklesIcon className="h-4 w-4" />
+                {t('suggest.button')}
+              </button>
+            )}
             <button type="button" className="btn-primary" disabled={busy || drafts.length === 0} onClick={() => setConfirm('publish')}>
               {drafts.length > 0 ? t('schedule.publish', { count: drafts.length }) : t('schedule.publishNone')}
             </button>
@@ -535,6 +545,18 @@ export default function ShiftsSchedulePage({ token }: ShiftsSchedulePageProps) {
           confirmLabel={t('schedule.copyWeek')}
           onCancel={() => setConfirm(null)}
           onConfirm={copyWeek}
+        />
+      )}
+      {suggesting && (
+        <SuggestWeekModal
+          token={token}
+          weekStart={weekStart}
+          locationId={locationFilter || undefined}
+          onClose={() => setSuggesting(false)}
+          onApplied={() => {
+            setSuggesting(false);
+            load(true);
+          }}
         />
       )}
     </div>

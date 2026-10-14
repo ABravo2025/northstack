@@ -712,5 +712,22 @@
     "none": "No hay horas aprobadas en este período.",
     "notBillable": "(no facturable)",
     "expires": "Este link funciona hasta el {{date}}."
+  },
+  "suggest": {
+    "button": "Sugerir semana",
+    "title": "Cronograma sugerido",
+    "loading": "Buscando la mejor combinación…",
+    "nothing": "Ningún turno en borrador de esta semana tiene lugares libres. La sugerencia solo completa borradores: primero agregá turnos o copiá la semana anterior.",
+    "body": "Quién podría cubrir los turnos en borrador de esta semana que tienen lugares libres. Destildá a quien no quieras; los turnos siguen en borrador hasta que publiques.",
+    "apply_one": "Asignar {{count}} persona",
+    "apply_other": "Asignar {{count}} personas",
+    "applied_one": "{{count}} asignación agregada a los borradores",
+    "applied_other": "{{count}} asignaciones agregadas a los borradores",
+    "appliedSkipped": "{{count}} agregadas; {{skipped}} salteadas porque el turno cambió mientras tanto",
+    "unfilledTitle": "Nadie disponible sin un aviso",
+    "places_one": "{{count}} lugar",
+    "places_other": "{{count}} lugares",
+    "hint": "Nunca sugiere a alguien bloqueado, de licencia, en feriado, no disponible, sin el descanso mínimo o sin una habilidad. Reparte las horas de forma pareja.",
+    "failed": "No se pudo sugerir: {{message}}"
   }
 }

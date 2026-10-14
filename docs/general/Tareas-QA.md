@@ -5234,6 +5234,15 @@ Resuelve el pendiente de agosto ("un área en el perfil de las notificaciones qu
 
 **Verificado** (servicios contra `staging`, 6/6): turno fichado 10 min tarde con 15 min de pausa → sugerencia 220 min (planificado 240); turno sin fichaje → 120 planificados; reporte: fichado 220, 1 tardanza, 1 ausencia; sin fichaje en el plan no hay columnas; resumen al Owner y no dos veces el mismo día. 790/790 tests.
 
+## QA-119 — Turnos fase 2, bloque E: cronograma sugerido (2026-10-14, en `staging`, Growth)
+
+- Cronograma (vista Semana o Por persona) → **Sugerir semana**: propone a quién poner en cada turno **en borrador** de esa semana con lugares libres. Cada línea se puede destildar; **Asignar N personas** las agrega y los turnos siguen en borrador hasta publicar.
+- Nunca sugiere a alguien bloqueado, de licencia, en feriado, "no disponible", sin descanso mínimo o sin una habilidad; "fuera del horario que dio" solo como último recurso (se muestra el aviso). Reparte horas de forma pareja, contando lo que ya tienen esa semana.
+- Los turnos publicados con lugares libres no entran (asignar ahí avisaría en el momento): para esos está "Abierto a compañeros".
+- Lo que no se puede cubrir aparece en "Nadie disponible sin un aviso".
+
+**Verificado** contra `staging`: API 15/15 (miembro sin permiso, publicado excluido, 5 lugares en 4 turnos, persona no disponible excluida, turno de 2 personas, reparto parejo, nada escrito antes de aplicar, aplicar deja borradores con asignaciones pendientes sin avisos, segunda aplicación no pasa el cupo, segunda sugerencia solo lo que queda, Starter → 403); navegador EN y ES oscuro 4/4. 7 tests del algoritmo.
+
 ## QA-118 — Turnos fase 2, bloque D: informe de horas para el cliente (2026-10-14, en `staging`, Growth)
 
 - Reportes → agrupar por **Empresa** → **Informe cliente** en la fila. Modal: proyecto opcional (los de esa empresa), "Mostrar quién trabajó cada línea", email del cliente (arranca con el contacto principal de la empresa).

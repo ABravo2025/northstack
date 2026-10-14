@@ -712,5 +712,22 @@
     "none": "No approved hours in this period.",
     "notBillable": "(not billable)",
     "expires": "This link works until {{date}}."
+  },
+  "suggest": {
+    "button": "Suggest week",
+    "title": "Suggested schedule",
+    "loading": "Looking for the best fit…",
+    "nothing": "No draft shift this week has free places. Suggestions only fill drafts: add shifts or copy last week first.",
+    "body": "Who could cover this week's draft shifts with free places. Untick anyone you don't want; the shifts stay drafts until you publish.",
+    "apply_one": "Assign {{count}} person",
+    "apply_other": "Assign {{count}} people",
+    "applied_one": "{{count}} assignment added to the drafts",
+    "applied_other": "{{count}} assignments added to the drafts",
+    "appliedSkipped": "{{count}} added; {{skipped}} skipped because the shift changed meanwhile",
+    "unfilledTitle": "Nobody available without a warning",
+    "places_one": "{{count}} place",
+    "places_other": "{{count}} places",
+    "hint": "Never suggests anyone blocked, on time off, on a holiday, unavailable, short on rest or missing a skill. Hours are spread evenly.",
+    "failed": "Couldn't suggest: {{message}}"
   }
 }

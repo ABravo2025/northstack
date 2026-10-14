@@ -49,7 +49,10 @@
       "minRest": "Descanso mínimo entre dos turnos de la misma persona",
       "minRestOff": "Sin mínimo",
       "hours": "horas",
-      "weekStart": "La semana empieza el"
+      "weekStart": "La semana empieza el",
+      "lateAfter": "Un fichaje cuenta como tarde después de",
+      "lateMinutes_one": "{{count}} minuto",
+      "lateMinutes_other": "{{count}} minutos"
     },
     "weekdays": [
       "Domingo",
@@ -124,7 +127,8 @@
     "timesheet": "Timesheet",
     "approvals": "Aprobaciones",
     "reports": "Reportes",
-    "requests": "Pedidos"
+    "requests": "Pedidos",
+    "today": "Hoy"
   },
   "status": {
     "draft": "Borrador",
@@ -576,5 +580,99 @@
     "reasonPlaceholder": "p. ej. Turno médico",
     "openToClaim": "Abierto a compañeros: cualquiera que pueda toma un lugar libre",
     "openToClaimHint": "Los lugares libres aparecen en Mis turnos → Para tomar de todos."
+  },
+  "clock": {
+    "title": "Fichar",
+    "cardTitle": "Fichar",
+    "loading": "Cargando…",
+    "invalidTitle": "Este QR no funciona",
+    "goMine": "Ir a Mis turnos",
+    "yourShift": "Tu turno de hoy: {{from}}–{{to}}",
+    "noShiftHere": "No tenés turno acá ahora: se va a registrar como tiempo extra.",
+    "openElsewhere": "Todavía tenés una entrada abierta en {{location}}. Fichá la salida ahí primero.",
+    "locationHint": "Esta locación revisa la ubicación de tu celular al fichar.",
+    "in": "Fichar entrada",
+    "inAt": "Fichar entrada en {{location}}",
+    "out": "Fichar salida",
+    "shiftAt": "Turno a las {{time}}",
+    "noShiftOvertime": "Sin turno ahora: tiempo extra",
+    "noPlace": "Escaneá el QR de tu locación para fichar.",
+    "noAppLocations": "Fichá escaneando el QR de tu locación.",
+    "inSince": "Adentro desde las {{time}} · {{location}}",
+    "onBreakSince": "En pausa desde las {{time}}",
+    "awayFlag": "Fichaste lejos de la locación",
+    "awayWarning": "Fichaste lejos de la locación: queda registrado y quien arma los turnos lo va a ver.",
+    "startBreak": "Iniciar pausa",
+    "endBreak": "Terminar pausa",
+    "breakMinutes": "Pausa (minutos)",
+    "breakStarted": "Pausa iniciada",
+    "breakEnded": "Pausa terminada",
+    "inToast": "Entrada fichada",
+    "outToast": "Salida fichada",
+    "overtimeToast": "Quedó en el cronograma como tiempo extra",
+    "failed": "No se pudo: {{message}}",
+    "overtime": "Tiempo extra",
+    "boardTitle": "Hoy",
+    "boardSubtitle": "Quién está, quién falta y quién ya se fue, en cada locación. Se actualiza al abrirlo.",
+    "reviewTitle": "Para revisar",
+    "reviewAction": "Revisar",
+    "review": {
+      "autoClosed": "No fichó la salida: se cerró al terminar el turno",
+      "overtime": "Fichó sin turno (tiempo extra)",
+      "away": "Fichó lejos de la locación"
+    },
+    "locationOff": "El fichaje está apagado en esta locación (Configuración → Turnos → Fichaje).",
+    "noShiftsToday": "No hay turnos hoy",
+    "noShift": "Sin turno",
+    "late": "Tarde",
+    "away": "Lejos",
+    "col": {
+      "person": "Persona",
+      "shift": "Turno",
+      "state": "Estado",
+      "in": "Entrada",
+      "out": "Salida",
+      "worked": "Trabajado"
+    },
+    "state": {
+      "upcoming": "Por llegar",
+      "missing": "Falta",
+      "in": "Adentro",
+      "on_break": "En pausa",
+      "out": "Se fue"
+    },
+    "fixTitle": "Revisar el fichaje de {{name}}",
+    "fixReason": "Motivo del cambio",
+    "fixSave": "Guardar",
+    "fixHint": "Los horarios originales quedan guardados junto al cambio, con tu motivo.",
+    "corrected": "Guardado",
+    "method": {
+      "off": "Apagado",
+      "qr": "QR",
+      "app": "App",
+      "qr_or_app": "QR o app"
+    },
+    "settings": {
+      "title": "Fichaje",
+      "lead": "Cómo ficha la gente en cada locación: escaneando el QR impreso con su propio celular, desde la app, o las dos.",
+      "growthOnly": "El fichaje es parte del plan Growth.",
+      "method": "Forma de fichar",
+      "showQr": "Ver QR",
+      "print": "Imprimir hoja con QR",
+      "qrTitle": "QR para fichar · {{name}}",
+      "sheetTitle": "Fichá acá",
+      "sheetStep": "Escaneá este código con la cámara de tu celular y tocá Fichar entrada.",
+      "regenerate": "Nuevo QR",
+      "regenerated": "Nuevo QR listo: imprimilo de nuevo, la hoja vieja ya no sirve",
+      "regenerateHint": "Si la hoja se copia o se pierde, generá un QR nuevo: el anterior deja de funcionar.",
+      "checkPosition": "Revisar la ubicación del celular al fichar",
+      "positionSet": "Punto de la locación: {{latitude}}, {{longitude}}",
+      "positionMissing": "Todavía no hay un punto cargado",
+      "useMyPosition": "Usar mi ubicación actual",
+      "positionSaved": "Ubicación guardada",
+      "noPosition": "No se pudo leer tu ubicación. Permití el acceso a la ubicación y probá de nuevo.",
+      "radius": "Radio",
+      "popupBlocked": "El navegador bloqueó la ventana de impresión. Permití las ventanas emergentes y probá de nuevo."
+    }
   }
 }

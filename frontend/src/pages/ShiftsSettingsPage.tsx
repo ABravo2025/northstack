@@ -12,6 +12,7 @@ import { BuildingIcon, ClockIcon, PencilIcon, TrashIcon } from '../components/co
 import { formatMinute } from '../lib/shiftDates';
 import { usePermissions } from '../contexts/PermissionsContext';
 import SkillsSettingsCard from '../components/shifts/SkillsSettingsCard';
+import ClockSettingsCard from '../components/shifts/ClockSettingsCard';
 
 interface ShiftsSettingsPageProps {
   token: string;
@@ -284,8 +285,20 @@ export default function ShiftsSettingsPage({ token }: ShiftsSettingsPageProps) {
               ))}
             </select>
           </div>
+          <div className="form-group !mb-0">
+            <label htmlFor="shifts-late">{t('settings.rules.lateAfter')}</label>
+            <select id="shifts-late" className="max-w-xs" value={settings.lateToleranceMinutes} onChange={(e) => save({ lateToleranceMinutes: Number(e.target.value) })}>
+              {[0, 5, 10, 15, 30].map((m) => (
+                <option key={m} value={m}>
+                  {t('settings.rules.lateMinutes', { count: m })}
+                </option>
+              ))}
+            </select>
+          </div>
         </section>
       </div>
+
+      <ClockSettingsCard token={token} />
 
       <section className="card rules-card">
         <h3 className="card-title">{t('settings.swaps.title')}</h3>

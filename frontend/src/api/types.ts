@@ -23,6 +23,8 @@ export interface PlanFeatures {
   shiftSkills?: boolean;
   // Timesheet (Unidad 9): billable hours (Growth). Optional on the wire, same as above.
   billableHours?: boolean;
+  // Phase 2, block B: clocking in and out (Growth).
+  clockIn?: boolean;
 }
 
 export interface AuthResponse {
@@ -632,7 +634,8 @@ export type ActivityEntityType =
   | 'skill'
   | 'timesheet'
   | 'timeEntry'
-  | 'shiftRequest';
+  | 'shiftRequest'
+  | 'clockEntry';
 
 export interface ActivityChange {
   field: string;
@@ -706,7 +709,8 @@ export type NotificationType =
   | 'timesheet_decided'
   | 'timesheet_reminder'
   | 'shift_request'
-  | 'shift_request_decided';
+  | 'shift_request_decided'
+  | 'attendance';
 
 export interface Notification {
   id: string;
@@ -1353,6 +1357,7 @@ export interface ShiftsSettings {
   allowSwaps: boolean;
   swapNeedsApproval: boolean;
   openShiftNeedsApproval: boolean;
+  lateToleranceMinutes: number;
 }
 
 export interface ShiftLocation {
@@ -1401,6 +1406,8 @@ export interface Shift {
   assignments: ShiftAssignment[];
   // Phase 2: free places anyone eligible can take.
   openToClaim?: boolean;
+  // Phase 2: created by clocking in without a shift.
+  isOvertime?: boolean;
 }
 
 export type ShiftBlock = 'no_user' | 'overlap' | 'already_assigned';
@@ -1575,6 +1582,7 @@ export type EmailCategory =
   | 'shiftReminders'
   | 'shiftDeclined'
   | 'shiftSwaps'
+  | 'attendance'
   | 'skillsExpiring'
   | 'timesheet'
   | 'timeOff'
@@ -1627,4 +1635,65 @@ export interface SwapTarget {
   assignmentId: string;
   employee: { id: string; firstName: string; lastName: string };
   shift: ShiftRequestShift;
+}
+
+// Shifts phase 2, block B: clock-in.
+export type ClockMethod = 'off' | 'qr' | 'app' | 'qr_or_app';
+
+export interface ClockEntry {
+  id: string;
+  employee: { id: string; firstName: string; lastName: string };
+  location: { id: string; name: string };
+  shiftAssignmentId: string | null;
+  clockInAt: string;
+  clockOutAt: string | null;
+  method: 'qr' | 'app' | 'manager';
+  breakMinutes: number;
+  onBreakSince: string | null;
+  breakButtonsUsed: boolean;
+  status: 'open' | 'closed' | 'auto_closed';
+  needsReview: boolean;
+  awayFromLocation: boolean;
+  inDistanceMeters: number | null;
+  workedMinutes: number;
+}
+
+export interface ClockMe {
+  open: ClockEntry | null;
+  appLocations: { id: string; name: string; requireLocation: boolean; shiftStartsAt: string | null }[];
+}
+
+export interface ClockCodeView {
+  location: { id: string; name: string };
+  requireLocation: boolean;
+  open: ClockEntry | null;
+  shiftStartsAt: string | null;
+  shiftEndsAt: string | null;
+}
+
+export interface ClockLocationConfig {
+  id: string;
+  name: string;
+  isActive: boolean;
+  clockMethod: ClockMethod;
+  clockCode: string | null;
+  requireLocation: boolean;
+  latitude: number | null;
+  longitude: number | null;
+  radiusMeters: number;
+}
+
+export type ClockBoardState = 'upcoming' | 'missing' | 'in' | 'on_break' | 'out';
+
+export interface ClockBoardLocation {
+  location: { id: string; name: string; clockMethod: ClockMethod };
+  date: string;
+  rows: {
+    employee: { id: string; firstName: string; lastName: string };
+    shift: { id: string; startMinute: number; endMinute: number; startsAt: string; isOvertime: boolean };
+    state: ClockBoardState;
+    late: boolean;
+    entry: ClockEntry | null;
+  }[];
+  unscheduled: ClockEntry[];
 }

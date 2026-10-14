@@ -12,7 +12,7 @@ interface EmailPreferencesCardProps {
 // optional emails they get. The bell keeps showing everything; emails about the account itself
 // (password, invitations, billing, legal) always arrive. Saves on every toggle.
 const GROUPS: { key: string; categories: EmailCategory[] }[] = [
-  { key: 'shifts', categories: ['shifts', 'shiftReminders', 'shiftSwaps', 'shiftDeclined', 'skillsExpiring', 'timesheet'] },
+  { key: 'shifts', categories: ['shifts', 'shiftReminders', 'shiftSwaps', 'shiftDeclined', 'attendance', 'skillsExpiring', 'timesheet'] },
   { key: 'timeOff', categories: ['timeOff'] },
   { key: 'sales', categories: ['opportunityStage', 'opportunityStalled'] },
 ];

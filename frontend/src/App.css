@@ -3897,6 +3897,10 @@ textarea.overview-field-input {
 .rep-kpis .sh-kpi {
   @apply w-44 items-center text-center max-sm:w-[calc(50%-0.375rem)];
 }
+.sh-block-overtime {
+  /* Phase 2: a shift created by clocking in without one. */
+  @apply border-dashed !border-l-amber-500 dark:!border-l-amber-400;
+}
 .sh-note-warn {
   @apply border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200;
 }

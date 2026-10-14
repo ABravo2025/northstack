@@ -49,7 +49,10 @@
       "minRest": "Minimum rest between two shifts of the same person",
       "minRestOff": "No minimum",
       "hours": "hours",
-      "weekStart": "Week starts on"
+      "weekStart": "Week starts on",
+      "lateAfter": "A clock-in counts as late after",
+      "lateMinutes_one": "{{count}} minute",
+      "lateMinutes_other": "{{count}} minutes"
     },
     "weekdays": [
       "Sunday",
@@ -124,7 +127,8 @@
     "timesheet": "Timesheet",
     "approvals": "Approvals",
     "reports": "Reports",
-    "requests": "Requests"
+    "requests": "Requests",
+    "today": "Today"
   },
   "status": {
     "draft": "Draft",
@@ -576,5 +580,99 @@
     "reasonPlaceholder": "e.g. Medical appointment",
     "openToClaim": "Open to colleagues: anyone eligible can take a free place",
     "openToClaimHint": "Free places show up in everyone's My shifts → Available to take."
+  },
+  "clock": {
+    "title": "Clock in",
+    "cardTitle": "Clock in",
+    "loading": "Loading…",
+    "invalidTitle": "This QR doesn't work",
+    "goMine": "Go to My shifts",
+    "yourShift": "Your shift today: {{from}}–{{to}}",
+    "noShiftHere": "You have no shift here now: it will be recorded as overtime.",
+    "openElsewhere": "You are still clocked in at {{location}}. Clock out there first.",
+    "locationHint": "This location checks your phone's position when you clock in.",
+    "in": "Clock in",
+    "inAt": "Clock in at {{location}}",
+    "out": "Clock out",
+    "shiftAt": "Shift at {{time}}",
+    "noShiftOvertime": "No shift now: overtime",
+    "noPlace": "Scan the QR at your location to clock in.",
+    "noAppLocations": "Clock in by scanning the QR at your location.",
+    "inSince": "In since {{time}} · {{location}}",
+    "onBreakSince": "On a break since {{time}}",
+    "awayFlag": "Clocked in away from the location",
+    "awayWarning": "You clocked in away from the location: it's recorded, and your manager will see it.",
+    "startBreak": "Start break",
+    "endBreak": "End break",
+    "breakMinutes": "Break (minutes)",
+    "breakStarted": "Break started",
+    "breakEnded": "Break ended",
+    "inToast": "Clocked in",
+    "outToast": "Clocked out",
+    "overtimeToast": "Added to the schedule as overtime",
+    "failed": "Couldn't do it: {{message}}",
+    "overtime": "Overtime",
+    "boardTitle": "Today",
+    "boardSubtitle": "Who's in, who's missing and who already left, at each location. It updates when you open it.",
+    "reviewTitle": "To review",
+    "reviewAction": "Review",
+    "review": {
+      "autoClosed": "Didn't clock out: closed at the shift's end",
+      "overtime": "Clocked in without a shift (overtime)",
+      "away": "Clocked in away from the location"
+    },
+    "locationOff": "Clocking in is off at this location (Settings → Shifts → Clock-in).",
+    "noShiftsToday": "No shifts today",
+    "noShift": "No shift",
+    "late": "Late",
+    "away": "Away",
+    "col": {
+      "person": "Person",
+      "shift": "Shift",
+      "state": "Status",
+      "in": "In",
+      "out": "Out",
+      "worked": "Worked"
+    },
+    "state": {
+      "upcoming": "Upcoming",
+      "missing": "Missing",
+      "in": "In",
+      "on_break": "On a break",
+      "out": "Left"
+    },
+    "fixTitle": "Review {{name}}'s punch",
+    "fixReason": "Reason for the change",
+    "fixSave": "Save",
+    "fixHint": "The original times are kept next to the change, with your reason.",
+    "corrected": "Saved",
+    "method": {
+      "off": "Off",
+      "qr": "QR",
+      "app": "App",
+      "qr_or_app": "QR or app"
+    },
+    "settings": {
+      "title": "Clock-in",
+      "lead": "How people clock in at each location: scanning the printed QR with their own phone, from the app, or both.",
+      "growthOnly": "Clocking in is part of the Growth plan.",
+      "method": "Clock-in method",
+      "showQr": "Show QR",
+      "print": "Print QR sheet",
+      "qrTitle": "Clock-in QR · {{name}}",
+      "sheetTitle": "Clock in here",
+      "sheetStep": "Scan this code with your phone's camera and tap Clock in.",
+      "regenerate": "New QR",
+      "regenerated": "New QR ready: print it again, the old sheet no longer works",
+      "regenerateHint": "If the sheet is copied or lost, make a new QR: the old one stops working.",
+      "checkPosition": "Check the phone's position when clocking in",
+      "positionSet": "Location point: {{latitude}}, {{longitude}}",
+      "positionMissing": "No point set yet",
+      "useMyPosition": "Use my current position",
+      "positionSaved": "Position saved",
+      "noPosition": "Couldn't read your position. Allow location access and try again.",
+      "radius": "Radius",
+      "popupBlocked": "Your browser blocked the print window. Allow pop-ups and try again."
+    }
   }
 }

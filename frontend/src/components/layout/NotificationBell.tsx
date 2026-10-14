@@ -6,6 +6,7 @@ import { api, type Notification, type PlatformAnnouncement } from '../../api';
 import Popover from '../common/Popover';
 import { BellIcon, SparklesIcon } from '../common/Icons';
 import AnnouncementDetailModal from './AnnouncementDetailModal';
+import { usePermissions } from '../../contexts/PermissionsContext';
 
 interface NotificationBellProps {
   token: string;
@@ -30,6 +31,7 @@ export default function NotificationBell({ token }: NotificationBellProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+  const permissions = usePermissions();
   const [unreadCount, setUnreadCount] = useState(0);
   const [announcementUnreadCount, setAnnouncementUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -111,6 +113,11 @@ export default function NotificationBell({ token }: NotificationBellProps) {
     if (notification.entityType === 'shiftRequest') {
       setOpen(false);
       navigate(notification.type === 'shift_request' ? '/shifts/requests' : '/shifts/mine');
+    }
+    // Clock-in (phase 2): schedulers' notices open Today; the person's own opens My shifts.
+    if (notification.entityType === 'clockEntry') {
+      setOpen(false);
+      navigate(permissions.has('manage_shifts') ? '/shifts/today' : '/shifts/mine');
     }
     // Timesheets: a week to approve opens Approvals; your own week's news opens your timesheet.
     if (notification.entityType === 'timesheet') {

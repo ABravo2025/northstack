@@ -465,8 +465,8 @@
         "name": "Prueba gratuita",
         "tagline": "Seguí explorando — decidí más adelante",
         "price": "Gratis",
-        "priceSuffix": "por 15 días",
-        "cap": "Acceso completo, sin tarjeta",
+        "priceSuffix": "por {{count}} días",
+        "cap": "Acceso completo · hasta {{cap}} usuarios",
         "ctaLabel": "Continuar con la prueba gratuita"
       },
       "starter": {
@@ -475,32 +475,118 @@
         "cap": "Se cobra por usuario activo · mínimo {{min}} usuarios ({{minTotal}}/mes)"
       },
       "growth": {
-        "tagline": "Para equipos en crecimiento que necesitan Nómina",
+        "tagline": "Sin límites, con nómina, horas facturables e integraciones",
         "priceSuffix": "/ usuario / mes",
         "cap": "Se cobra por usuario activo · mínimo {{min}} usuarios ({{minTotal}}/mes)"
       }
     },
-    "features": {
-      "salesCrm": "Ventas / CRM",
-      "salesCrmSubUnlimited": "pipelines ilimitados",
-      "salesCrmSubStarter": "hasta 2 pipelines",
-      "hrTimeOff": "RR.HH. y Ausencias",
-      "hrTimeOffSubUnlimited": "políticas ilimitadas",
-      "hrTimeOffSubStarter": "hasta 3 políticas",
-      "notesTasksTags": "Notas, Tareas, Etiquetas y Campos personalizados",
-      "activityLog": "Registro de actividad",
-      "activityLogSub30": "30 días de historial",
-      "activityLogSub7": "7 días de historial",
-      "payrollTracking": "Seguimiento de Nómina",
-      "payments": "Pagos",
-      "paymentsSub": "historial de pagos de Stripe + facturación",
-      "googleCalendar": "Integración con Google Calendar",
-      "customRoles": "Roles y permisos personalizados",
-      "customRolesSubUnlimited": "ilimitados",
-      "customRolesSubStarter": "hasta 2 roles personalizados",
-      "apiAccess": "Acceso a la API",
+    "highlights": {
+      "trialAllGrowth": "Todo lo de Growth mientras probás",
+      "trialNewModules": "Proyectos, Turnos y Timesheet incluidos",
+      "trialNoCard": "Sin tarjeta de crédito",
+      "starterAllModules": "Todos los módulos en versión básica",
+      "starterLimits": "{{locations}} sede, {{projects}} proyectos abiertos, {{pipelines}} pipelines",
+      "starterShifts": "Turnos, timesheet y ausencias",
       "emailSupport": "Soporte por correo electrónico",
-      "emailSupportPriority": "Soporte prioritario por correo electrónico"
+      "growthUnlimited": "Sedes, proyectos, pipelines y roles ilimitados",
+      "growthPayroll": "Seguimiento de nómina y Pagos (Stripe)",
+      "growthBillable": "Horas facturables, habilidades y templates de proyecto",
+      "growthApi": "API y webhooks",
+      "prioritySupport": "Soporte prioritario por correo"
+    },
+    "compare": {
+      "title": "Comparar planes por módulo",
+      "trialNote": "La prueba gratuita incluye todo lo de Growth.",
+      "feature": "Función",
+      "included": "Incluido",
+      "notIncluded": "No incluido",
+      "unlimited": "Ilimitado",
+      "upTo_one": "Hasta {{count}}",
+      "upTo_other": "Hasta {{count}}",
+      "days_one": "{{count}} día",
+      "days_other": "{{count}} días",
+      "groups": {
+        "people": "Personas y RR.HH.",
+        "timeOff": "Ausencias",
+        "sales": "Ventas / CRM",
+        "projects": "Proyectos",
+        "shifts": "Turnos y horas",
+        "payroll": "Nómina y pagos",
+        "integrations": "Integraciones",
+        "control": "Control y soporte"
+      },
+      "rows": {
+        "profiles": {
+          "label": "Legajos, áreas y campos personalizados"
+        },
+        "selfService": {
+          "label": "Autogestión para cada empleado"
+        },
+        "customRoles": {
+          "label": "Roles y permisos personalizados"
+        },
+        "policies": {
+          "label": "Políticas de ausencia"
+        },
+        "holidays": {
+          "label": "Calendarios de feriados y días de la empresa"
+        },
+        "googleCalendar": {
+          "label": "Sincronización con Google Calendar"
+        },
+        "pipelines": {
+          "label": "Pipelines de ventas"
+        },
+        "crmRecords": {
+          "label": "Empresas, contactos y oportunidades"
+        },
+        "formsCsv": {
+          "label": "Formularios públicos e importación/exportación CSV"
+        },
+        "activeProjects": {
+          "label": "Proyectos abiertos a la vez",
+          "sub": "Los completados y cancelados no cuentan"
+        },
+        "taskChat": {
+          "label": "Tareas con chat, menciones y links de Meet"
+        },
+        "templates": {
+          "label": "Guardar tus propios templates de proyecto"
+        },
+        "locations": {
+          "label": "Sedes activas"
+        },
+        "scheduling": {
+          "label": "Turnos, disponibilidad y confirmaciones"
+        },
+        "timesheet": {
+          "label": "Timesheet y tiempo en tareas"
+        },
+        "skills": {
+          "label": "Habilidades y certificaciones con vencimiento"
+        },
+        "billable": {
+          "label": "Horas facturables e informe de horas por cliente"
+        },
+        "payroll": {
+          "label": "Seguimiento de nómina",
+          "sub": "Solo registro: Northstack nunca mueve dinero"
+        },
+        "payments": {
+          "label": "Pagos de Stripe y facturación"
+        },
+        "api": {
+          "label": "API privada y webhooks"
+        },
+        "activityLog": {
+          "label": "Historial del registro de actividad"
+        },
+        "support": {
+          "label": "Soporte",
+          "starter": "Por correo",
+          "growth": "Prioritario por correo"
+        }
+      }
     }
   },
   "addPaymentMethod": {

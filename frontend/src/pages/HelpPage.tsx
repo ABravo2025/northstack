@@ -84,7 +84,7 @@ const FAQ_CATEGORIES: FaqCategory[] = [
     items: [
       {
         q: "What's different between Starter and Growth?",
-        a: "Growth removes the caps on pipelines, time off policies, and custom roles, keeps activity history for 30 days instead of 7, and is the only plan with Payroll and Payments (your own Stripe) included. Both plans are priced per active user: {starterPrice} on Starter and {growthPrice} on Growth per user per month.",
+        a: "Growth removes the caps on pipelines, time off policies, custom roles, open projects and Shifts locations, keeps activity history for 30 days instead of 7, and is the only plan with Payroll, Payments (your own Stripe), billable hours, skills and certifications, your own project templates, and the API included. Both plans are priced per active user: {starterPrice} on Starter and {growthPrice} on Growth per user per month.",
       },
       {
         q: 'How do seats work?',
@@ -359,7 +359,7 @@ const FAQ_CATEGORIES_ES: FaqCategory[] = [
       },
       {
         q: '¿Qué diferencia hay entre Starter y Growth?',
-        a: 'Growth saca los topes de pipelines, políticas de ausencias y roles personalizados, guarda el historial de actividad 30 días en vez de 7, y es el único plan que incluye Nómina y Pagos (tu propia cuenta de Stripe). Los dos planes se cobran por usuario activo: {starterPrice} en Starter y {growthPrice} en Growth por usuario por mes.',
+        a: 'Growth saca los topes de pipelines, políticas de ausencias, roles personalizados, proyectos abiertos y sedes de Turnos, guarda el historial de actividad 30 días en vez de 7, y es el único plan que incluye Nómina, Pagos (tu propia cuenta de Stripe), horas facturables, habilidades y certificaciones, templates de proyecto propios y la API. Los dos planes se cobran por usuario activo: {starterPrice} en Starter y {growthPrice} en Growth por usuario por mes.',
       },
       {
         q: '¿Cómo funcionan los puestos (seats)?',

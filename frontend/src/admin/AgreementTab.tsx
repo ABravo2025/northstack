@@ -7,10 +7,16 @@ import { Chip, Panel } from './ui';
 // Admin Center v2, stage 2b: "Módulos y límites" — a per-client agreement on top of the plan.
 // What the backend enforces lives in planLimits.ts (PlanOverride); this only edits it.
 
-const MODULES: { key: AgreementModule; flag: 'payrollEnabled' | 'paymentsEnabled' | 'apiAccessEnabled'; label: string; hint: string }[] = [
+type ModuleFlag = 'payrollEnabled' | 'paymentsEnabled' | 'apiAccessEnabled' | 'customProjectTemplatesEnabled' | 'shiftSkillsEnabled' | 'billableHoursEnabled' | 'clockInEnabled';
+
+const MODULES: { key: AgreementModule; flag: ModuleFlag; label: string; hint: string }[] = [
   { key: 'payroll', flag: 'payrollEnabled', label: 'Nómina', hint: 'Liquidaciones y recibos (seguimiento)' },
   { key: 'payments', flag: 'paymentsEnabled', label: 'Pagos', hint: 'Cobros con Stripe' },
   { key: 'apiAccess', flag: 'apiAccessEnabled', label: 'API, webhooks e IA (MCP)', hint: 'Integraciones externas' },
+  { key: 'projectTemplates', flag: 'customProjectTemplatesEnabled', label: 'Templates de proyecto propios', hint: 'Proyectos → Guardar como template' },
+  { key: 'shiftSkills', flag: 'shiftSkillsEnabled', label: 'Habilidades y certificaciones', hint: 'Turnos: catálogo y requisitos por turno' },
+  { key: 'billableHours', flag: 'billableHoursEnabled', label: 'Horas facturables', hint: 'Timesheet: horas a facturar al cliente' },
+  { key: 'clockIn', flag: 'clockInEnabled', label: 'Fichaje', hint: 'Turnos: fichar entrada y salida' },
 ];
 
 const LIMITS: { key: AgreementLimit; label: string; unlimitedOk: boolean }[] = [
@@ -19,6 +25,8 @@ const LIMITS: { key: AgreementLimit; label: string; unlimitedOk: boolean }[] = [
   { key: 'maxCustomRoles', label: 'Roles a medida', unlimitedOk: true },
   { key: 'activityLogRetentionDays', label: 'Historial del registro de actividad (días)', unlimitedOk: true },
   { key: 'freeTrialSeatCap', label: 'Usuarios durante la prueba (sin plan)', unlimitedOk: false },
+  { key: 'maxActiveProjects', label: 'Proyectos abiertos a la vez', unlimitedOk: true },
+  { key: 'maxActiveLocations', label: 'Sedes activas (Turnos)', unlimitedOk: true },
 ];
 
 type ModuleChoice = 'plan' | 'on' | 'off';

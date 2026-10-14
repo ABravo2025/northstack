@@ -1359,6 +1359,26 @@ export interface PlanPricing {
   markets: Record<Market, MarketPricing>;
   includedSeats: Record<PricedPlan, number>;
   freeTrialSeatCap: number;
+  // 2026-10-14 (plan review). Optional so a cached/older backend response still type-checks.
+  trialDays?: number;
+  limits?: Record<PricedPlan, PublicPlanLimits>;
+}
+
+// What each plan includes as sold — backend planLimits.ts's PLAN_LIMITS. null = unlimited.
+export interface PublicPlanLimits {
+  maxPipelines: number | null;
+  maxTimeOffPolicies: number | null;
+  maxCustomRoles: number | null;
+  activityLogRetentionDays: number | null;
+  payrollEnabled: boolean;
+  paymentsEnabled: boolean;
+  apiAccessEnabled: boolean;
+  maxActiveProjects: number | null;
+  customProjectTemplatesEnabled: boolean;
+  maxActiveLocations: number | null;
+  shiftSkillsEnabled: boolean;
+  billableHoursEnabled: boolean;
+  clockInEnabled: boolean;
 }
 
 // Shifts module (docs/general/spec-shifts.md, 2026-10-04).

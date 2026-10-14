@@ -19,12 +19,12 @@ export interface PlanLimits {
   freeTrialSeatCap: number;
   // Projects module (2026-10-04): open projects (planning/active/on hold) at once — completed and
   // cancelled ones don't count — and whether "Save as template" is available. System templates are
-  // on every plan. Not Admin-overridable yet (would need the Admin Center's override UI to list them).
+  // on every plan. Admin-overridable since 2026-10-14 (plan review), like the rest.
   maxActiveProjects: number | null;
   customProjectTemplatesEnabled: boolean;
   // Shifts module (2026-10-04, spec-shifts.md §0.3): active locations at once (inactive ones keep
-  // their history and don't count), and the skills/certifications catalog. Not Admin-overridable yet,
-  // same as the Projects limits above.
+  // their history and don't count), and the skills/certifications catalog. Admin-overridable since
+  // 2026-10-14, same as the Projects limits above.
   maxActiveLocations: number | null;
   shiftSkillsEnabled: boolean;
   // Timesheet (Unidad 9): marking hours as billable to a client. Starter logs hours, never billable.
@@ -88,16 +88,24 @@ export function getEffectivePlan(tenant: { plan: PlanTier | null } | null): Effe
 // (isPayrollAllowed, maxPipelines, seatCapError, ...) honours it without knowing it exists.
 // An override past its expiresAt is ignored — the tenant goes back to the plan as sold on its own.
 
-export type OverridableModule = 'payroll' | 'payments' | 'apiAccess';
-export type OverridableLimit = 'maxPipelines' | 'maxTimeOffPolicies' | 'maxCustomRoles' | 'activityLogRetentionDays' | 'freeTrialSeatCap';
+// 2026-10-14 (plan review): the Projects/Shifts/Timesheet gates joined the list, so a special
+// agreement can also grant e.g. 3 locations or billable hours to a Starter client.
+export type OverridableModule = 'payroll' | 'payments' | 'apiAccess' | 'projectTemplates' | 'shiftSkills' | 'billableHours' | 'clockIn';
+export type OverridableLimit = 'maxPipelines' | 'maxTimeOffPolicies' | 'maxCustomRoles' | 'activityLogRetentionDays' | 'freeTrialSeatCap' | 'maxActiveProjects' | 'maxActiveLocations';
 
-export const OVERRIDABLE_MODULES: OverridableModule[] = ['payroll', 'payments', 'apiAccess'];
-export const OVERRIDABLE_LIMITS: OverridableLimit[] = ['maxPipelines', 'maxTimeOffPolicies', 'maxCustomRoles', 'activityLogRetentionDays', 'freeTrialSeatCap'];
+export const OVERRIDABLE_MODULES: OverridableModule[] = ['payroll', 'payments', 'apiAccess', 'projectTemplates', 'shiftSkills', 'billableHours', 'clockIn'];
+export const OVERRIDABLE_LIMITS: OverridableLimit[] = ['maxPipelines', 'maxTimeOffPolicies', 'maxCustomRoles', 'activityLogRetentionDays', 'freeTrialSeatCap', 'maxActiveProjects', 'maxActiveLocations'];
 
-const MODULE_FLAG: Record<OverridableModule, 'payrollEnabled' | 'paymentsEnabled' | 'apiAccessEnabled'> = {
+type ModuleFlag = 'payrollEnabled' | 'paymentsEnabled' | 'apiAccessEnabled' | 'customProjectTemplatesEnabled' | 'shiftSkillsEnabled' | 'billableHoursEnabled' | 'clockInEnabled';
+
+const MODULE_FLAG: Record<OverridableModule, ModuleFlag> = {
   payroll: 'payrollEnabled',
   payments: 'paymentsEnabled',
   apiAccess: 'apiAccessEnabled',
+  projectTemplates: 'customProjectTemplatesEnabled',
+  shiftSkills: 'shiftSkillsEnabled',
+  billableHours: 'billableHoursEnabled',
+  clockIn: 'clockInEnabled',
 };
 
 export interface PlanOverride {

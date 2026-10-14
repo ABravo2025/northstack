@@ -72,8 +72,8 @@ export interface ClientRow {
   attention: Attention[];
 }
 
-export type AgreementModule = 'payroll' | 'payments' | 'apiAccess';
-export type AgreementLimit = 'maxPipelines' | 'maxTimeOffPolicies' | 'maxCustomRoles' | 'activityLogRetentionDays' | 'freeTrialSeatCap';
+export type AgreementModule = 'payroll' | 'payments' | 'apiAccess' | 'projectTemplates' | 'shiftSkills' | 'billableHours' | 'clockIn';
+export type AgreementLimit = 'maxPipelines' | 'maxTimeOffPolicies' | 'maxCustomRoles' | 'activityLogRetentionDays' | 'freeTrialSeatCap' | 'maxActiveProjects' | 'maxActiveLocations';
 
 export interface PlanLimitsView {
   maxPipelines: number | null;
@@ -84,6 +84,12 @@ export interface PlanLimitsView {
   paymentsEnabled: boolean;
   apiAccessEnabled: boolean;
   freeTrialSeatCap: number;
+  maxActiveProjects: number | null;
+  customProjectTemplatesEnabled: boolean;
+  maxActiveLocations: number | null;
+  shiftSkillsEnabled: boolean;
+  billableHoursEnabled: boolean;
+  clockInEnabled: boolean;
 }
 
 export interface Agreement {

@@ -28,6 +28,18 @@ describe('plan + per-client agreement (getPlanLimits)', () => {
     expect(getPlanLimits({ plan: null, planOverride: agreement({ limits: { freeTrialSeatCap: 10 } }) }, now).freeTrialSeatCap).toBe(10);
   });
 
+  it('covers the Projects/Shifts/Timesheet gates too (2026-10-14)', () => {
+    const o = agreement({ modules: { billableHours: true, clockIn: true, shiftSkills: true, projectTemplates: true }, limits: { maxActiveLocations: 3, maxActiveProjects: null } });
+    const l = getPlanLimits({ plan: 'starter', planOverride: o }, now);
+    expect(l.maxActiveLocations).toBe(3);
+    expect(l.maxActiveProjects).toBeNull();
+    expect(planFeatures({ plan: 'starter', planOverride: o })).toEqual({ payroll: false, payments: false, apiAccess: false, projectTemplates: true, shiftSkills: true, billableHours: true, clockIn: true });
+    const growthNoClock = getPlanLimits({ plan: 'growth', planOverride: agreement({ modules: { clockIn: false } }) }, now);
+    expect(growthNoClock.clockInEnabled).toBe(false);
+    expect(growthNoClock.billableHoursEnabled).toBe(true);
+    expect(parseAgreement({ modules: { clockIn: true }, limits: { maxActiveLocations: '2' } }, now)).toEqual({ ok: true, modules: { clockIn: true }, limits: { maxActiveLocations: 2 }, expiresAt: null });
+  });
+
   it('stops applying the day after it expires', () => {
     const o = agreement({ modules: { payroll: true }, expiresAt: '2026-10-03' });
     expect(activeOverride(o, new Date('2026-10-03T23:00:00Z'))).not.toBeNull();

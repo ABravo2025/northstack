@@ -23,6 +23,10 @@
 // "not sold in this market yet" — checkout refuses it rather than charging nothing.
 
 export const MIN_USERS = 3;
+// Free Trial length for a regular signup (a referred company gets REFERRAL.trialDays instead).
+// Moved here from tenantService.ts on 2026-10-14 (plan review) so the app and the landing read the
+// "15 days" from GET /api/plans/prices instead of hardcoding it.
+export const TRIAL_DAYS = 15;
 export const LAUNCH_ENDS_AT = '2026-12-31';
 
 // Per user per month. ARS at the same ratio as the previous ARS prices (US$1 ≈ ARS 1.500).

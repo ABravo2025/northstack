@@ -2237,6 +2237,11 @@ export default function GuidePage() {
                   <tr><td>Nómina</td><td className="no">—</td><td className="yes">Incluido</td></tr>
                   <tr><td>Pagos (tu Stripe)</td><td className="no">—</td><td className="yes">Incluido</td></tr>
                   <tr><td>API y webhooks</td><td className="no">—</td><td className="yes">Incluido</td></tr>
+                  <tr><td>Proyectos abiertos a la vez</td><td className="num">5</td><td className="num">Ilimitados</td></tr>
+                  <tr><td>Templates de proyecto propios</td><td className="no">—</td><td className="yes">Incluido</td></tr>
+                  <tr><td>Sedes activas (Turnos)</td><td className="num">1</td><td className="num">Ilimitadas</td></tr>
+                  <tr><td>Habilidades y certificaciones</td><td className="no">—</td><td className="yes">Incluido</td></tr>
+                  <tr><td>Horas facturables</td><td className="no">—</td><td className="yes">Incluido</td></tr>
                 </tbody>
               </table>
             </div>
@@ -2317,6 +2322,11 @@ export default function GuidePage() {
                   <tr><td>Payroll</td><td className="no">—</td><td className="yes">Included</td></tr>
                   <tr><td>Payments (your Stripe)</td><td className="no">—</td><td className="yes">Included</td></tr>
                   <tr><td>API &amp; webhooks</td><td className="no">—</td><td className="yes">Included</td></tr>
+                  <tr><td>Open projects at a time</td><td className="num">5</td><td className="num">Unlimited</td></tr>
+                  <tr><td>Your own project templates</td><td className="no">—</td><td className="yes">Included</td></tr>
+                  <tr><td>Active locations (Shifts)</td><td className="num">1</td><td className="num">Unlimited</td></tr>
+                  <tr><td>Skills and certifications</td><td className="no">—</td><td className="yes">Included</td></tr>
+                  <tr><td>Billable hours</td><td className="no">—</td><td className="yes">Included</td></tr>
                 </tbody>
               </table>
             </div>

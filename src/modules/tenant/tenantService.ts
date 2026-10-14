@@ -18,7 +18,7 @@ import { seedDefaultRolesForTenant } from '../auth/roleService.js';
 import { getEmailDomain } from '../../lib/email.js';
 import { CURRENT_PLAN_PRICES_CENTS } from './planService.js';
 import { sendSignupAlertEmail } from '../../lib/mailer.js';
-import { REFERRAL } from '../../config/pricing.js';
+import { REFERRAL, TRIAL_DAYS } from '../../config/pricing.js';
 import { attachReferral, findActiveMemberByCode } from '../referral/referralService.js';
 
 // Personal/free email providers are excluded from the duplicate-domain check below —
@@ -126,10 +126,10 @@ export interface RegisterTenantWithOwnerInput {
   referralCode?: string;
 }
 
-// 15 days, spec-subscription-plans.md — set once at registration, independent of whether the
-// owner ever picks a plan on /plans. Kept as a named constant (not inlined) so
-// planTransitionService.ts's own comment about "same 15 days" has one source to point at.
-export const SIGNUP_TRIAL_DAYS = 15;
+// spec-subscription-plans.md — set once at registration, independent of whether the owner ever
+// picks a plan on /plans. The number itself lives in src/config/pricing.ts (TRIAL_DAYS, 2026-10-14);
+// this name stays so planTransitionService.ts's own comment about "same 15 days" still points here.
+export const SIGNUP_TRIAL_DAYS = TRIAL_DAYS;
 
 export async function registerTenantWithOwner(input: RegisterTenantWithOwnerInput): Promise<TenantCreationResult> {
   const slug = normalizeSlug(input.tenantName);

@@ -1,6 +1,7 @@
 import prisma from '../../lib/prisma.js';
 import { createExtraSeatAddon, createRecurringProduct, legacyExtraSeatAddonMatching } from '../../lib/dodopayments.js';
-import { ADDONS, LAUNCH_ENDS_AT, MIN_USERS, PER_USER, PRICING, billingMarkets, isLaunchPeriod, type Market, type PricedPlan } from '../../config/pricing.js';
+import { ADDONS, LAUNCH_ENDS_AT, MIN_USERS, PER_USER, PRICING, TRIAL_DAYS, billingMarkets, isLaunchPeriod, type Market, type PricedPlan } from '../../config/pricing.js';
+import { PLAN_LIMITS, type PlanLimits } from './planLimits.js';
 import type { PaymentProvider, PlanPrice } from '@prisma/client';
 
 // Turns src/config/pricing.ts (the one place prices are defined) into what billing actually
@@ -132,6 +133,15 @@ export function mercadoPagoAmount(row: Pick<PlanPrice, 'launchPriceCents' | 'ext
   return (row.launchPriceCents + extraSeats * row.extraSeatPriceCents) / 100;
 }
 
+// What each plan includes, as sold (no per-client agreement) — the numbers the plans comparison
+// shows in the app and on the landing (2026-10-14 plan review), so neither hardcodes "5 projects".
+// null = unlimited. freeTrialSeatCap is left out: it's the trial's, not a plan's (top-level below).
+type PublicPlanLimits = Omit<PlanLimits, 'freeTrialSeatCap'>;
+function publicLimits(plan: PricedPlan): PublicPlanLimits {
+  const { freeTrialSeatCap: _trialCap, ...rest } = PLAN_LIMITS[plan];
+  return rest;
+}
+
 // What GET /api/plans/prices serves — the app UI and the landing render every price from this.
 export function publicPricing() {
   const markets = billingMarkets();
@@ -151,6 +161,8 @@ export function publicPricing() {
     markets: { international: withCompat('international'), ar: withCompat('ar') },
     includedSeats: PRICING.includedSeats,
     freeTrialSeatCap: PRICING.freeTrialSeatCap,
+    trialDays: TRIAL_DAYS,
+    limits: { starter: publicLimits('starter'), growth: publicLimits('growth') },
     // Kept for any client still on the pre-2026-09-26 shape (USD plan prices only).
     prices: markets.international.plans,
   };

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Modal from './Modal';
 import { CheckIcon } from './Icons';
+import PlansComparison from './PlansComparison';
 import { useToast } from './ToastProvider';
 import type { PlanTier, Tenant } from '../../api/types';
 import { daysRemainingUntil } from '../../lib/trial';
@@ -67,27 +68,22 @@ function getPlanCards(t: ReturnType<typeof useTranslation>['t'], pricing: PlanPr
       min: pricing ? pricing.minUsers : '—',
       minTotal: minMonthlyLabel(pricing, market, plan),
     });
+  // 2026-10-14 plan review: each card carries 3-5 highlights only — the full, module-by-module
+  // detail is PlansComparison under the cards. Numbers come from pricing.limits (backend
+  // PLAN_LIMITS), '—' until it loads.
+  const starter = pricing?.limits?.starter;
+  const n = (v: number | null | undefined) => (v === undefined ? '—' : v === null ? '∞' : v);
+  const hl = (key: string, opts?: Record<string, unknown>): FeatureRow => ({ label: t(`plansModal.highlights.${key}`, opts), included: true });
   return [
     {
       key: 'trial',
       name: t('plansModal.cards.trial.name'),
       tagline: t('plansModal.cards.trial.tagline'),
       price: t('plansModal.cards.trial.price'),
-      priceSuffix: t('plansModal.cards.trial.priceSuffix'),
-      cap: t('plansModal.cards.trial.cap'),
+      priceSuffix: t('plansModal.cards.trial.priceSuffix', { count: pricing?.trialDays ?? 15 }),
+      cap: t('plansModal.cards.trial.cap', { cap: pricing ? pricing.freeTrialSeatCap : '—' }),
       ctaLabel: t('plansModal.cards.trial.ctaLabel'),
-      features: [
-        { label: t('plansModal.features.salesCrm'), sub: t('plansModal.features.salesCrmSubUnlimited'), included: true },
-        { label: t('plansModal.features.hrTimeOff'), sub: t('plansModal.features.hrTimeOffSubUnlimited'), included: true },
-        { label: t('plansModal.features.notesTasksTags'), included: true },
-        { label: t('plansModal.features.activityLog'), sub: t('plansModal.features.activityLogSub30'), included: true },
-        { label: t('plansModal.features.payrollTracking'), included: true },
-        { label: t('plansModal.features.payments'), sub: t('plansModal.features.paymentsSub'), included: true },
-        { label: t('plansModal.features.googleCalendar'), included: true },
-        { label: t('plansModal.features.customRoles'), sub: t('plansModal.features.customRolesSubUnlimited'), included: true },
-        { label: t('plansModal.features.apiAccess'), included: true },
-        { label: t('plansModal.features.emailSupport'), included: true },
-      ],
+      features: [hl('trialAllGrowth'), hl('trialNewModules'), hl('trialNoCard')],
     },
     {
       key: 'starter',
@@ -96,16 +92,10 @@ function getPlanCards(t: ReturnType<typeof useTranslation>['t'], pricing: PlanPr
       priceSuffix: t('plansModal.cards.starter.priceSuffix'),
       cap: seatCap('starter'),
       features: [
-        { label: t('plansModal.features.salesCrm'), sub: t('plansModal.features.salesCrmSubStarter'), included: true },
-        { label: t('plansModal.features.hrTimeOff'), sub: t('plansModal.features.hrTimeOffSubStarter'), included: true },
-        { label: t('plansModal.features.notesTasksTags'), included: true },
-        { label: t('plansModal.features.activityLog'), sub: t('plansModal.features.activityLogSub7'), included: true },
-        { label: t('plansModal.features.payrollTracking'), included: false },
-        { label: t('plansModal.features.payments'), included: false },
-        { label: t('plansModal.features.googleCalendar'), included: true },
-        { label: t('plansModal.features.customRoles'), sub: t('plansModal.features.customRolesSubStarter'), included: true },
-        { label: t('plansModal.features.apiAccess'), included: false },
-        { label: t('plansModal.features.emailSupport'), included: true },
+        hl('starterAllModules'),
+        hl('starterLimits', { locations: n(starter?.maxActiveLocations), projects: n(starter?.maxActiveProjects), pipelines: n(starter?.maxPipelines) }),
+        hl('starterShifts'),
+        hl('emailSupport'),
       ],
     },
     {
@@ -114,18 +104,7 @@ function getPlanCards(t: ReturnType<typeof useTranslation>['t'], pricing: PlanPr
       tagline: t('plansModal.cards.growth.tagline'),
       priceSuffix: t('plansModal.cards.growth.priceSuffix'),
       cap: seatCap('growth'),
-      features: [
-        { label: t('plansModal.features.salesCrm'), sub: t('plansModal.features.salesCrmSubUnlimited'), included: true },
-        { label: t('plansModal.features.hrTimeOff'), sub: t('plansModal.features.hrTimeOffSubUnlimited'), included: true },
-        { label: t('plansModal.features.notesTasksTags'), included: true },
-        { label: t('plansModal.features.activityLog'), sub: t('plansModal.features.activityLogSub30'), included: true },
-        { label: t('plansModal.features.payrollTracking'), included: true },
-        { label: t('plansModal.features.payments'), sub: t('plansModal.features.paymentsSub'), included: true },
-        { label: t('plansModal.features.googleCalendar'), included: true },
-        { label: t('plansModal.features.customRoles'), sub: t('plansModal.features.customRolesSubUnlimited'), included: true },
-        { label: t('plansModal.features.apiAccess'), included: true },
-        { label: t('plansModal.features.emailSupportPriority'), included: true },
-      ],
+      features: [hl('growthUnlimited'), hl('growthPayroll'), hl('growthBillable'), hl('growthApi'), hl('prioritySupport')],
     },
   ];
 }
@@ -318,6 +297,8 @@ export default function PlansModal({ open, tenant, onClose, onSelectPlan, curren
           );
         })}
       </div>
+
+      {pricing?.limits && <PlansComparison limits={pricing.limits} />}
 
       <p className="text-center text-xs text-ink-faint dark:text-dark-ink-faint mt-5">
         {t('plansModal.enterprisePrefix')}{' '}

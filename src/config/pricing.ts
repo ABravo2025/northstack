@@ -47,7 +47,12 @@ export const REFERRAL = {
   holdDays: 30,
   minPayoutCents: { USD: 5_000, ARS: 5_000_000 } as Record<string, number>,
   trialDays: 30,
-  termsVersion: '1.1', // 1.1 (2026-10-07): closing your account deactivates the link and settles what's earned
+  // Brought up to date with production on 2026-10-13: staging had kept the 8-item flat-list
+  // wording (v1.1) from before the Program Terms were rewritten as a full document directly on
+  // main (v2.0, then v2.1's new closed-account section). Also carries the Section 4 wording fix
+  // (commission basis described as "our invoice amount", not "amount actually charged" — true
+  // for Mercado Pago but not for Dodo, which excludes tax). No calculation changed, only text.
+  termsVersion: '2.1',
 } as const;
 
 export type Market = keyof typeof PER_USER;

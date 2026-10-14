@@ -1,6 +1,6 @@
 # Post 01 · 5 signs your team has outgrown spreadsheets (EN)
 **Publish:** Tuesday Oct 20, 8–10 am · **Where:** Alejandro's profile (the page reshares) ·
-**Pillar:** tips · **Visual:** 6-slide PDF carousel (cover + one sign per slide). Documents/carousels
+**Pillar:** tips · **Visual:** `../imagenes/carrusel-5-senales-en.pdf` (7 slides; upload with the **document** button). Documents/carousels
 are the highest-engagement format on LinkedIn.
 
 ---

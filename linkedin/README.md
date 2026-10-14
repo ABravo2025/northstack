@@ -69,16 +69,22 @@ _Creado: 2026-10-13_
   punto 5. Requieren aprobación de Alejandro y actualizar la Política de privacidad.
 
 ## Calendario
-| Semana | Fecha | Pilar | Tema | Archivo |
-|---|---|---|---|---|
-| 2026-10 s03 | mié 14/10 | Dolor + producto | Turnos: dejar de confirmar por WhatsApp | `2026-10/semana-03/linkedin/01-turnos-*.md` |
-| 2026-10 s03 | vie 16/10 | Fundador | Un laboratorio consultó por turnos y lo construimos | `2026-10/semana-03/linkedin/02-pedido-cliente-*.md` |
-| 2026-10 s04 | mar 20/10 | Consejos | 5 señales de que tu equipo superó las planillas | `2026-10/semana-04/linkedin/01-senales-*.md` |
-| 2026-10 s04 | mié 21/10 | Producto | Proyectos: el cierre de mes de un estudio contable | `2026-10/semana-04/linkedin/02-proyectos-*.md` |
-| 2026-10 s04 | jue 22/10 | Dolor + producto | Vacaciones: "¿cuántos días le quedan?" | `2026-10/semana-04/linkedin/03-vacaciones-*.md` |
+Página para ver y copiar todos los posts (ES/EN, con imagen y primer comentario):
+https://claude.ai/artifact/VBRYwMv89TezGmnZqHkzGH (se regenera con `tools/linkedin-page/build.mjs`).
 
-Ideas para las próximas semanas: CRM (oportunidades que se pierden en el mail), onboarding de un
-empleado nuevo (checklist), roles y permisos ("no todos tienen que ver los sueldos"), calendario del
-equipo con cumpleaños, "lo que reemplaza Northstack" (5 apps → 1), casos de clientes cuando haya
-permiso para nombrarlos. **Historia del fundador:** Alejandro va a pasar un archivo con su historia;
+| Semana | Fecha | Pilar | Tema | Visual |
+|---|---|---|---|---|
+| 2026-10 s03 | mié 14/10 | Dolor + producto | Turnos: dejar de confirmar por WhatsApp | GIF Turnos |
+| 2026-10 s03 | vie 16/10 | Fundador | Un laboratorio consultó por turnos y lo construimos | Foto de Alejandro o GIF Turnos |
+| 2026-10 s04 | mar 20/10 | Consejos | 5 señales de que tu equipo superó las planillas | Carrusel PDF |
+| 2026-10 s04 | mié 21/10 | Producto | Proyectos: el cierre de mes de un estudio contable | GIF Proyectos |
+| 2026-10 s04 | jue 22/10 | Dolor + producto | Vacaciones: "¿cuántos días le quedan?" | GIF Vacaciones |
+| 2026-10 s05 | mar 27/10 | Dolor + producto | CRM: las ventas que se pierden en el correo | Imagen |
+| 2026-10 s05 | mié 28/10 | Consejos | Checklist de onboarding en 4 etapas | Imagen |
+| 2026-10 s05 | jue 29/10 | Producto | Roles y permisos: no todos ven los sueldos | Imagen |
+| 2026-11 s01 | mar 3/11 | Dolor + producto | Calendario del equipo: ¿quién está esta semana? | Imagen |
+| 2026-11 s01 | mié 4/11 | Producto | Lo que reemplaza Northstack (6 → 1) | Imagen |
+
+Ideas para las próximas semanas: casos de clientes cuando haya permiso para nombrarlos, Turnos para
+salud y comercio (mismo producto, otro gancho), errores comunes al armar una política de vacaciones. **Historia del fundador:** Alejandro va a pasar un archivo con su historia;
 con eso se arma una serie de 2–3 posts para su perfil.

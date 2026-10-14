@@ -1,0 +1,203 @@
+<title>Northstack LinkedIn Posts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap">
+<style>
+/* Layout: one column of week sections; each post is a two-column row (visual | copy), stacking on phones. */
+:root {
+  --bg: #f7f5fc;
+  --surface: #ffffff;
+  --line: #e4def5;
+  --ink: #17132b;
+  --muted: #625c7c;
+  --accent: #5b21e6;
+  --accent-soft: #efe9ff;
+  --ok: #1b7a46;
+  --ok-soft: #e3f5ea;
+  --warn: #9a5b00;
+  --warn-soft: #fff1d9;
+  --text-box: #fbfaff;
+  --display: 'Instrument Serif', Georgia, serif;
+  --body: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #110e1d; --surface: #1a1630; --line: #2e2848; --ink: #efecf8; --muted: #a49dbf;
+    --accent: #a98bff; --accent-soft: #2a2150; --ok: #7ad7a2; --ok-soft: #173326; --warn: #f2c26b; --warn-soft: #3a2c12;
+    --text-box: #151227; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #110e1d; --surface: #1a1630; --line: #2e2848; --ink: #efecf8; --muted: #a49dbf;
+  --accent: #a98bff; --accent-soft: #2a2150; --ok: #7ad7a2; --ok-soft: #173326; --warn: #f2c26b; --warn-soft: #3a2c12;
+  --text-box: #151227; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.5; }
+.wrap { max-width: 1080px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 80px; }
+header.top { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 16px 24px; }
+h1 { font-family: var(--display); font-weight: 400; font-size: clamp(36px, 6vw, 56px); line-height: 1; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+h1 i { color: var(--accent); }
+.lede { color: var(--muted); max-width: 62ch; margin: 10px 0 0; }
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(8px);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding-block: 12px; margin-top: 18px; border-bottom: 1px solid var(--line); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px; background: var(--surface); }
+.seg button { border: 0; background: transparent; color: var(--muted); font: 600 14px var(--body); padding: 7px 16px; border-radius: 999px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+:root[data-theme="dark"] .seg button[aria-pressed="true"] { color: #17132b; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .seg button[aria-pressed="true"] { color: #17132b; } }
+.progress { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.progress b { color: var(--ink); }
+.tips { margin-left: auto; font-size: 13px; color: var(--muted); }
+section.week { margin-top: 40px; }
+section.week > h2 { font: 600 13px var(--body); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin: 0 0 14px; }
+.post { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 24px; background: var(--surface); border: 1px solid var(--line);
+  border-radius: 18px; padding: 20px; }
+.post + .post { margin-top: 16px; }
+.post.done { opacity: 0.62; }
+.visual { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.visual img { width: 100%; border-radius: 12px; border: 1px solid var(--line); display: block; background: var(--text-box); }
+.vnote { font-size: 13px; color: var(--muted); }
+.vnote a { color: var(--accent); font-weight: 600; }
+.copy { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.date { font-weight: 700; font-variant-numeric: tabular-nums; }
+.pill { font-size: 12.5px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+.pill.today { background: var(--warn-soft); color: var(--warn); }
+.pill.late { background: var(--warn-soft); color: var(--warn); }
+.pill.ok { background: var(--ok-soft); color: var(--ok); }
+h3 { margin: 0; font-size: 22px; line-height: 1.2; text-wrap: balance; }
+.where { font-size: 14px; color: var(--muted); margin: -4px 0 0; }
+.note { font-size: 14px; background: var(--warn-soft); color: var(--warn); padding: 8px 12px; border-radius: 10px; }
+.box { border: 1px solid var(--line); border-radius: 12px; background: var(--text-box); }
+.box header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px 8px 14px; border-bottom: 1px solid var(--line); }
+.box header span { font-size: 12.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.box pre { margin: 0; padding: 14px; white-space: pre-wrap; word-wrap: break-word; font: 15px/1.55 var(--body); max-height: 320px; overflow: auto; }
+.box.short pre { max-height: none; }
+.btn { border: 1px solid var(--accent); background: var(--accent); color: #fff; font: 600 13.5px var(--body); padding: 7px 14px; border-radius: 9px; cursor: pointer; white-space: nowrap; }
+:root[data-theme="dark"] .btn { color: #17132b; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn { color: #17132b; } }
+.btn.ghost { background: transparent; color: var(--accent); }
+.btn.copied { background: var(--ok); border-color: var(--ok); }
+.btn:focus-visible, .seg button:focus-visible, .check input:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: 2px; }
+.row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.check { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.check input { width: 18px; height: 18px; accent-color: var(--accent); }
+.src { font-size: 12.5px; color: var(--muted); font-family: ui-monospace, 'Cascadia Code', Consolas, monospace; overflow-wrap: anywhere; }
+footer { margin-top: 48px; color: var(--muted); font-size: 14px; max-width: 70ch; }
+@media (max-width: 720px) {
+  .post { grid-template-columns: minmax(0, 1fr); }
+  .visual img { max-width: 360px; }
+  .tips { margin-left: 0; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Posts de LinkedIn <i>Northstack</i></h1>
+      <p class="lede" id="lede">Diez posts listos para copiar y pegar, en español y en inglés. Cada uno tiene su imagen, el texto del post y el primer comentario.</p>
+    </div>
+  </header>
+
+  <div class="bar" role="toolbar" aria-label="Opciones">
+    <div class="seg" role="group" aria-label="Idioma">
+      <button type="button" id="lang-es" aria-pressed="true">Español</button>
+      <button type="button" id="lang-en" aria-pressed="false">English</button>
+    </div>
+    <span class="progress" id="progress"></span>
+    <span class="tips" id="tips">GIF: súbelo con el botón de <b>foto</b> · Carrusel: botón de <b>documento</b></span>
+  </div>
+
+  <main id="list"></main>
+
+  <footer id="foot">
+    Los archivos originales están en la rama <code>marketing</code> (carpeta <code>C:\tmp\ns-marketing</code>). Para subir una imagen o GIF a LinkedIn, ábrela con un clic y guárdala, o tómala directo de esa carpeta. La marca de "Publicado" queda guardada solo en este navegador.
+  </footer>
+</div>
+
+<script>
+const POSTS = /*__DATA__*/[];
+const UI = {
+  es: { lede: 'Diez posts listos para copiar y pegar, en español y en inglés. Cada uno tiene su imagen, el texto del post y el primer comentario.',
+    tips: 'GIF: súbelo con el botón de <b>foto</b> · Carrusel: botón de <b>documento</b>', post: 'Texto del post', comment: 'Primer comentario',
+    copy: 'Copiar', copied: 'Copiado', done: 'Publicado', today: 'Hoy', late: 'Pendiente', pub: 'Publicado', progress: (n, t) => `<b>${n}</b> de ${t} publicados`,
+    gif: 'GIF animado: súbelo con el botón de foto.', png: 'Imagen 1080 × 1350.', pdf: 'Carrusel PDF: súbelo como documento.', openPdf: 'Abrir el PDF',
+    noComment: 'Este post no lleva primer comentario.', file: 'Archivo',
+    weeks: { 'Semana del 12 oct': 'Semana del 12 de octubre', 'Semana del 19 oct': 'Semana del 19 de octubre', 'Semana del 26 oct': 'Semana del 26 de octubre', 'Semana del 2 nov': 'Semana del 2 de noviembre' },
+    foot: 'Los archivos originales están en la rama <code>marketing</code> (carpeta <code>C:\\tmp\\ns-marketing</code>). Para subir una imagen o GIF a LinkedIn, ábrela con un clic y guárdala, o tómala directo de esa carpeta. La marca de "Publicado" queda guardada solo en este navegador.' },
+  en: { lede: 'Ten posts ready to copy and paste, in Spanish and English. Each one has its image, the post text and the first comment.',
+    tips: 'GIF: upload with the <b>photo</b> button · Carousel: <b>document</b> button', post: 'Post text', comment: 'First comment',
+    copy: 'Copy', copied: 'Copied', done: 'Published', today: 'Today', late: 'Pending', pub: 'Published', progress: (n, t) => `<b>${n}</b> of ${t} published`,
+    gif: 'Animated GIF: upload it with the photo button.', png: 'Image 1080 × 1350.', pdf: 'PDF carousel: upload it as a document.', openPdf: 'Open the PDF',
+    noComment: 'This post has no first comment.', file: 'File',
+    weeks: { 'Semana del 12 oct': 'Week of October 12', 'Semana del 19 oct': 'Week of October 19', 'Semana del 26 oct': 'Week of October 26', 'Semana del 2 nov': 'Week of November 2' },
+    foot: 'The source files are on the <code>marketing</code> branch (folder <code>C:\\tmp\\ns-marketing</code>). To upload an image or GIF to LinkedIn, open it with a click and save it, or take it straight from that folder. "Published" marks are saved in this browser only.' },
+};
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+let lang = store.get('ns-li-lang', 'es');
+const done = store.get('ns-li-done', {});
+const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const todayIso = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+const fmtDate = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString(lang === 'es' ? 'es' : 'en-US', { weekday: 'long', day: 'numeric', month: 'long' });
+
+function copyText(btn, text) {
+  const t = UI[lang];
+  const ok = () => { btn.textContent = t.copied; btn.classList.add('copied'); setTimeout(() => { btn.textContent = t.copy; btn.classList.remove('copied'); }, 1600); };
+  const fallback = () => { const pre = btn.closest('.box').querySelector('pre'); const r = document.createRange(); r.selectNodeContents(pre); const s = getSelection(); s.removeAllRanges(); s.addRange(r); };
+  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(ok, fallback); else fallback();
+}
+
+function render() {
+  const t = UI[lang];
+  document.documentElement.lang = lang;
+  document.getElementById('lang-es').setAttribute('aria-pressed', String(lang === 'es'));
+  document.getElementById('lang-en').setAttribute('aria-pressed', String(lang === 'en'));
+  document.getElementById('lede').textContent = t.lede;
+  document.getElementById('tips').innerHTML = t.tips;
+  document.getElementById('foot').innerHTML = t.foot;
+  const key = (p) => `${p.date}-${lang}`;
+  const n = POSTS.filter((p) => done[key(p)]).length;
+  document.getElementById('progress').innerHTML = t.progress(n, POSTS.length);
+
+  const weeks = [...new Set(POSTS.map((p) => p.week))];
+  const list = document.getElementById('list');
+  list.innerHTML = weeks.map((w) => `<section class="week"><h2>${t.weeks[w] ?? w}</h2>${POSTS.map((p, i) => [p, i]).filter(([p]) => p.week === w).map(([p, i]) => {
+    const c = p[lang], isDone = !!done[key(p)];
+    const status = isDone ? `<span class="pill ok">${t.pub}</span>` : p.date === todayIso ? `<span class="pill today">${t.today}</span>` : p.date < todayIso ? `<span class="pill late">${t.late}</span>` : '';
+    const vnote = p.pdf ? `${t.pdf} <a href="${c.pdf}" target="_blank" rel="noopener">${t.openPdf}</a>` : c.isGif ? t.gif : t.png;
+    return `<article class="post${isDone ? ' done' : ''}" id="p${i}">
+      <div class="visual"><a href="${c.visual}" target="_blank" rel="noopener"><img src="${c.visual}" alt="${esc(c.title)}" loading="lazy"></a><div class="vnote">${vnote}</div></div>
+      <div class="copy">
+        <div class="meta"><span class="date">${fmtDate(p.date)}</span><span class="pill">${esc(c.pillar)}</span>${status}</div>
+        <h3>${esc(c.title)}</h3>
+        <p class="where">${esc(c.where)}</p>
+        ${c.note ? `<div class="note">${esc(c.note)}</div>` : ''}
+        <div class="box"><header><span>${t.post}</span><button type="button" class="btn" data-copy="post" data-i="${i}">${t.copy}</button></header><pre>${esc(c.body)}</pre></div>
+        ${c.comment ? `<div class="box short"><header><span>${t.comment}</span><button type="button" class="btn ghost" data-copy="comment" data-i="${i}">${t.copy}</button></header><pre>${esc(c.comment)}</pre></div>` : `<div class="vnote">${t.noComment}</div>`}
+        <div class="row"><label class="check"><input type="checkbox" id="done-${i}-${lang}" data-done="${i}" ${isDone ? 'checked' : ''}> ${t.done}</label><span class="src">${t.file}: ${c.source}</span></div>
+      </div></article>`;
+  }).join('')}</section>`).join('');
+}
+
+document.getElementById('list').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-copy]');
+  if (!b) return;
+  const c = POSTS[+b.dataset.i][lang];
+  copyText(b, b.dataset.copy === 'post' ? c.body : c.comment);
+});
+document.getElementById('list').addEventListener('change', (e) => {
+  const cb = e.target.closest('[data-done]');
+  if (!cb) return;
+  const p = POSTS[+cb.dataset.done];
+  done[`${p.date}-${lang}`] = cb.checked;
+  store.set('ns-li-done', done);
+  render();
+});
+for (const l of ['es', 'en']) document.getElementById('lang-' + l).addEventListener('click', () => { lang = l; store.set('ns-li-lang', l); render(); });
+render();
+</script>

@@ -1,6 +1,6 @@
 # Post 01 · 5 señales de que tu equipo superó las planillas (ES)
 **Publicar:** martes 20/10, 8–10 h · **Dónde:** perfil de Alejandro (la página lo comparte) ·
-**Pilar:** consejos · **Visual:** carrusel PDF de 6 láminas (portada + una señal por lámina). Los
+**Pilar:** consejos · **Visual:** `../imagenes/carrusel-5-senales-es.pdf` (7 láminas; subirlo con el botón de **documento**). Los
 documentos/carruseles son el formato con más interacción en LinkedIn.
 
 ---

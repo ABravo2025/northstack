@@ -15,6 +15,10 @@ export interface EffectiveShiftsSettings {
   timesheetEnabled: boolean;
   timesheetReminder: boolean;
   showScheduleCost: boolean;
+  // Phase 2, block A (spec-shifts-fase2.md §A.2).
+  allowSwaps: boolean;
+  swapNeedsApproval: boolean;
+  openShiftNeedsApproval: boolean;
 }
 
 // Must match the @default()s on the ShiftsSettings model.
@@ -27,6 +31,9 @@ export const DEFAULT_SHIFTS_SETTINGS: EffectiveShiftsSettings = {
   timesheetEnabled: true,
   timesheetReminder: true,
   showScheduleCost: false,
+  allowSwaps: true,
+  swapNeedsApproval: true,
+  openShiftNeedsApproval: false,
 };
 
 const MAX_REST_HOURS = 48;
@@ -42,6 +49,9 @@ function toEffective(row: ShiftsSettings | null): EffectiveShiftsSettings {
     timesheetEnabled: row.timesheetEnabled,
     timesheetReminder: row.timesheetReminder,
     showScheduleCost: row.showScheduleCost,
+    allowSwaps: row.allowSwaps,
+    swapNeedsApproval: row.swapNeedsApproval,
+    openShiftNeedsApproval: row.openShiftNeedsApproval,
   };
 }
 
@@ -60,6 +70,9 @@ const BOOLEAN_FIELDS = [
   'timesheetEnabled',
   'timesheetReminder',
   'showScheduleCost',
+  'allowSwaps',
+  'swapNeedsApproval',
+  'openShiftNeedsApproval',
 ] as const;
 
 // Pure validation, exported for tests: turns untrusted input into the fields to write.

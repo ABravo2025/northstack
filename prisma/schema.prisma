@@ -448,6 +448,7 @@ model Tenant {
   skills                    Skill[]
   employeeSkills            EmployeeSkill[]
   timesheets                Timesheet[]
+  shiftChangeRequests       ShiftChangeRequest[]
   timeEntries               TimeEntry[]
   timeSuggestionDismissals  TimeSuggestionDismissal[]
   referredBy                Referral?
@@ -766,6 +767,8 @@ model Employee {
   availabilities           EmployeeAvailability[]
   skills                   EmployeeSkill[]
   timesheets               Timesheet[]
+  shiftChangesRequested    ShiftChangeRequest[]       @relation("ShiftChangeRequestedBy")
+  shiftChangesTargeted     ShiftChangeRequest[]       @relation("ShiftChangeTarget")
   timeEntries              TimeEntry[]
   timeSuggestionDismissals TimeSuggestionDismissal[]
 
@@ -1221,6 +1224,7 @@ enum ActivityEntityType {
   skill
   timesheet
   timeEntry
+  shiftRequest
 }
 
 enum ActivityAction {
@@ -1897,8 +1901,12 @@ model ShiftsSettings {
   // Schedule cost (hours × rate from EmployeeCompensation) — opt-in, off by default, and only ever
   // shown to roles with payroll access (Alejandro, 2026-10-04).
   showScheduleCost    Boolean  @default(false)
-  // Reserved for phase 2 (shift swaps between employees); not read anywhere yet.
-  allowSwaps          Boolean  @default(false)
+  // Phase 2 (spec-shifts-fase2.md, block A): people can give away and swap their shifts.
+  allowSwaps          Boolean  @default(true)
+  // A swap or a handed-over shift waits for a manager's approval (Alejandro's default, 2026-10-14)…
+  swapNeedsApproval      Boolean @default(true)
+  // …while an open shift goes to whoever takes it first unless this is on.
+  openShiftNeedsApproval Boolean @default(false)
   updatedAt           DateTime @updatedAt
 }
 
@@ -1981,9 +1989,65 @@ model Shift {
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   assignments      ShiftAssignment[]
+  // Phase 2, block A: published with free places that anyone eligible can take (My shifts → Available).
+  openToClaim      Boolean           @default(false)
+  changeRequests   ShiftChangeRequest[] @relation("ShiftChangeRequestShift")
+  swapOffers       ShiftChangeRequest[] @relation("ShiftChangeRequestTargetShift")
 
   @@index([tenantId, startsAt])
   @@index([tenantId, locationId, date])
+}
+
+// Phase 2, block A (spec-shifts-fase2.md): someone takes an open place (claim), hands their shift to
+// whoever covers it (give), or trades shifts with a colleague (swap). Nothing moves until the request
+// is approved — by the peer, and by a manager when the settings (or a warning) ask for it.
+enum ShiftChangeType {
+  claim
+  give
+  swap
+}
+
+enum ShiftChangeStatus {
+  open // give: waiting for someone to take it
+  pending_peer // swap: waiting for the colleague
+  pending_manager
+  approved
+  declined
+  cancelled
+  expired // the shift started first
+}
+
+model ShiftChangeRequest {
+  id                    String            @id @default(uuid())
+  tenantId              String
+  tenant                Tenant            @relation(fields: [tenantId], references: [id])
+  type                  ShiftChangeType
+  status                ShiftChangeStatus
+  // The shift being claimed or handed over (for a swap: the requester's own shift).
+  shiftId               String
+  shift                 Shift             @relation("ShiftChangeRequestShift", fields: [shiftId], references: [id], onDelete: Cascade)
+  requestedByEmployeeId String
+  requestedBy           Employee          @relation("ShiftChangeRequestedBy", fields: [requestedByEmployeeId], references: [id], onDelete: Cascade)
+  // give/swap: the requester's place on `shift` (plain id: the assignment is replaced when approved).
+  fromAssignmentId      String?
+  // give: who takes it; swap: the colleague; claim: null (the requester takes the place).
+  targetEmployeeId      String?
+  targetEmployee        Employee?         @relation("ShiftChangeTarget", fields: [targetEmployeeId], references: [id], onDelete: Cascade)
+  // swap: the colleague's shift and place offered in return.
+  targetShiftId         String?
+  targetShift           Shift?            @relation("ShiftChangeRequestTargetShift", fields: [targetShiftId], references: [id], onDelete: Cascade)
+  targetAssignmentId    String?
+  reason                String?
+  // Warnings (rules) the incoming person had when it was asked — they force a manager's approval.
+  warnings              Json?
+  decidedById           String?
+  decidedAt             DateTime?
+  decisionNote          String?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  @@index([tenantId, status])
+  @@index([shiftId])
 }
 
 model ShiftAssignment {
@@ -2237,6 +2301,8 @@ enum NotificationType {
   timesheet_submitted // to whoever approves it. entityType 'timesheet'.
   timesheet_decided // approved or returned, to its owner. entityType 'timesheet'.
   timesheet_reminder // daily cron: yesterday's shift hours not logged yet. entityType 'timesheet'.
+  shift_request // phase 2: a claim/give/swap waiting for you (colleague or manager). entityType 'shiftRequest'.
+  shift_request_decided // phase 2: your request was approved, declined or expired. entityType 'shiftRequest'.
   // Task chat (2026-10-06) — someone @mentioned you in a task's conversation. entityType 'task'.
   task_mention
 }

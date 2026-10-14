@@ -24,4 +24,7 @@ export interface ShiftEvent {
   // 'unassigned' only: the assignment (and its ShiftCalendarSync rows) is already deleted when
   // delivery runs, so the Google events to remove travel with the event.
   calendarEvents?: { userId: string; googleCalendarEventId: string }[];
+  // Phase 2 (claims, hand-overs, swaps): only update the person's calendar — the request's own
+  // notice already told them what happened, so no bell or email for this event.
+  quiet?: boolean;
 }

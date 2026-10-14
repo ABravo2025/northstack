@@ -162,7 +162,7 @@ export async function dispatchShiftEvents(events: ShiftEvent[]): Promise<void> {
     const groups = new Map<string, ShiftEvent[]>();
     for (const e of events) {
       if (e.kind === 'declined') continue;
-      const key = `${e.employeeId}:${e.kind}`;
+      const key = `${e.employeeId}:${e.kind}:${e.quiet ? 'quiet' : ''}`;
       groups.set(key, [...(groups.get(key) ?? []), e]);
     }
 
@@ -174,6 +174,14 @@ export async function dispatchShiftEvents(events: ShiftEvent[]): Promise<void> {
       });
       const recipient = employee?.user;
       if (!recipient || recipient.status !== 'active') continue;
+
+      if (group.every((e) => e.quiet)) {
+        for (const e of group) {
+          const shift = shifts.get(e.shiftId);
+          if (shift) await syncCalendar(shift, e, recipient);
+        }
+        continue;
+      }
 
       const emailShifts: ShiftEmailShift[] = [];
       const icsEvents: IcsEvent[] = [];

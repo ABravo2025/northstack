@@ -7,6 +7,7 @@ import type { AuthenticatedUser } from '../modules/auth/authService.js';
 import { canManageProjects, canViewProjects } from '../modules/auth/permissionService.js';
 import { canEditProject, canViewProject, findOwnEmployeeId } from '../modules/projects/projectAccess.js';
 import { getPlanLimits } from '../modules/tenant/planLimits.js';
+import { checkProjectBudget, parseBudgetMinutes } from '../modules/projects/projectBudget.js';
 import {
   deleteTenantTemplate,
   findTemplateForTenant,
@@ -286,6 +287,15 @@ projectsRouter.patch('/api/projects/:projectId', async (req, res) => {
     input.ownerEmployeeId = req.body.ownerEmployeeId;
   }
 
+  if (req.body.budgetMinutes !== undefined) {
+    const budget = parseBudgetMinutes(req.body.budgetMinutes);
+    if (!budget.ok) return res.status(400).json({ error: 'The budget must be a whole number of minutes', field: 'budgetMinutes' });
+    if (budget.value !== null && !getPlanLimits(user.tenant).billableHoursEnabled) {
+      return res.status(403).json({ error: 'Hour budgets are part of the Growth plan', code: 'plan_limit_budget' });
+    }
+    input.budgetMinutes = budget.value;
+  }
+
   // Reopening, un-archiving or un-cancelling counts against the plan like creating would.
   const wasOpen = wouldBeOpen(project.status, project.isActive);
   const willBeOpen = wouldBeOpen(input.status ?? project.status, input.isActive ?? project.isActive);
@@ -295,6 +305,8 @@ projectsRouter.patch('/api/projects/:projectId', async (req, res) => {
   }
 
   const updated = await updateProject(project.id, input, user.id);
+  // A new (or smaller) budget may already be crossed.
+  if (input.budgetMinutes !== undefined) await checkProjectBudget(project.id);
   return res.json({ ...updated, canEdit: await canEditProject(user, project.id) });
 });
 

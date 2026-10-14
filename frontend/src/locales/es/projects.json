@@ -215,5 +215,15 @@
     "title": "Proyectos ({{count}})",
     "emptyCompany": "Todavía no hay proyectos para esta empresa.",
     "emptyPerson": "Todavía no participa en ningún proyecto."
+  },
+  "budget": {
+    "hours": "Presupuesto (horas)",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "edit": "Editar presupuesto",
+    "set": "Definir horas presupuestadas",
+    "logged": "{{hours}} cargadas en timesheets",
+    "of": "{{used}} de {{budget}} ({{pct}}%)",
+    "failed": "No se pudo guardar: {{message}}"
   }
 }

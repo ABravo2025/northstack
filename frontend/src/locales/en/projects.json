@@ -215,5 +215,15 @@
     "title": "Projects ({{count}})",
     "emptyCompany": "No projects for this company yet.",
     "emptyPerson": "Not on any project yet."
+  },
+  "budget": {
+    "hours": "Budget (hours)",
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit budget",
+    "set": "Set an hour budget",
+    "logged": "{{hours}} logged in timesheets",
+    "of": "{{used}} of {{budget}} ({{pct}}%)",
+    "failed": "Couldn't save: {{message}}"
   }
 }

@@ -184,6 +184,10 @@
     "notifSkillOwn_other": "{{count}} de tus habilitaciones vencen pronto",
     "notifSkillTeam_one": "1 habilitación de tu equipo vence pronto",
     "notifSkillTeam_other": "{{count}} habilitaciones de tu equipo vencen pronto",
+    "budget": {
+      "near": "{{name}} lleva {{used}} de las {{budget}} presupuestadas (80%)",
+      "over": "{{name}} llegó a las {{budget}} presupuestadas ({{used}} cargadas)"
+    },
     "clock": {
       "overtime": "{{name}} fichó en {{location}} sin turno: se agregaron {{hours}} como tiempo extra",
       "autoClosed": "{{name}} no fichó la salida en {{location}}: se cerró al terminar el turno, revisalo",

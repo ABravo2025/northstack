@@ -1774,6 +1774,10 @@ model Project {
   templateId      String?
   template        ProjectTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
   isActive        Boolean          @default(true) // archived when false
+  // Shifts phase 2, block C (Growth): hours sold/planned for the project, in minutes, and the last
+  // threshold (80 or 100 %) the owner was told about — reset when the budget changes.
+  budgetMinutes     Int?
+  budgetNoticeLevel Int            @default(0)
   createdById     String
   createdBy       User             @relation("ProjectCreatedBy", fields: [createdById], references: [id])
   updatedById     String?
@@ -2406,6 +2410,7 @@ enum NotificationType {
   shift_request // phase 2: a claim/give/swap waiting for you (colleague or manager). entityType 'shiftRequest'.
   shift_request_decided // phase 2: your request was approved, declined or expired. entityType 'shiftRequest'.
   attendance // phase 2: overtime clock-in, auto-closed punch, daily attendance summary. entityType 'clockEntry'.
+  project_budget // phase 2: a project's logged hours crossed 80 % / 100 % of its budget. entityType 'project'.
 }
 
 model Notification {

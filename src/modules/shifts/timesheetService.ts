@@ -5,6 +5,7 @@ import type { AuthenticatedUser } from '../auth/authService.js';
 import { canApproveTimesheets } from '../auth/permissionService.js';
 import { findOwnEmployeeIdForShifts } from './shiftAccess.js';
 import { addDays, isValidDateString } from './shiftTime.js';
+import { checkProjectBudget } from '../projects/projectBudget.js';
 
 // Shifts module, Unidad 9 (spec-shifts.md §0.6-0.7, §1) — the weekly timesheet. A person logs
 // hours (from suggestions or by hand), submits the week, and whoever approves it (their direct
@@ -370,6 +371,7 @@ export async function addEntry(employee: TimesheetEmployee, input: Partial<Entry
     });
     if (!entry) return notEditable;
     await logEntry(employee.tenantId, entry.id, `${employeeLabel(employee)} · ${input.date}`, 'create', actorId, null, entrySnapshot(entry));
+    await checkProjectBudget(entry.projectId);
     return { success: true, value: { id: entry.id, weekStart } };
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
@@ -407,6 +409,7 @@ export async function updateEntry(employee: TimesheetEmployee, entry: LoadedEntr
     },
   });
   await logEntry(employee.tenantId, entry.id, `${employeeLabel(employee)} · ${toDate(updated.date)}`, 'update', actorId, entrySnapshot(entry), entrySnapshot(updated));
+  await checkProjectBudget(updated.projectId);
   return { success: true, value: { id: updated.id } };
 }
 

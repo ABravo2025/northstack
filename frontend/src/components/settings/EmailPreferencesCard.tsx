@@ -14,6 +14,7 @@ interface EmailPreferencesCardProps {
 const GROUPS: { key: string; categories: EmailCategory[] }[] = [
   { key: 'shifts', categories: ['shifts', 'shiftReminders', 'shiftSwaps', 'shiftDeclined', 'attendance', 'skillsExpiring', 'timesheet'] },
   { key: 'timeOff', categories: ['timeOff'] },
+  { key: 'projects', categories: ['projectBudget'] },
   { key: 'sales', categories: ['opportunityStage', 'opportunityStalled'] },
 ];
 

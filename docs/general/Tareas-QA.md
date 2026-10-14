@@ -5233,3 +5233,12 @@ Resuelve el pendiente de agosto ("un área en el perfil de las notificaciones qu
 - **Resumen diario** (cron de la mañana): a quien arma turnos, las ausencias y tardanzas de ayer de sus sedes y cuántos fichajes esperan revisión (campana + email, categoría "Fichaje"); nada si no hay nada que contar; no se repite el mismo día.
 
 **Verificado** (servicios contra `staging`, 6/6): turno fichado 10 min tarde con 15 min de pausa → sugerencia 220 min (planificado 240); turno sin fichaje → 120 planificados; reporte: fichado 220, 1 tardanza, 1 ausencia; sin fichaje en el plan no hay columnas; resumen al Owner y no dos veces el mismo día. 790/790 tests.
+
+## QA-117 — Turnos fase 2, bloque C: horas presupuestadas por proyecto (2026-10-14, en `staging`, Growth)
+
+- En el detalle del proyecto: **Definir horas presupuestadas** (quien edita el proyecto). Barra de horas cargadas en timesheets contra presupuestadas: verde, ámbar desde 80 %, roja al pasarse. Sin presupuesto muestra solo las horas cargadas.
+- Aviso al dueño del proyecto al cruzar 80 % y al llegar a 100 %, una sola vez cada uno (campana + email, nueva categoría "Proyectos" en Preferencias de email); cambiar el presupuesto vuelve a habilitar los avisos.
+- Reportes agrupados por proyecto: columna **Presupuesto** (horas y %; en rojo si se pasó).
+- Schema: `Project.budgetMinutes`, `Project.budgetNoticeLevel`, aplicados en `staging`.
+
+**Verificado** (servicios contra `staging`, 7/7): presupuesto de 10 h; 8 h cargadas → aviso del 80 %; 9 h → sin repetir; 10,5 h → aviso del 100 %; el detalle devuelve cargado y presupuesto; nuevo presupuesto reinicia los avisos; el reporte por proyecto trae el presupuesto. 792/792 tests.

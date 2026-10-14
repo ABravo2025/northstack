@@ -710,7 +710,8 @@ export type NotificationType =
   | 'timesheet_reminder'
   | 'shift_request'
   | 'shift_request_decided'
-  | 'attendance';
+  | 'attendance'
+  | 'project_budget';
 
 export interface Notification {
   id: string;
@@ -1559,6 +1560,8 @@ export interface HoursReportRow {
   planned: { total: number; past: number; upcoming: number; unconfirmed: number } | null;
   // Phase 2 (Growth, clock-in): per person and in the totals.
   attendance: { clockedMinutes: number; late: number; absent: number } | null;
+  // Project rows: the project's hour budget (phase 2, block C).
+  budgetMinutes?: number | null;
 }
 
 export interface HoursReport {
@@ -1588,6 +1591,7 @@ export type EmailCategory =
   | 'shiftDeclined'
   | 'shiftSwaps'
   | 'attendance'
+  | 'projectBudget'
   | 'skillsExpiring'
   | 'timesheet'
   | 'timeOff'

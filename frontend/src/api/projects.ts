@@ -58,6 +58,9 @@ export interface ProjectMember {
 export interface ProjectDetail extends Omit<ProjectSummary, '_count'> {
   members: ProjectMember[];
   canEdit: boolean;
+  // Phase 2, block C: the hour budget and the minutes logged to the project in timesheets.
+  budgetMinutes?: number | null;
+  loggedMinutes?: number;
 }
 
 export interface ProjectLimits {
@@ -90,6 +93,8 @@ export interface ProjectInput {
   startDate?: string | null;
   dueDate?: string | null;
   isActive?: boolean;
+  // Phase 2, block C (Growth): hour budget in minutes; null removes it.
+  budgetMinutes?: number | null;
 }
 
 export interface ProjectMemberInput {

@@ -49,6 +49,7 @@ const ENTITY_TYPE_LABELS: Record<ActivityEntityType, string> = {
   skill: 'Skill',
   timesheet: 'Timesheet',
   timeEntry: 'Time Entry',
+  shiftRequest: 'Shift Request',
 };
 
 // `record` is the full before/after snapshot the value came from (not just the one field) — a

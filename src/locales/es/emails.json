@@ -183,7 +183,21 @@
     "notifSkillOwn_one": "Tu habilitación {{skill}} vence pronto",
     "notifSkillOwn_other": "{{count}} de tus habilitaciones vencen pronto",
     "notifSkillTeam_one": "1 habilitación de tu equipo vence pronto",
-    "notifSkillTeam_other": "{{count}} habilitaciones de tu equipo vencen pronto"
+    "notifSkillTeam_other": "{{count}} habilitaciones de tu equipo vencen pronto",
+    "request": {
+      "swapAsk": "{{name}} te propone cambiar: su turno del {{when}} por el tuyo del {{otherWhen}}",
+      "managerClaim": "{{name}} quiere el turno libre del {{when}} en {{location}}",
+      "managerCover": "{{other}} quiere cubrir el turno de {{name}} del {{when}} en {{location}}",
+      "managerSwap": "{{name}} y {{other}} quieren intercambiar {{when}} y {{otherWhen}}",
+      "doneClaim": "Listo: el turno del {{when}} en {{location}} es de {{name}}",
+      "doneGive": "Listo: {{other}} cubre el turno de {{name}} del {{when}}",
+      "doneSwap": "Intercambio hecho: {{name}} ↔ {{other}} ({{when}} / {{otherWhen}})",
+      "declinedByPeer": "{{other}} no aceptó intercambiar el turno del {{when}}",
+      "declinedByManager": "Se rechazó tu pedido sobre el turno del {{when}}",
+      "declinedCover": "No se aprobó que cubras el turno del {{when}}",
+      "expired": "El pedido del turno del {{when}} venció: el turno ya empezó",
+      "note": "Nota: {{note}}"
+    }
   },
   "timesheet": {
     "greeting": "Hola {{firstName}},",

@@ -10,6 +10,8 @@ import { getShiftsSettings, type EffectiveShiftsSettings } from './shiftsSetting
 import { newResponseToken } from './shiftService.js';
 import { addDays, zonedDateString } from './shiftTime.js';
 import { weekStartFor } from './timesheetService.js';
+import { expireStartedRequests } from './shiftRequestService.js';
+import { notifyExpired } from './shiftRequestNotifier.js';
 
 // Shifts module, Unidad 8 (spec-shifts.md §0.4) — the one daily run (Vercel Hobby = crons once a
 // day). In order:
@@ -346,6 +348,7 @@ export interface ShiftReminderRunResult {
   skillHolders: number;
   skillManagers: number;
   timesheet: number;
+  expiredRequests: number;
 }
 
 export async function runShiftReminders(now: Date = new Date(), only?: string): Promise<ShiftReminderRunResult> {
@@ -363,5 +366,15 @@ export async function runShiftReminders(now: Date = new Date(), only?: string): 
   const unanswered = await step('unanswered', () => remindUnanswered(now, settingsFor, only), 0);
   const skills = await step('skills', () => noticeExpiringSkills(now, only), { holders: 0, managers: 0 });
   const timesheet = await step('timesheet', () => remindTimesheet(now, settingsFor, only), 0);
-  return { tomorrow, unanswered, skillHolders: skills.holders, skillManagers: skills.managers, timesheet };
+  // Phase 2: claims, hand-overs and swaps whose shift already started are closed and their people told.
+  const expiredRequests = await step(
+    'expired requests',
+    async () => {
+      const expired = await expireStartedRequests(now, only);
+      await notifyExpired(expired);
+      return expired.length;
+    },
+    0,
+  );
+  return { tomorrow, unanswered, skillHolders: skills.holders, skillManagers: skills.managers, timesheet, expiredRequests };
 }

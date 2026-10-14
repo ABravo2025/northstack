@@ -9,6 +9,7 @@ export const EMAIL_CATEGORIES = [
   'shifts', // new, changed or cancelled shifts
   'shiftReminders', // tomorrow's shifts, shifts waiting for an answer
   'shiftDeclined', // to schedulers: someone can't make a shift
+  'shiftSwaps', // claims, hand-overs and swaps: asks, approvals, outcomes
   'skillsExpiring',
   'timesheet', // a week sent back or reopened, yesterday's hours not logged
   'timeOff', // requests to decide, decisions on yours

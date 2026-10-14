@@ -183,7 +183,21 @@
     "notifSkillOwn_one": "Your {{skill}} expires soon",
     "notifSkillOwn_other": "{{count}} of your skills expire soon",
     "notifSkillTeam_one": "1 skill in your team expires soon",
-    "notifSkillTeam_other": "{{count}} skills in your team expire soon"
+    "notifSkillTeam_other": "{{count}} skills in your team expire soon",
+    "request": {
+      "swapAsk": "{{name}} wants to swap: their shift on {{when}} for yours on {{otherWhen}}",
+      "managerClaim": "{{name}} wants the open shift on {{when}} at {{location}}",
+      "managerCover": "{{other}} wants to cover {{name}}'s shift on {{when}} at {{location}}",
+      "managerSwap": "{{name}} and {{other}} want to swap {{when}} and {{otherWhen}}",
+      "doneClaim": "Done: the shift on {{when}} at {{location}} is {{name}}'s",
+      "doneGive": "Done: {{other}} covers {{name}}'s shift on {{when}}",
+      "doneSwap": "Swap done: {{name}} ↔ {{other}} ({{when}} / {{otherWhen}})",
+      "declinedByPeer": "{{other}} said no to swapping {{when}}",
+      "declinedByManager": "Your request for the shift on {{when}} was declined",
+      "declinedCover": "Your offer to cover the shift on {{when}} wasn't approved",
+      "expired": "The request for the shift on {{when}} expired: the shift already started",
+      "note": "Note: {{note}}"
+    }
   },
   "timesheet": {
     "greeting": "Hi {{firstName}},",

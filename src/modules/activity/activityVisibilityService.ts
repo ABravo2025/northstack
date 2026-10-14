@@ -71,6 +71,8 @@ const ACTIVITY_MODULE_GATE: Partial<Record<ActivityEntityType, (role: RoleContex
   // Timesheets: the tenant-wide feed shows them to whoever approves anyone's week.
   timesheet: canApproveTimesheets,
   timeEntry: canApproveTimesheets,
+  // Phase 2: shift claims, hand-overs and swaps — whoever sees the whole schedule.
+  shiftRequest: canViewShifts,
 };
 
 export function canViewEntryModule(role: RoleContext, entityType: ActivityEntityType): boolean {

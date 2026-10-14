@@ -29,7 +29,7 @@ const REST_LOOKAROUND_MS = 72 * 3_600_000;
 
 type Result<T> = { success: true; value: T } | { success: false; error: string; field?: string; code?: string };
 
-const SHIFT_INCLUDE = {
+export const SHIFT_INCLUDE = {
   location: { select: { id: true, name: true, timezone: true, address: true } },
   assignments: {
     include: { employee: { select: { id: true, firstName: true, lastName: true } } },
@@ -63,6 +63,7 @@ export function serializeShift(shift: ShiftWithRelations) {
     status: shift.status,
     publishedAt: shift.publishedAt,
     requiredSkillIds: shift.requiredSkillIds,
+    openToClaim: shift.openToClaim,
     assignments: shift.assignments.map((a) => ({
       id: a.id,
       employeeId: a.employeeId,
@@ -114,7 +115,7 @@ function shiftLabel(shift: ShiftWithRelations): string {
   return `${shift.location.name} · ${toDateString(shift.date)} ${formatMinute(shift.startMinute)}–${formatMinute(shift.endMinute)}`;
 }
 
-async function logShift(action: 'create' | 'update' | 'delete', before: ShiftWithRelations | null, after: ShiftWithRelations | null, changedByUserId: string) {
+export async function logShift(action: 'create' | 'update' | 'delete', before: ShiftWithRelations | null, after: ShiftWithRelations | null, changedByUserId: string) {
   const ref = (after ?? before)!;
   await recordActivity({
     tenantId: ref.tenantId,
@@ -287,6 +288,9 @@ export async function evaluateCandidates(
   skillsEnabled: boolean,
   // Evaluate as if the shift had these times (an edit in progress); defaults to the stored ones.
   override?: ShiftWindow,
+  // Shifts to leave out of each person's overlap/rest checks: in a swap or hand-over, the shift
+  // they're giving up (phase 2, block A).
+  leaving: Record<string, string[]> = {},
 ): Promise<Map<string, CandidateEvaluation>> {
   const target = override ?? window(shift);
   const ids = [...new Set(employeeIds)];
@@ -340,7 +344,7 @@ export async function evaluateCandidates(
     const ctx: CandidateContext = {
       hasActiveUser: employee?.user?.status === 'active',
       alreadyAssigned: !override && assignedHere.has(id),
-      heldShifts: held.filter((h) => h.employeeId === id && h.shiftId !== shift.id).map((h) => ({ shiftId: h.shiftId, startsAt: h.shift.startsAt, endsAt: h.shift.endsAt })),
+      heldShifts: held.filter((h) => h.employeeId === id && h.shiftId !== shift.id && !(leaving[id] ?? []).includes(h.shiftId)).map((h) => ({ shiftId: h.shiftId, startsAt: h.shift.startsAt, endsAt: h.shift.endsAt })),
       timeOff: timeOff.filter((t) => t.employeeId === id).map((t) => ({ startDate: toDateString(t.startDate), endDate: toDateString(t.endDate) })),
       holidayDates: holidays
         .filter((h) => h.kind !== 'religious' || (h.religion !== null && religionSet.has(h.religion)))

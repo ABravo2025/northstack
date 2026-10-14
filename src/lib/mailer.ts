@@ -1066,6 +1066,41 @@ export async function sendTimesheetReturnedEmail(input: SendTimesheetReturnedEma
   );
 }
 
+// Shifts phase 2, block A — a claim, hand-over or swap: the one-line message (already in the
+// recipient's language), an optional reason or note, and a link to act on it.
+export interface SendShiftRequestEmailInput {
+  to: string;
+  locale?: string | null;
+  firstName: string;
+  message: string;
+  note?: string | null;
+  url: string;
+}
+
+export async function sendShiftRequestEmail(input: SendShiftRequestEmailInput): Promise<void> {
+  if (!mailerConfigured()) return;
+  const lng = resolveEmailLocale(input.locale);
+  const t = (key: string, opts?: Record<string, unknown>) => i18n.t(`shifts.${key}`, { lng, ns: 'emails', ...opts });
+  const note = input.note ? i18n.t('shifts.request.note', { lng, ns: 'emails', note: input.note }) : null;
+  await dispatchMail(
+    {
+      from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
+      to: input.to,
+      subject: input.message,
+      text: [t('greeting', { firstName: input.firstName }), '', input.message, ...(note ? ['', note] : []), '', `${t('openSchedule')}: ${input.url}`].join('\n'),
+      html: [
+        `<p>${t('greeting', { firstName: escapeHtml(input.firstName) })}</p>`,
+        `<p>${escapeHtml(input.message)}</p>`,
+        note ? `<p style="color:#58536f">${escapeHtml(note)}</p>` : '',
+        `<p><a href="${input.url}">${t('openSchedule')}</a></p>`,
+      ].join('\n'),
+    },
+    'Failed to send shift request email:',
+    lng,
+    'shiftSwaps',
+  );
+}
+
 // Shifts module, Unidad 9 — the daily nudge: yesterday's shifts whose hours aren't logged yet.
 export interface SendTimesheetReminderEmailInput {
   to: string;

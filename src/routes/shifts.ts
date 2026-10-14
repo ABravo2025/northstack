@@ -40,6 +40,7 @@ import {
   updateShift,
 } from '../modules/shifts/shiftService.js';
 import { getShiftsSettings, updateShiftsSettings } from '../modules/shifts/shiftsSettingsService.js';
+import { applySuggestions, suggestWeek } from '../modules/shifts/suggestService.js';
 import { createAvailability, deleteAvailability, listAvailability } from '../modules/shifts/availabilityService.js';
 import { createSkill, findSkill, listSkills, removeHolder, setHolder, updateSkill } from '../modules/shifts/skillService.js';
 import {
@@ -325,6 +326,47 @@ shiftsRouter.post('/api/shifts/copy-week', async (req, res) => {
     if (locationIds.length === 0) return res.status(403).json({ error: 'Insufficient permissions' });
   }
   const result = await copyWeek(user.tenantId!, req.body?.fromWeekStart, req.body?.toWeekStart, locationIds, user.id);
+  if (!result.success) return res.status(400).json({ error: result.error });
+  return res.json(result.value);
+});
+
+// Phase 2, block E (Growth): "Suggest week". { weekStart, locationId? } → proposals for the week's
+// draft shifts with free places; nothing is written. Apply with /suggestions/apply.
+async function suggestScope(req: Request, res: Response, user: AuthenticatedUser): Promise<string[] | null | false> {
+  if (!skillsEnabledFor(user)) {
+    res.status(403).json({ error: 'Suggested schedules are part of the Growth plan', code: 'plan_limit_shift_suggest' });
+    return false;
+  }
+  const requested = typeof req.body?.locationId === 'string' && req.body.locationId ? [req.body.locationId as string] : null;
+  if (canManageShifts(user.roleContext)) return requested;
+  const managed = await managedLocationIds(user);
+  const ids = requested ? requested.filter((id) => managed.includes(id)) : managed;
+  if (ids.length === 0) {
+    res.status(403).json({ error: 'Insufficient permissions' });
+    return false;
+  }
+  return ids;
+}
+
+shiftsRouter.post('/api/shifts/suggestions', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) return;
+  const scope = await suggestScope(req, res, user);
+  if (scope === false) return;
+  const settings = await getShiftsSettings(user.tenantId!);
+  const result = await suggestWeek(user.tenantId!, req.body?.weekStart, scope, settings, skillsEnabledFor(user));
+  if (!result.success) return res.status(400).json({ error: result.error });
+  return res.json(result.value);
+});
+
+// { items: [{ shiftId, employeeId }] } — what the scheduler kept. Shifts stay drafts.
+shiftsRouter.post('/api/shifts/suggestions/apply', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) return;
+  const scope = await suggestScope(req, res, user);
+  if (scope === false) return;
+  const settings = await getShiftsSettings(user.tenantId!);
+  const result = await applySuggestions(user.tenantId!, req.body?.items, (locationId) => canManageLocationShifts(user, locationId), user.id, settings, skillsEnabledFor(user));
   if (!result.success) return res.status(400).json({ error: result.error });
   return res.json(result.value);
 });

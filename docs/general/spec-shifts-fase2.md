@@ -1,6 +1,6 @@
 # Spec Shifts — Fase 2 (fichaje, intercambio de turnos y horas por proyecto)
 
-**Estado:** borrador para aprobar (2026-10-13). Nada construido todavía.
+**Estado:** aprobada por Alejandro el 2026-10-14 con las decisiones de §0.1. En construcción en `staging`; se prueba todo junto al final (Alejandro: "hacelos en el orden que te parezca y después testeamos todo junto").
 **Base:** la fase 1 (`spec-shifts.md`, Unidades 1-13) está completa y en producción desde el 2026-10-13.
 **Origen:** decisiones de Alejandro del 2026-10-04 ("Segunda etapa: bolsa e intercambio de turnos —
 prioridad alta—, presupuesto de horas por proyecto, informe de horas para el cliente, cronograma sugerido
@@ -20,6 +20,21 @@ directo desde la app".
 | **E. Cronograma sugerido** | Proponer una semana armada respetando reglas y disponibilidad | Baja (la más compleja; al final) |
 
 Cada bloque se puede pasar a producción por separado.
+
+### 0.1 Decisiones de Alejandro (2026-10-14)
+
+1. **Un QR fijo por locación**, impreso una vez. La verificación de ubicación queda como opción por
+   locación, apagada por defecto.
+2. **Aprobaciones por defecto** (configurables en Settings → Turnos): un intercambio entre dos personas
+   necesita **aprobación del manager**; un turno libre en la bolsa es **del primero que lo toma**.
+3. **Fichar sin turno se permite**: se crea solo un turno en el calendario, marcado **tiempo extra**, para
+   esa persona en esa locación (publicado y aceptado), y el manager lo ve para revisar.
+4. **Pausas de las dos formas**, a elección de cada persona: botones Iniciar/Terminar pausa, o cargar los
+   minutos de pausa al fichar la salida.
+5. **Push al celular (Firebase): más adelante**, fuera de esta fase.
+6. **Orden libre**; se prueba todo junto al final. Orden elegido: A → B → C → D → E.
+7. **El QR es un componente genérico** (cualquier texto o link), porque se va a reusar para la
+   **verificación en dos pasos con Google Authenticator** (bloque F, futuro).
 
 ## 1. Restricciones que condicionan el diseño
 
@@ -113,16 +128,23 @@ de los dos (mismo mecanismo de la fase 1: se quita del que sale, se agrega al qu
 A cada manager de sede: ausencias y tardanzas de ayer, y fichajes cerrados automáticamente para revisar.
 A cada persona: si tiene un fichaje para revisar. Categoría de email nueva `attendance`.
 
-### B.5 Seguridad del QR (ver P1)
-Un QR impreso es fijo: alguien podría fotografiarlo y fichar desde su casa. Opciones (decidir):
-- **(a) Solo QR fijo** + el registro muestra desde dónde (IP) — simple, confía en la gente.
-- **(b) QR + ubicación:** al fichar, el celular comparte su ubicación y se compara con la de la sede
-  (radio configurable, ej. 150 m). Si está lejos, se ficha igual pero queda marcado "fuera de la sede".
-  Pide permiso de ubicación en el celular.
-- **(c) QR que cambia** cada minuto, mostrado en una pantalla de la sede — **descartado**: necesita un
-  dispositivo fijo (Alejandro: "no podemos pedirles una tablet").
-- Recomendación: **(b)**, con la ubicación **opcional por sede** (`requireLocation`), para no exigirla
-  donde no hace falta.
+### B.5 QR y ubicación (decidido)
+- **Un QR fijo por locación** (código aleatorio, regenerable si se filtra: el viejo deja de servir).
+- **Ubicación opcional por locación** (`requireLocation`, apagado por defecto): si está activa, al fichar
+  el celular comparte su ubicación y se compara con la de la sede (radio configurable, 150 m por defecto);
+  lejos, se ficha igual pero queda marcado "fuera de la sede".
+- El QR se dibuja con un **componente genérico** (`QrCode`, recibe cualquier texto) que después usa la
+  verificación en dos pasos.
+
+### B.6 Fichar sin turno (decidido)
+Si la persona ficha en una locación sin turno ese día, al fichar la salida se crea un turno **publicado,
+aceptado y marcado `isOvertime`** con esas horas, para esa persona y esa locación. Aparece en el
+cronograma con la marca "Tiempo extra" y en la campana de quien gestiona esa locación.
+
+### B.7 Pausas (decidido)
+Las dos formas conviven y cada persona usa la que quiera: **Iniciar pausa / Terminar pausa** (cada pausa
+queda registrada) o, al **Fichar salida**, cargar los minutos de pausa. Si usó los botones, el campo viene
+completado con la suma.
 
 ---
 
@@ -158,6 +180,12 @@ Un QR impreso es fijo: alguien podría fotografiarlo y fichar desde su casa. Opc
 
 ---
 
+## F. Verificación en dos pasos (futuro, fuera de esta fase)
+
+Pedido de Alejandro (2026-10-14): en Perfil, **Activar verificación en dos pasos** muestra un QR (el mismo
+componente `QrCode`) con un `otpauth://` para Google Authenticator; al iniciar sesión se pide el código de
+6 dígitos (TOTP, RFC 6238), con códigos de respaldo. Spec propia cuando se encare.
+
 ## 2. Permisos y planes
 
 | Qué | Permiso | Plan |
@@ -186,7 +214,7 @@ Un QR impreso es fijo: alguien podría fotografiarlo y fichar desde su casa. Opc
 
 **Total estimado:** ~12 sesiones. A (F2-1/2) y B (F2-3/4/5) se pueden promover sin esperar al resto.
 
-## 4. Preguntas para Alejandro (antes de empezar)
+## 4. Preguntas (respondidas el 2026-10-14, ver §0.1)
 
 - **P1. Seguridad del QR:** ¿(a) solo QR, o (b) QR + ubicación opcional por sede? (recomendado: b)
 - **P2. Aprobación por defecto:** intercambios con aprobación del manager y turnos abiertos "primero que

@@ -6,6 +6,7 @@ import TableSkeleton from '../../components/common/TableSkeleton';
 import AvailabilityEditor from '../../components/shifts/AvailabilityEditor';
 import Modal from '../../components/common/Modal';
 import ShiftMarketplace from '../../components/shifts/ShiftMarketplace';
+import ClockCard from '../../components/shifts/ClockCard';
 import { useShiftLabel } from '../../components/shifts/ShiftRequestText';
 import { addDays, formatDay, formatDuration, formatMinute, shiftDurationMinutes, todayString } from '../../lib/shiftDates';
 
@@ -112,6 +113,8 @@ export default function MyShiftsPage({ token }: MyShiftsPageProps) {
         <h2 className="to-title">{t('mine.title')}</h2>
         <p className="to-subtitle">{t('mine.subtitle')}</p>
       </div>
+
+      <ClockCard token={token} />
 
       <section className="card rules-card">
         <h3 className="card-title">{t('mine.upcoming')}</h3>

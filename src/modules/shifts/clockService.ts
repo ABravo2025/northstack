@@ -284,7 +284,8 @@ export async function clockOut(input: { entry: LoadedEntry; breakMinutes?: unkno
   }
   const worked = Math.round((now.getTime() - e.clockInAt.getTime()) / 60_000);
   if (breakMinutes > worked) breakMinutes = Math.max(0, worked);
-  const geo = geoCheck(input.location, input.geo);
+  // Clocking out only checks the position when the phone sent one (the in-punch already did).
+  const geo = input.geo ? geoCheck(input.location, input.geo) : null;
   let shiftAssignmentId = e.shiftAssignmentId;
   const overtime = !shiftAssignmentId;
   if (overtime) shiftAssignmentId = await createOvertimeShift(e, now, input.actorUserId);

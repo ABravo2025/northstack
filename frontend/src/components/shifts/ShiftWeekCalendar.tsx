@@ -175,19 +175,20 @@ export default function ShiftWeekCalendar({ days, shifts, holidays, today, showL
                 <button
                   key={`${s.id}-${seg.day}`}
                   type="button"
-                  className={`sh-block sh-${shiftTone(s)} ${seg.continuesFromPrev ? 'sh-block-cont-top' : ''} ${seg.continuesNext ? 'sh-block-cont-bottom' : ''}`}
+                  className={`sh-block sh-${shiftTone(s)} ${seg.continuesFromPrev ? 'sh-block-cont-top' : ''} ${seg.continuesNext ? 'sh-block-cont-bottom' : ''} ${s.isOvertime ? 'sh-block-overtime' : ''}`}
                   style={{ top, height, left: `calc(${(seg.col / seg.cols) * 100}% + 2px)`, width: `calc(${100 / seg.cols}% - 4px)` }}
                   onClick={(e) => {
                     e.stopPropagation();
                     onOpen(s);
                   }}
-                  aria-label={`${formatMinute(s.startMinute)}–${formatMinute(s.endMinute)} ${s.position ?? s.location.name} · ${t(`status.${s.status}`)}`}
+                  aria-label={`${formatMinute(s.startMinute)}–${formatMinute(s.endMinute)} ${s.position ?? s.location.name} · ${t(`status.${s.status}`)}${s.isOvertime ? ` · ${t('clock.overtime')}` : ''}`}
                 >
                   <span className="sh-block-time">
                     {formatMinute(s.startMinute)}–{formatMinute(s.endMinute)}
                     {s.endsNextDay && '+1'}
                   </span>
                   {sub && <span className="sh-block-sub">{sub}</span>}
+                  {s.isOvertime && <span className="sh-block-sub font-semibold">{t('clock.overtime')}</span>}
                   {s.assignments.length > 0 && (
                     <span className="sh-block-people">
                       {s.assignments.map((a) => (

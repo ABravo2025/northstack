@@ -56,6 +56,7 @@ export default function ShiftCard({ shift, mode, onOpen }: ShiftCardProps) {
       )}
       {open > 0 && <span className="sh-open block">{t('schedule.openSlots', { count: open })}</span>}
       {shift.status === 'draft' && <span className="sh-card-sub block">{t('status.draft')}</span>}
+      {shift.isOvertime && <span className="sh-card-sub block font-semibold">{t('clock.overtime')}</span>}
     </button>
   );
 }

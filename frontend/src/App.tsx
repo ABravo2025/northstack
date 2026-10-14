@@ -49,6 +49,8 @@ import TimesheetPage from './pages/shifts/TimesheetPage';
 import TimesheetApprovalsPage from './pages/shifts/TimesheetApprovalsPage';
 import HoursReportPage from './pages/shifts/HoursReportPage';
 import ShiftRequestsPage from './pages/shifts/ShiftRequestsPage';
+import TodayBoardPage from './pages/shifts/TodayBoardPage';
+import ClockPage from './pages/shifts/ClockPage';
 import ShiftResponsePage from './pages/shifts/ShiftResponsePage';
 import { useCanSchedule } from './components/layout/ShiftsSidebar';
 import CompanyUsersPage from './pages/CompanyUsersPage';
@@ -65,6 +67,7 @@ import AppLayout from './layouts/AppLayout';
 import WorkspaceSettingsLayout from './layouts/WorkspaceSettingsLayout';
 import SettingsHomePage from './pages/SettingsHomePage';
 import { isPublicFormsEnabled } from './lib/featureFlags';
+import { clearReturnTo, peekReturnTo } from './lib/returnTo';
 import './App.css';
 
 export default function App() {
@@ -295,7 +298,7 @@ export default function App() {
         path="/login"
         element={
           isAuthenticated ? (
-            <Navigate to="/overview" replace />
+            <AfterLogin />
           ) : (
             <LoginPage
               onLogin={handleLogin}
@@ -374,6 +377,8 @@ export default function App() {
         <Route path="/shifts/approvals" element={<TimesheetApprovalsPage token={token ?? ''} />} />
         <Route path="/shifts/reports" element={<HoursReportPage token={token ?? ''} />} />
         <Route path="/shifts/requests" element={<ShiftRequestsPage token={token ?? ''} />} />
+        <Route path="/shifts/today" element={<TodayBoardPage token={token ?? ''} />} />
+        <Route path="/clock/:code" element={<ClockPage token={token ?? ''} />} />
         <Route path="/projects/:projectId" element={<ProjectDetailPage token={token ?? ''} user={user} />} />
         <Route path="/help" element={<HelpPage />} />
         <Route path="/guide" element={<GuidePage />} />
@@ -445,4 +450,11 @@ function ShiftsHome({ token }: { token: string }) {
   const canSchedule = useCanSchedule(token);
   if (canSchedule === null) return null;
   return canSchedule ? <ShiftsSchedulePage token={token} /> : <Navigate to="/shifts/mine" replace />;
+}
+
+// Back to the page that sent you to the login (read once), or the overview.
+function AfterLogin() {
+  const [to] = useState(() => peekReturnTo() ?? '/overview');
+  useEffect(() => clearReturnTo(), []);
+  return <Navigate to={to} replace />;
 }

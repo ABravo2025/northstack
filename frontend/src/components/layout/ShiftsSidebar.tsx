@@ -34,6 +34,7 @@ export default function ShiftsSidebar({ token, mobileOpen, onMobileClose }: Shif
   const { t } = useTranslation('shifts');
   const navigate = useNavigate();
   const permissions = usePermissions();
+  const { features } = permissions;
   const canSchedule = useCanSchedule(token);
   // Phase 2: requests waiting for a scheduler's approval.
   const [pendingRequests, setPendingRequests] = useState(0);
@@ -80,6 +81,12 @@ export default function ShiftsSidebar({ token, mobileOpen, onMobileClose }: Shif
             <NavLink to="/shifts" end className={linkClass} onClick={onMobileClose}>
               <CalendarIcon className="h-4 w-4 shrink-0" />
               {t('nav.schedule')}
+            </NavLink>
+          )}
+          {canSchedule && features.clockIn && (
+            <NavLink to="/shifts/today" className={linkClass} onClick={onMobileClose}>
+              <ClockIcon className="h-4 w-4 shrink-0" />
+              {t('nav.today')}
             </NavLink>
           )}
           {canSchedule && (

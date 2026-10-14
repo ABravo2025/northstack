@@ -58,12 +58,12 @@ clockRouter.get('/api/clock/me', async (req, res) => {
   const now = new Date();
   const [open, locations] = await Promise.all([
     findOpenEntry(ctx.employee.id),
-    prisma.location.findMany({ where: { tenantId: ctx.user.tenantId!, isActive: true, clockMethod: { in: ['app', 'qr_or_app'] } }, select: { id: true, name: true }, orderBy: { name: 'asc' } }),
+    prisma.location.findMany({ where: { tenantId: ctx.user.tenantId!, isActive: true, clockMethod: { in: ['app', 'qr_or_app'] } }, select: { id: true, name: true, requireLocation: true, latitude: true }, orderBy: { name: 'asc' } }),
   ]);
   const appLocations = await Promise.all(
     locations.map(async (l) => {
       const a = await findShiftForClockIn(ctx.employee!.id, l.id, now);
-      return { ...l, shiftStartsAt: a?.shift.startsAt.toISOString() ?? null };
+      return { id: l.id, name: l.name, requireLocation: l.requireLocation && l.latitude !== null, shiftStartsAt: a?.shift.startsAt.toISOString() ?? null };
     }),
   );
   // Locations with a shift now first.

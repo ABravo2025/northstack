@@ -21,6 +21,7 @@ import { PrimaryActionProvider } from '../contexts/PrimaryActionContext';
 import { TimeOffTabProvider } from '../contexts/TimeOffTabContext';
 import { useNewVersionAvailable } from '../hooks/useNewVersionAvailable';
 import TaskTimePrompt from '../components/tasks/TaskTimePrompt';
+import { rememberReturnTo } from '../lib/returnTo';
 
 interface AppLayoutProps {
   user: any;
@@ -55,6 +56,7 @@ export default function AppLayout({ user, token, tenant, onLogout }: AppLayoutPr
   }, [location.pathname]);
 
   if (!token || !user) {
+    rememberReturnTo(`${location.pathname}${location.search}`);
     return <Navigate to="/login" replace />;
   }
 

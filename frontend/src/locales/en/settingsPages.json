@@ -1031,6 +1031,7 @@
       "shifts": "New, changed or cancelled shifts",
       "shiftReminders": "Reminders: tomorrow's shifts and shifts waiting for my answer",
       "shiftSwaps": "Hand-overs and swaps: asks, approvals, outcomes",
+      "attendance": "Clock-in: punches closed for you, overtime",
       "shiftDeclined": "Someone can't make a shift I scheduled",
       "skillsExpiring": "Skills and certifications about to expire",
       "timesheet": "My timesheet: weeks sent back or reopened, hours not logged yet",

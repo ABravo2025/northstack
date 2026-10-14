@@ -1,5 +1,10 @@
 import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
 import type {
+  ClockBoardLocation,
+  ClockCodeView,
+  ClockEntry,
+  ClockLocationConfig,
+  ClockMe,
   AvailableShift,
   ShiftRequest,
   SwapTarget,
@@ -211,6 +216,22 @@ export const shiftsApi = {
   decideShiftRequest: (token: string, requestId: string, approve: boolean, note?: string) =>
     call<ShiftRequest>(token, `/api/shifts/requests/${requestId}/decide`, { method: 'POST', body: JSON.stringify({ approve, note }) }),
   cancelShiftRequest: (token: string, requestId: string) => call<void>(token, `/api/shifts/requests/${requestId}/cancel`, { method: 'POST' }),
+  // Phase 2, block B: clock-in.
+  getClockMe: (token: string) => call<ClockMe>(token, '/api/clock/me'),
+  getClockCode: (token: string, code: string) => call<ClockCodeView>(token, `/api/clock/code/${encodeURIComponent(code)}`),
+  clockIn: (token: string, data: { code?: string; locationId?: string; geo?: { lat: number; lng: number } | null }) =>
+    call<ClockEntry>(token, '/api/clock/in', { method: 'POST', body: JSON.stringify(data) }),
+  clockOut: (token: string, data: { breakMinutes?: number; geo?: { lat: number; lng: number } | null }) =>
+    call<ClockEntry & { overtime: boolean }>(token, '/api/clock/out', { method: 'POST', body: JSON.stringify(data) }),
+  clockBreak: (token: string, action: 'start' | 'end') => call<ClockEntry>(token, `/api/clock/break/${action}`, { method: 'POST' }),
+  getClockBoard: (token: string, locationId?: string) =>
+    call<{ canManage: boolean; locations: ClockBoardLocation[]; review: ClockEntry[] }>(token, `/api/clock/board${locationId ? `?locationId=${locationId}` : ''}`),
+  correctClockEntry: (token: string, entryId: string, data: { clockInAt?: string; clockOutAt?: string; breakMinutes?: number; reason: string; markReviewed?: boolean }) =>
+    call<ClockEntry>(token, `/api/clock/entries/${entryId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  listClockLocations: (token: string) => call<{ locations: ClockLocationConfig[] }>(token, '/api/clock/locations'),
+  updateClockLocation: (token: string, locationId: string, data: Partial<Omit<ClockLocationConfig, 'id' | 'name' | 'isActive' | 'clockCode'>>) =>
+    call<ClockLocationConfig>(token, `/api/clock/locations/${locationId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  regenerateClockCode: (token: string, locationId: string) => call<{ id: string; clockCode: string }>(token, `/api/clock/locations/${locationId}/code`, { method: 'POST' }),
   getScheduleCost: (token: string, from: string, to: string, locationId?: string) =>
     call<ScheduleCost | null>(token, `/api/shifts/cost?from=${from}&to=${to}${locationId ? `&locationId=${locationId}` : ''}`),
   getHoursReport: (token: string, params: { from: string; to: string; groupBy: HoursReport['groupBy'] }) =>

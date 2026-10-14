@@ -217,7 +217,7 @@ export default function PlansModal({ open, tenant, onClose, onSelectPlan, curren
       <div className="text-center text-sm font-medium rounded-lg border border-line bg-accent-tint px-4 py-2.5 my-4 mx-auto max-w-xl dark:border-dark-line">
         {pricing?.isLaunch ? (
           <>
-            <span className="mr-2 inline-block rounded-full bg-orange-600 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white">
+            <span className="mr-2 inline-block rounded-full bg-orange-600 px-2 py-0.5 text-2xs font-bold uppercase tracking-wide text-white">
               {t('plansModal.launchTag')}
             </span>
             {t('plansModal.launchBanner', { date: launchEndLabel(pricing, i18n.language) })}
@@ -263,7 +263,7 @@ export default function PlansModal({ open, tenant, onClose, onSelectPlan, curren
                 <span className="text-2xl font-bold">{displayPrice}</span>
                 {card.priceSuffix && <span className="text-sm font-normal text-ink-muted dark:text-dark-ink-muted">{card.priceSuffix}</span>}
                 {discount ? (
-                  <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[11px] font-bold text-orange-700 dark:bg-orange-500/15 dark:text-orange-300">
+                  <span className="rounded-full bg-orange-100 px-2 py-0.5 text-2xs font-bold text-orange-700 dark:bg-orange-500/15 dark:text-orange-300">
                     -{discount}%
                   </span>
                 ) : null}

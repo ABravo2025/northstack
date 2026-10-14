@@ -53,22 +53,22 @@ export default function DashboardsHrPage() {
       {hr.customFields.fields.length > 0 && (
         <div className="card mt-4">
           <h3 className="card-title">{t('hr.customFieldCompletion')}</h3>
-          <table className="w-full text-sm">
+          <table className="mini-table">
             <thead>
-              <tr className="text-left text-ink-faint dark:text-dark-ink-faint">
-                <th className="pb-2 font-medium">{t('hr.colField')}</th>
-                <th className="pb-2 font-medium">{t('hr.colFilled')}</th>
-                <th className="pb-2 font-medium">{t('hr.colCompletion')}</th>
+              <tr>
+                <th>{t('hr.colField')}</th>
+                <th>{t('hr.colFilled')}</th>
+                <th>{t('hr.colCompletion')}</th>
               </tr>
             </thead>
             <tbody>
               {hr.customFields.fields.map((f) => (
                 <tr key={f.id} className="border-t border-line-soft dark:border-dark-line-soft">
-                  <td className="py-1.5 text-ink dark:text-dark-ink">{f.name}</td>
-                  <td className="py-1.5 text-ink-muted dark:text-dark-ink-muted">
+                  <td>{f.name}</td>
+                  <td>
                     {f.filledCount} / {hr.customFields.employeeCount}
                   </td>
-                  <td className="py-1.5 text-ink-muted dark:text-dark-ink-muted">{f.completionPct === null ? '—' : `${f.completionPct}%`}</td>
+                  <td>{f.completionPct === null ? '—' : `${f.completionPct}%`}</td>
                 </tr>
               ))}
             </tbody>

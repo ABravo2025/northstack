@@ -244,7 +244,7 @@ function JoinView({ token, rules, onJoined }: { token: string; rules: ReferralRu
       <div className="grid gap-3 md:grid-cols-3">
         {(['share', 'pay', 'transfer'] as const).map((step, i) => (
           <div key={step} className="rounded-lg border border-line bg-surface-1 p-4 dark:border-dark-line dark:bg-dark-surface">
-            <span className="mb-2 inline-grid h-5 w-5 place-items-center rounded-full bg-accent-tint text-[11px] font-bold text-accent dark:text-brand-blue-light">{i + 1}</span>
+            <span className="mb-2 inline-grid h-5 w-5 place-items-center rounded-full bg-accent-tint text-2xs font-bold text-accent dark:text-brand-blue-light">{i + 1}</span>
             <p className="text-sm font-semibold">{t(`referrals.steps.${step}.title`, vars)}</p>
             <p className="text-xs text-ink-muted dark:text-dark-ink-muted">{t(`referrals.steps.${step}.body`, { ...vars, min: `${vars.minUsd} / ${vars.minArs}` })}</p>
           </div>

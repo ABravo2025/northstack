@@ -53,24 +53,24 @@ export default function DashboardsPayrollPage() {
       {payroll.compensationByDepartment.length > 0 && (
         <div className="card mt-4">
           <h3 className="card-title">{t('payroll.compensationByDepartment')}</h3>
-          <table className="w-full text-sm">
+          <table className="mini-table">
             <thead>
-              <tr className="text-left text-ink-faint dark:text-dark-ink-faint">
-                <th className="pb-2 font-medium">{t('payroll.colDepartment')}</th>
-                <th className="pb-2 font-medium">{t('payroll.colType')}</th>
-                <th className="pb-2 font-medium">{t('payroll.colMedian')}</th>
-                <th className="pb-2 font-medium">{t('payroll.colAvg')}</th>
-                <th className="pb-2 font-medium">{t('payroll.colSample')}</th>
+              <tr>
+                <th>{t('payroll.colDepartment')}</th>
+                <th>{t('payroll.colType')}</th>
+                <th>{t('payroll.colMedian')}</th>
+                <th>{t('payroll.colAvg')}</th>
+                <th>{t('payroll.colSample')}</th>
               </tr>
             </thead>
             <tbody>
               {payroll.compensationByDepartment.map((c, i) => (
                 <tr key={i} className="border-t border-line-soft dark:border-dark-line-soft">
-                  <td className="py-1.5 text-ink dark:text-dark-ink">{c.departmentName}</td>
-                  <td className="py-1.5 text-ink-muted dark:text-dark-ink-muted">{c.compensationType}</td>
-                  <td className="py-1.5 text-ink-muted dark:text-dark-ink-muted">{formatMoney(c.medianRateCents, c.currency)}</td>
-                  <td className="py-1.5 text-ink-muted dark:text-dark-ink-muted">{formatMoney(c.avgRateCents, c.currency)}</td>
-                  <td className="py-1.5 text-ink-muted dark:text-dark-ink-muted">{c.sampleSize}</td>
+                  <td>{c.departmentName}</td>
+                  <td>{c.compensationType}</td>
+                  <td>{formatMoney(c.medianRateCents, c.currency)}</td>
+                  <td>{formatMoney(c.avgRateCents, c.currency)}</td>
+                  <td>{c.sampleSize}</td>
                 </tr>
               ))}
             </tbody>

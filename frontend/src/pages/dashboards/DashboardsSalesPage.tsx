@@ -83,22 +83,22 @@ export default function DashboardsSalesPage() {
       {sales.stageVelocity.byStage.length > 0 && (
         <div className="card mt-4">
           <h3 className="card-title">{t('sales.stageVelocity')}</h3>
-          <table className="w-full text-sm">
+          <table className="mini-table">
             <thead>
-              <tr className="text-left text-ink-faint dark:text-dark-ink-faint">
-                <th className="pb-2 font-medium">{t('sales.colPipeline')}</th>
-                <th className="pb-2 font-medium">{t('sales.colStage')}</th>
-                <th className="pb-2 font-medium">{t('sales.colHistoricalMedian')}</th>
-                <th className="pb-2 font-medium">{t('sales.colSample')}</th>
+              <tr>
+                <th>{t('sales.colPipeline')}</th>
+                <th>{t('sales.colStage')}</th>
+                <th>{t('sales.colHistoricalMedian')}</th>
+                <th>{t('sales.colSample')}</th>
               </tr>
             </thead>
             <tbody>
               {sales.stageVelocity.byStage.map((s) => (
                 <tr key={s.stageId} className="border-t border-line-soft dark:border-dark-line-soft">
-                  <td className="py-1.5 text-ink dark:text-dark-ink">{s.pipelineName}</td>
-                  <td className="py-1.5 text-ink-muted dark:text-dark-ink-muted">{s.stageName}</td>
-                  <td className="py-1.5 text-ink-muted dark:text-dark-ink-muted">{t('common.daysValue', { count: s.historicalMedianDays })}</td>
-                  <td className="py-1.5 text-ink-muted dark:text-dark-ink-muted">{s.sampleSize}</td>
+                  <td>{s.pipelineName}</td>
+                  <td>{s.stageName}</td>
+                  <td>{t('common.daysValue', { count: s.historicalMedianDays })}</td>
+                  <td>{s.sampleSize}</td>
                 </tr>
               ))}
             </tbody>
@@ -109,24 +109,24 @@ export default function DashboardsSalesPage() {
       {sales.stageVelocity.atRisk.length > 0 && (
         <div className="card mt-4">
           <h3 className="card-title">{t('sales.dealsAtRisk')}</h3>
-          <table className="w-full text-sm">
+          <table className="mini-table">
             <thead>
-              <tr className="text-left text-ink-faint dark:text-dark-ink-faint">
-                <th className="pb-2 font-medium">{t('sales.colOpportunity')}</th>
-                <th className="pb-2 font-medium">{t('sales.colStage')}</th>
-                <th className="pb-2 font-medium">{t('sales.colDaysInStage')}</th>
-                <th className="pb-2 font-medium">{t('sales.colStageMedian')}</th>
+              <tr>
+                <th>{t('sales.colOpportunity')}</th>
+                <th>{t('sales.colStage')}</th>
+                <th>{t('sales.colDaysInStage')}</th>
+                <th>{t('sales.colStageMedian')}</th>
               </tr>
             </thead>
             <tbody>
               {sales.stageVelocity.atRisk.map((o) => (
                 <tr key={o.opportunityId} className="border-t border-line-soft dark:border-dark-line-soft">
-                  <td className="py-1.5 text-ink dark:text-dark-ink">{o.name}</td>
-                  <td className="py-1.5 text-ink-muted dark:text-dark-ink-muted">{o.stageName}</td>
-                  <td className="py-1.5 font-medium" style={{ color: 'var(--chart-status-critical)' }}>
+                  <td>{o.name}</td>
+                  <td>{o.stageName}</td>
+                  <td className="font-medium" style={{ color: 'var(--chart-status-critical)' }}>
                     {t('common.daysValue', { count: o.daysInStage })}
                   </td>
-                  <td className="py-1.5 text-ink-muted dark:text-dark-ink-muted">{t('common.daysValue', { count: o.stageMedianDays })}</td>
+                  <td>{t('common.daysValue', { count: o.stageMedianDays })}</td>
                 </tr>
               ))}
             </tbody>
@@ -137,22 +137,22 @@ export default function DashboardsSalesPage() {
       {sales.dealsByOwner.length > 0 && (
         <div className="card mt-4">
           <h3 className="card-title">{t('sales.dealsByOwner')}</h3>
-          <table className="w-full text-sm">
+          <table className="mini-table">
             <thead>
-              <tr className="text-left text-ink-faint dark:text-dark-ink-faint">
-                <th className="pb-2 font-medium">{t('sales.colOwner')}</th>
-                <th className="pb-2 font-medium">{t('sales.colOpen')}</th>
-                <th className="pb-2 font-medium">{t('sales.colWon')}</th>
-                <th className="pb-2 font-medium">{t('sales.colWonAmount')}</th>
+              <tr>
+                <th>{t('sales.colOwner')}</th>
+                <th>{t('sales.colOpen')}</th>
+                <th>{t('sales.colWon')}</th>
+                <th>{t('sales.colWonAmount')}</th>
               </tr>
             </thead>
             <tbody>
               {sales.dealsByOwner.map((o) => (
                 <tr key={o.ownerId} className="border-t border-line-soft dark:border-dark-line-soft">
-                  <td className="py-1.5 text-ink dark:text-dark-ink">{o.ownerName}</td>
-                  <td className="py-1.5 text-ink-muted dark:text-dark-ink-muted">{o.openCount}</td>
-                  <td className="py-1.5 text-ink-muted dark:text-dark-ink-muted">{o.wonCount}</td>
-                  <td className="py-1.5 text-ink-muted dark:text-dark-ink-muted">
+                  <td>{o.ownerName}</td>
+                  <td>{o.openCount}</td>
+                  <td>{o.wonCount}</td>
+                  <td>
                     {o.wonAmountByCurrency.map((a) => formatMoney(a.amountCents, a.currency)).join(' + ') || '—'}
                   </td>
                 </tr>

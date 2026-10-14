@@ -268,7 +268,7 @@ export function AdminReferralMember({ session }: { session: AdminSession }) {
             {Object.entries(m.payoutDetails).map(([k, v]) => (
               <div key={k} className="contents">
                 <dt className="text-ink-faint dark:text-dark-ink-faint">{DETAIL_LABEL[k] ?? k}</dt>
-                <dd className="m-0 break-words font-mono text-[13px]">{k === 'wireType' ? WIRE_TYPE_LABEL[v] ?? v : v}</dd>
+                <dd className="m-0 break-words font-mono text-sm">{k === 'wireType' ? WIRE_TYPE_LABEL[v] ?? v : v}</dd>
               </div>
             ))}
             <dt className="text-ink-faint dark:text-dark-ink-faint">Email de la cuenta</dt>

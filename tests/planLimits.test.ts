@@ -40,6 +40,7 @@ describe('getPlanLimits', () => {
       maxActiveLocations: 1,
       shiftSkillsEnabled: false,
       billableHoursEnabled: false,
+      clockInEnabled: false,
     });
   });
 

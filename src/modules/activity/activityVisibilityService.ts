@@ -73,6 +73,8 @@ const ACTIVITY_MODULE_GATE: Partial<Record<ActivityEntityType, (role: RoleContex
   timeEntry: canApproveTimesheets,
   // Phase 2: shift claims, hand-overs and swaps — whoever sees the whole schedule.
   shiftRequest: canViewShifts,
+  // Phase 2: punches and their corrections — whoever sees the whole schedule.
+  clockEntry: canViewShifts,
 };
 
 export function canViewEntryModule(role: RoleContext, entityType: ActivityEntityType): boolean {

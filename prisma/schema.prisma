@@ -450,6 +450,7 @@ model Tenant {
   employeeSkills            EmployeeSkill[]
   timesheets                Timesheet[]
   shiftChangeRequests       ShiftChangeRequest[]
+  clockEntries              ClockEntry[]
   timeEntries               TimeEntry[]
   timeSuggestionDismissals  TimeSuggestionDismissal[]
 }
@@ -772,6 +773,7 @@ model Employee {
   timesheets               Timesheet[]
   shiftChangesRequested    ShiftChangeRequest[]       @relation("ShiftChangeRequestedBy")
   shiftChangesTargeted     ShiftChangeRequest[]       @relation("ShiftChangeTarget")
+  clockEntries             ClockEntry[]
   timeEntries              TimeEntry[]
   timeSuggestionDismissals TimeSuggestionDismissal[]
 
@@ -1228,6 +1230,7 @@ enum ActivityEntityType {
   timesheet
   timeEntry
   shiftRequest
+  clockEntry
 }
 
 enum ActivityAction {
@@ -1910,6 +1913,8 @@ model ShiftsSettings {
   swapNeedsApproval      Boolean @default(true)
   // …while an open shift goes to whoever takes it first unless this is on.
   openShiftNeedsApproval Boolean @default(false)
+  // Phase 2, block B: minutes after a shift's start before a clock-in counts as late.
+  lateToleranceMinutes   Int     @default(5)
   updatedAt           DateTime @updatedAt
 }
 
@@ -1928,8 +1933,19 @@ model Location {
   // The location's manager schedules its shifts without needing manage_shifts (shiftAccess.ts).
   managerEmployeeId String?
   managerEmployee   Employee?       @relation("LocationManager", fields: [managerEmployeeId], references: [id], onDelete: SetNull)
+  // Phase 2, block B (spec-shifts-fase2.md): how people clock in here (Growth). The printed QR
+  // opens /clock/<clockCode>; regenerating the code retires the old sheet.
+  clockMethod       ClockMethod     @default(off)
+  clockCode         String?         @unique
+  // Optional per location (Alejandro, 2026-10-14): compare the phone's position with this point;
+  // farther than radiusMeters still clocks in, flagged "away from the location".
+  requireLocation   Boolean         @default(false)
+  latitude          Float?
+  longitude         Float?
+  radiusMeters      Int             @default(150)
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
+  clockEntries      ClockEntry[]
   shifts            Shift[]
   templates         ShiftTemplate[]
 
@@ -1994,11 +2010,92 @@ model Shift {
   assignments      ShiftAssignment[]
   // Phase 2, block A: published with free places that anyone eligible can take (My shifts → Available).
   openToClaim      Boolean           @default(false)
+  // Phase 2, block B: created by clocking in without a shift (Alejandro: "se agrega automáticamente
+  // en el calendario como tiempo extra"). Published and accepted on creation.
+  isOvertime       Boolean           @default(false)
   changeRequests   ShiftChangeRequest[] @relation("ShiftChangeRequestShift")
   swapOffers       ShiftChangeRequest[] @relation("ShiftChangeRequestTargetShift")
 
   @@index([tenantId, startsAt])
   @@index([tenantId, locationId, date])
+}
+
+// Phase 2, block B (spec-shifts-fase2.md): clocking in and out. One open entry per person at a time.
+// Punches are never overwritten: a correction keeps the old and new values with a reason
+// (ClockCorrection), so the record stands up as a register of working hours.
+enum ClockMethod {
+  off
+  qr
+  app
+  qr_or_app
+}
+
+enum ClockEntryMethod {
+  qr
+  app
+  manager
+}
+
+enum ClockEntryStatus {
+  open
+  closed
+  auto_closed // forgot to clock out: closed by the daily run at the shift's end (or after 12 h)
+}
+
+model ClockEntry {
+  id                String           @id @default(uuid())
+  tenantId          String
+  tenant            Tenant           @relation(fields: [tenantId], references: [id])
+  employeeId        String
+  employee          Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  locationId        String
+  location          Location         @relation(fields: [locationId], references: [id])
+  // The shift this punch belongs to (plain id; an overtime shift is created at clock-out when null).
+  shiftAssignmentId String?
+  clockInAt         DateTime
+  clockOutAt        DateTime?
+  method            ClockEntryMethod
+  // Breaks: minutes typed at clock-out, or the sum of ClockBreak rows when the buttons were used.
+  breakMinutes      Int              @default(0)
+  status            ClockEntryStatus @default(open)
+  needsReview       Boolean          @default(false)
+  // Distance from the location when it asks for the phone's position; null = not checked.
+  inDistanceMeters  Int?
+  outDistanceMeters Int?
+  awayFromLocation  Boolean          @default(false)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  breaks            ClockBreak[]
+  corrections       ClockCorrection[]
+
+  @@index([tenantId, employeeId, clockInAt])
+  @@index([tenantId, locationId, clockInAt])
+  @@index([tenantId, status])
+}
+
+model ClockBreak {
+  id           String     @id @default(uuid())
+  clockEntryId String
+  clockEntry   ClockEntry @relation(fields: [clockEntryId], references: [id], onDelete: Cascade)
+  startedAt    DateTime
+  endedAt      DateTime?
+
+  @@index([clockEntryId])
+}
+
+model ClockCorrection {
+  id            String     @id @default(uuid())
+  tenantId      String
+  clockEntryId  String
+  clockEntry    ClockEntry @relation(fields: [clockEntryId], references: [id], onDelete: Cascade)
+  field         String // clockInAt | clockOutAt | breakMinutes
+  oldValue      String?
+  newValue      String?
+  reason        String
+  correctedById String
+  createdAt     DateTime   @default(now())
+
+  @@index([clockEntryId])
 }
 
 // Phase 2, block A (spec-shifts-fase2.md): someone takes an open place (claim), hands their shift to
@@ -2308,6 +2405,7 @@ enum NotificationType {
   timesheet_reminder // daily cron: yesterday's shift hours not logged yet. entityType 'timesheet'.
   shift_request // phase 2: a claim/give/swap waiting for you (colleague or manager). entityType 'shiftRequest'.
   shift_request_decided // phase 2: your request was approved, declined or expired. entityType 'shiftRequest'.
+  attendance // phase 2: overtime clock-in, auto-closed punch, daily attendance summary. entityType 'clockEntry'.
 }
 
 model Notification {

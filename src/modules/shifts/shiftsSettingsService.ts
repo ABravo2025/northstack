@@ -19,6 +19,8 @@ export interface EffectiveShiftsSettings {
   allowSwaps: boolean;
   swapNeedsApproval: boolean;
   openShiftNeedsApproval: boolean;
+  // Phase 2, block B.
+  lateToleranceMinutes: number;
 }
 
 // Must match the @default()s on the ShiftsSettings model.
@@ -34,6 +36,7 @@ export const DEFAULT_SHIFTS_SETTINGS: EffectiveShiftsSettings = {
   allowSwaps: true,
   swapNeedsApproval: true,
   openShiftNeedsApproval: false,
+  lateToleranceMinutes: 5,
 };
 
 const MAX_REST_HOURS = 48;
@@ -52,6 +55,7 @@ function toEffective(row: ShiftsSettings | null): EffectiveShiftsSettings {
     allowSwaps: row.allowSwaps,
     swapNeedsApproval: row.swapNeedsApproval,
     openShiftNeedsApproval: row.openShiftNeedsApproval,
+    lateToleranceMinutes: row.lateToleranceMinutes,
   };
 }
 
@@ -90,6 +94,13 @@ export function parseShiftsSettingsInput(input: UpdateShiftsSettingsInput): Resu
       return { success: false, error: `Minimum rest must be between 1 and ${MAX_REST_HOURS} hours`, field: 'minRestHours' };
     }
     data.minRestHours = v as number | null;
+  }
+  if (input.lateToleranceMinutes !== undefined) {
+    const v = input.lateToleranceMinutes;
+    if (typeof v !== 'number' || !Number.isInteger(v) || v < 0 || v > 120) {
+      return { success: false, error: 'Late tolerance must be between 0 and 120 minutes', field: 'lateToleranceMinutes' };
+    }
+    data.lateToleranceMinutes = v;
   }
   if (input.weekStartsOn !== undefined) {
     const v = input.weekStartsOn;

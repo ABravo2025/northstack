@@ -153,7 +153,7 @@
         },
         "commissions": {
           "heading": "4. Comisiones",
-          "body": "Ganás el {{percent}}% de cada uno de los primeros {{payments}} pagos exitosos de la suscripción de la empresa referida, calculado sobre el monto efectivamente cobrado, en la moneda de ese pago. Una comisión queda disponible para cobro {{holdDays}} días después del pago correspondiente. Podemos anular una comisión en cualquier momento antes de pagarla — por ejemplo, si el pago correspondiente se reembolsa o se desconoce (contracargo), o si determinamos que surgió de fraude o de una violación de estos Términos del Programa."
+          "body": "Ganás el {{percent}}% de cada uno de los primeros {{payments}} pagos exitosos de la suscripción de la empresa referida, calculado sobre el monto de nuestra factura por ese pago, en la moneda de ese pago — el precio de su suscripción para ese ciclo de facturación, que puede ser menor que el monto total que cobra el medio de pago (por ejemplo, no incluye impuestos que el medio de pago agregue aparte). Una comisión queda disponible para cobro {{holdDays}} días después del pago correspondiente. Podemos anular una comisión en cualquier momento antes de pagarla — por ejemplo, si el pago correspondiente se reembolsa o se desconoce (contracargo), o si determinamos que surgió de fraude o de una violación de estos Términos del Programa."
         },
         "payouts": {
           "heading": "5. Pagos",

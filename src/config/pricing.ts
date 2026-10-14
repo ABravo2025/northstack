@@ -55,6 +55,12 @@ export const REFERRAL = {
   // against for a *new* join).
   // 2.1 (2026-10-07, Alejandro): new section 6 — a closed account's link is deactivated, later
   // payments earn nothing, and what was earned is settled with no minimum after each hold.
+  // 2026-10-13: Section 4's wording said commissions are "calculated on the amount actually
+  // charged" — true for Mercado Pago (amountCents = payment.transaction_amount), false for Dodo
+  // (amountCents = our own locked price, explicitly excluding tax — see webhooks.ts's invoice
+  // creation comment). Fixed the wording to match the real calculation for both providers; left
+  // the calculation itself untouched (a provider-specific change there is a business decision,
+  // not a docs fix) and did not bump termsVersion, since no Member's rights or amounts changed.
   termsVersion: '2.1',
 } as const;
 

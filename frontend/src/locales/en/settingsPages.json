@@ -153,7 +153,7 @@
         },
         "commissions": {
           "heading": "4. Commissions",
-          "body": "You earn {{percent}}% of each of the referred company's first {{payments}} successful subscription payments, calculated on the amount actually charged, in the currency of that payment. A commission becomes payable {{holdDays}} days after the underlying payment. We may void a commission at any time before it is paid out — for example, if the underlying payment is refunded or charged back, or if we determine it resulted from fraud or a violation of these Program Terms."
+          "body": "You earn {{percent}}% of each of the referred company's first {{payments}} successful subscription payments, calculated on the amount of our invoice for that payment, in the currency of that payment — their subscription price for that billing cycle, which can be lower than a payment provider's total charge (for example, it does not include tax a provider adds on top). A commission becomes payable {{holdDays}} days after the underlying payment. We may void a commission at any time before it is paid out — for example, if the underlying payment is refunded or charged back, or if we determine it resulted from fraud or a violation of these Program Terms."
         },
         "payouts": {
           "heading": "5. Payouts",

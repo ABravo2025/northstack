@@ -7,7 +7,6 @@ producción el 12/10.
 |---|---|---|---|---|
 | Post Turnos: dejar de confirmar por WhatsApp ES / EN | `linkedin/01-turnos-es.md`, `-en.md` | mié 14/10 | Perfil de Alejandro | Borrador, para revisar |
 | Post fundador: un laboratorio consultó por turnos ES / EN | `linkedin/02-pedido-cliente-es.md`, `-en.md` | vie 16/10 | Perfil de Alejandro | Borrador, para revisar (el laboratorio no se nombra y aún no es cliente) |
-
 | GIFs de producto ES / EN: Turnos, Proyectos, Vacaciones | `gif/{turnos,proyectos,vacaciones}-{es,en}.gif` | — | Usados en los posts de las semanas 03 y 04 | Listos |
 
 ## GIFs

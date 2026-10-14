@@ -139,7 +139,7 @@ export default function NewProjectModal({ open, token, limits, defaultCompanyId,
 
         {niche === 'custom' && !customAllowed ? (
           <div className="flex items-start gap-3 rounded-lg border border-dashed border-line-strong p-4 text-sm dark:border-dark-line">
-            <LockIcon className="mt-0.5 h-4 w-4 shrink-0 text-ink-faint" />
+            <LockIcon className="mt-0.5 h-4 w-4 shrink-0 text-ink-faint dark:text-dark-ink-faint" />
             <div>
               <div className="font-semibold">{t('new.lockedTitle')}</div>
               <div className="text-ink-muted dark:text-dark-ink-muted">{t('new.lockedBody')}</div>

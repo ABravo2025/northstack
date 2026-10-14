@@ -72,7 +72,7 @@ export default function PayslipPreviewModal({
         ) : undefined
       }
     >
-      {resolvedHelperText && <p className="text-sm text-ink-muted mb-3">{resolvedHelperText}</p>}
+      {resolvedHelperText && <p className="text-sm text-ink-muted dark:text-dark-ink-muted mb-3">{resolvedHelperText}</p>}
       {loading && <p>{t('payroll.payslipPreview.loading')}</p>}
       {error && <div className="alert alert-error">{error}</div>}
       {objectUrl && <iframe src={objectUrl} title={resolvedTitle} style={{ width: '100%', height: '70vh', border: 'none' }} />}

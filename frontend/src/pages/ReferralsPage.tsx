@@ -404,7 +404,7 @@ function MemberView({ token, rules, member, onChange }: { token: string; rules: 
               role="tab"
               aria-selected={tab === key}
               onClick={() => setTab(key)}
-              className={`-mb-px whitespace-nowrap border-b-2 px-3.5 py-2.5 text-sm ${tab === key ? 'border-accent font-semibold text-accent dark:text-brand-blue-light' : 'border-transparent text-ink-muted hover:text-ink dark:text-dark-ink-muted'}`}
+              className={`-mb-px whitespace-nowrap border-b-2 px-3.5 py-2.5 text-sm ${tab === key ? 'border-accent font-semibold text-accent dark:text-brand-blue-light' : 'border-transparent text-ink-muted hover:text-ink dark:text-dark-ink-muted dark:hover:text-dark-ink'}`}
             >
               {label}
             </button>

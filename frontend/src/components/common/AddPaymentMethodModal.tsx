@@ -51,7 +51,7 @@ export default function AddPaymentMethodModal({ open, token, provider, onClose }
 
   return (
     <Modal open={open} title={t('addPaymentMethod.title')} onClose={onClose}>
-      <p className="text-sm text-ink-muted mb-4">
+      <p className="text-sm text-ink-muted dark:text-dark-ink-muted mb-4">
         {provider === 'mercadopago' ? t('addPaymentMethod.descriptionMercadoPago') : t('addPaymentMethod.description')}
       </p>
       <div className="flex justify-end gap-2">

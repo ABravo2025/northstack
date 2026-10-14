@@ -257,7 +257,7 @@ export default function EmployeeOverviewPanel({
               ))}
             </>
           ) : paymentHistory.length === 0 ? (
-            <p className="text-sm text-ink-faint">{t('employeeOverview.noPayments')}</p>
+            <p className="text-sm text-ink-faint dark:text-dark-ink-faint">{t('employeeOverview.noPayments')}</p>
           ) : (
             <div className="overview-field overview-field-full">
               <table className="table">
@@ -417,7 +417,7 @@ export default function EmployeeOverviewPanel({
             </span>
             <div className="min-w-0 flex-1">
               {assignedPolicies.length === 0 && (
-                <p className="text-xs text-ink-faint">{t('employeeOverview.noPoliciesAssigned')}</p>
+                <p className="text-xs text-ink-faint dark:text-dark-ink-faint">{t('employeeOverview.noPoliciesAssigned')}</p>
               )}
               {assignedPolicies.map((policy) => (
                 <div key={policy.id} className="flex items-center justify-between gap-2 py-1 text-sm">
@@ -461,7 +461,7 @@ export default function EmployeeOverviewPanel({
                 ))}
               </>
             ) : !compensation ? (
-              <p className="text-sm text-ink-faint">{t('employeeOverview.compensation.noActiveCompensation')}</p>
+              <p className="text-sm text-ink-faint dark:text-dark-ink-faint">{t('employeeOverview.compensation.noActiveCompensation')}</p>
             ) : (
               <>
                 <div className="overview-field">
@@ -613,7 +613,7 @@ export default function EmployeeOverviewPanel({
             </div>
             {terminationOptions?.pendingTermination && (
               <div className="flex items-center gap-2">
-                <p className="text-xs text-ink-faint">
+                <p className="text-xs text-ink-faint dark:text-dark-ink-faint">
                   {t('employeeOverview.scheduledTermination', {
                     date: terminationOptions.pendingTermination.terminationDate.slice(0, 10),
                   })}

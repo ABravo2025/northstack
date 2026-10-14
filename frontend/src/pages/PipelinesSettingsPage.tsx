@@ -318,7 +318,7 @@ function StageEditor({ pipeline, token, onChanged }: StageEditorProps) {
                 />
               ) : (
                 <span
-                  className="text-xs text-ink-faint"
+                  className="text-xs text-ink-faint dark:text-dark-ink-faint"
                   style={{ width: 56, textAlign: 'center' }}
                   title={t('pipelines.stageEditor.forcedProbabilityTooltip')}
                 >
@@ -402,7 +402,7 @@ function StageEditor({ pipeline, token, onChanged }: StageEditorProps) {
               title={t('pipelines.stageEditor.winProbabilityTooltip')}
             />
           ) : (
-            <span className="text-xs text-ink-faint" style={{ width: 56, textAlign: 'center' }}>
+            <span className="text-xs text-ink-faint dark:text-dark-ink-faint" style={{ width: 56, textAlign: 'center' }}>
               {newStage.outcome === 'won' ? 100 : 0}%
             </span>
           )}
@@ -1139,13 +1139,13 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
         <td>{pipeline.stages.length}</td>
         <td>
           <div>{formatPipelineDate(pipeline.createdAt)}</div>
-          <div className="text-xs text-ink-faint">
+          <div className="text-xs text-ink-faint dark:text-dark-ink-faint">
             {pipeline.createdBy ? `${pipeline.createdBy.firstName} ${pipeline.createdBy.lastName}` : '—'}
           </div>
         </td>
         <td>
           <div>{formatPipelineDate(pipeline.updatedAt)}</div>
-          <div className="text-xs text-ink-faint">
+          <div className="text-xs text-ink-faint dark:text-dark-ink-faint">
             {pipeline.updatedBy ? `${pipeline.updatedBy.firstName} ${pipeline.updatedBy.lastName}` : '—'}
           </div>
         </td>
@@ -1351,7 +1351,7 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
             </div>
             <div className="form-group">
               <label>{t('pipelines.fields.type')}</label>
-              <p className="text-sm text-ink-faint" title={t('pipelines.typeTitle')}>
+              <p className="text-sm text-ink-faint dark:text-dark-ink-faint" title={t('pipelines.typeTitle')}>
                 {t(`pipelines.typeLabel.${editingPipeline.type}`)}
               </p>
             </div>
@@ -1474,7 +1474,7 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
                         />
                       ) : (
                         <span
-                          className="text-xs text-ink-faint"
+                          className="text-xs text-ink-faint dark:text-dark-ink-faint"
                           style={{ width: 56, textAlign: 'center' }}
                           title={t('pipelines.stageEditor.forcedProbabilityTooltip')}
                         >

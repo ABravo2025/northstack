@@ -97,8 +97,8 @@ export default function EntityActivityList({ token, entityType, entityId, onCoun
 
   return (
     <div className="activity-list">
-      {loading && <p className="text-xs text-ink-faint">{t('activityLog.entity.loading')}</p>}
-      {!loading && entries.length === 0 && <p className="text-xs text-ink-faint">{t('activityLog.entity.empty')}</p>}
+      {loading && <p className="text-xs text-ink-faint dark:text-dark-ink-faint">{t('activityLog.entity.loading')}</p>}
+      {!loading && entries.length === 0 && <p className="text-xs text-ink-faint dark:text-dark-ink-faint">{t('activityLog.entity.empty')}</p>}
       {entries.map((entry) => (
         <ActivityRow key={entry.id} entry={entry} />
       ))}

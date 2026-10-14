@@ -218,7 +218,7 @@ export default function ActivityLogSettingsPage({ token }: ActivityLogSettingsPa
         <div className="page-toolbar no-border">
           <h2>{t('activityLogSettings.title')}</h2>
         </div>
-        <p className="text-sm text-ink-muted">{t('activityLogSettings.ownerAdminOnly')}</p>
+        <p className="text-sm text-ink-muted dark:text-dark-ink-muted">{t('activityLogSettings.ownerAdminOnly')}</p>
       </div>
     );
   }
@@ -269,7 +269,7 @@ export default function ActivityLogSettingsPage({ token }: ActivityLogSettingsPa
       </div>
 
       {loading && <TableSkeleton rows={6} columns={1} />}
-      {!loading && entries.length === 0 && <p className="text-sm text-ink-muted">{t('activityLogSettings.noActivity')}</p>}
+      {!loading && entries.length === 0 && <p className="text-sm text-ink-muted dark:text-dark-ink-muted">{t('activityLogSettings.noActivity')}</p>}
       {!loading && entries.length > 0 && (
         <div className="rounded-md border border-line bg-surface-1 dark:border-dark-line dark:bg-dark-surface">
           {entries.map((entry) => (

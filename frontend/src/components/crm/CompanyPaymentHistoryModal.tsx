@@ -119,7 +119,7 @@ export function CompanyPaymentHistory({ token, companyId }: { token: string; com
                           {t('companyPaymentHistory.viewReceipt')}
                         </a>
                       ) : (
-                        <span className="text-ink-faint">—</span>
+                        <span className="text-ink-faint dark:text-dark-ink-faint">—</span>
                       )}
                     </td>
                   </tr>

@@ -288,7 +288,7 @@ export default function BillingPage({ token, tenant }: BillingPageProps) {
               {isFreeTrial ? t('billing.freeTrialLabel') : PLAN_LABEL[subscription.tenantPlan!]}
             </span>
             {!isFreeTrial && (
-              <span className="text-sm text-ink-muted">
+              <span className="text-sm text-ink-muted dark:text-dark-ink-muted">
                 {formatMoney(subscription.lockedPriceCents, subscription.currency)}
                 {t('billing.perMonthSuffix')}
               </span>
@@ -307,12 +307,12 @@ export default function BillingPage({ token, tenant }: BillingPageProps) {
           )}
         </div>
         {isFreeTrial ? (
-          <p className="text-sm text-ink-faint mb-2">
+          <p className="text-sm text-ink-faint dark:text-dark-ink-faint mb-2">
             {t('billing.trialEndsHint', { date: formatDate(subscription.trialEndsAt) })}
           </p>
         ) : (
           dateInfo && (
-            <p className="text-sm text-ink-faint mb-2">
+            <p className="text-sm text-ink-faint dark:text-dark-ink-faint mb-2">
               {dateInfo.rangeStart ? (
                 <>
                   {dateInfo.label}: {formatDate(dateInfo.rangeStart)} – {formatDate(dateInfo.date)}
@@ -350,9 +350,9 @@ export default function BillingPage({ token, tenant }: BillingPageProps) {
             <span className="font-medium">
               {subscription.activeSeats}/{subscription.includedSeats}
             </span>{' '}
-            <span className="text-ink-muted">{t('billing.seatsIncluded')}</span>
+            <span className="text-ink-muted dark:text-dark-ink-muted">{t('billing.seatsIncluded')}</span>
             {subscription.extraSeats > 0 && (
-              <span className="text-ink-muted">
+              <span className="text-ink-muted dark:text-dark-ink-muted">
                 {' '}
                 {t('billing.extraSeats', {
                   count: subscription.extraSeats,
@@ -396,7 +396,7 @@ export default function BillingPage({ token, tenant }: BillingPageProps) {
         {hasProvider ? (
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-3">
-              <BriefcaseIcon className="h-4 w-4 text-ink-faint" />
+              <BriefcaseIcon className="h-4 w-4 text-ink-faint dark:text-dark-ink-faint" />
               <span className="text-sm">
                 {subscription.paymentMethodBrand === 'account_money'
                   ? t('billing.mercadoPagoBalance')
@@ -412,19 +412,19 @@ export default function BillingPage({ token, tenant }: BillingPageProps) {
             </button>
           </div>
         ) : (
-          <p className="text-sm text-ink-muted">{t('billing.noPaymentMethod')}</p>
+          <p className="text-sm text-ink-muted dark:text-dark-ink-muted">{t('billing.noPaymentMethod')}</p>
         )}
       </div>
 
       <div className="card">
         <h3 className="card-title">{t('billing.invoicesCardTitle')}</h3>
         {subscription.invoices.length === 0 ? (
-          <p className="text-sm text-ink-muted">{t('billing.noInvoices')}</p>
+          <p className="text-sm text-ink-muted dark:text-dark-ink-muted">{t('billing.noInvoices')}</p>
         ) : (
           <div className="full-table-wrap">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-ink-faint">
+              <tr className="text-left text-ink-faint dark:text-dark-ink-faint">
                 <th className="font-normal py-1.5">{t('billing.columns.date')}</th>
                 <th className="font-normal py-1.5">{t('billing.columns.amount')}</th>
                 <th className="font-normal py-1.5">{t('billing.columns.status')}</th>
@@ -438,7 +438,7 @@ export default function BillingPage({ token, tenant }: BillingPageProps) {
                   <td className="py-1.5">
                     {formatMoney(invoice.amountCents, invoice.currency)}
                     {invoice.baseAmountCents != null && invoice.extraSeatsAmountCents != null && invoice.extraSeatsAmountCents > 0 && (
-                      <span className="block text-xs text-ink-faint">
+                      <span className="block text-xs text-ink-faint dark:text-dark-ink-faint">
                         {t('billing.invoiceSeatsBreakdown', {
                           base: formatMoney(invoice.baseAmountCents, invoice.currency),
                           extra: formatMoney(invoice.extraSeatsAmountCents, invoice.currency),
@@ -453,7 +453,7 @@ export default function BillingPage({ token, tenant }: BillingPageProps) {
                     {invoice.provider === 'dodopayments' && (
                       <button
                         type="button"
-                        className="text-xs text-accent underline disabled:opacity-50"
+                        className="text-xs text-accent dark:text-brand-blue-light underline disabled:opacity-50"
                         onClick={() => handleViewInvoice(invoice.id)}
                         disabled={viewingInvoiceId === invoice.id}
                       >

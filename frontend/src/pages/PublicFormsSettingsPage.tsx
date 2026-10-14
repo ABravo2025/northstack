@@ -476,7 +476,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
                   onDrop={() => handleDropOnPreview(null)}
                   className={`rounded border border-dashed py-3 text-center text-xs transition-colors ${
                     dragOverKey === END_DROP_ZONE
-                      ? 'border-brand-blue text-brand-blue'
+                      ? 'border-brand-blue text-brand-blue dark:text-brand-blue-light'
                       : 'border-line-strong text-ink-faint dark:border-dark-line dark:text-dark-ink-faint'
                   }`}
                 >

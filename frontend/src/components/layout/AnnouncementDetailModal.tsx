@@ -26,7 +26,7 @@ export default function AnnouncementDetailModal({ announcement, onClose }: Annou
   return (
     <>
       <Modal open={!viewingDoc} title={announcement.title} onClose={onClose}>
-        <p className="text-ink-muted text-xs mb-2">
+        <p className="text-ink-muted dark:text-dark-ink-muted text-xs mb-2">
           {new Date(announcement.publishedAt).toLocaleDateString(i18n.language.startsWith('es') ? 'es-AR' : 'en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
         </p>
         <p className="whitespace-pre-line">{announcement.body}</p>

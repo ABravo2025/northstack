@@ -165,7 +165,7 @@ export default function ContractConfirmationPage({ onConfirmed }: ContractConfir
                 </div>
               </div>
 
-              <p className="text-sm text-ink-muted mt-3">
+              <p className="text-sm text-ink-muted dark:text-dark-ink-muted mt-3">
                 {t('contract.frozenNotice')}
               </p>
 
@@ -336,7 +336,7 @@ export default function ContractConfirmationPage({ onConfirmed }: ContractConfir
                 )}
 
                 {paymentMethodId && (
-                  <p className="text-xs text-ink-muted inline-flex items-center gap-1">
+                  <p className="text-xs text-ink-muted dark:text-dark-ink-muted inline-flex items-center gap-1">
                     🔒 {t('contract.restricted')}
                   </p>
                 )}

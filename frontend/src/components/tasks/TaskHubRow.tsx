@@ -48,7 +48,7 @@ export default function TaskHubRow({ task, onToggleComplete, onOpenDetail }: Tas
         )}
       </td>
       <td>{task.createdAt ? formatHubDate(task.createdAt) : '—'}</td>
-      <td className={overdue ? '!font-semibold !text-red-600 dark:!text-red-400' : ''}>
+      <td className={overdue ? '!font-semibold !text-red-600 dark:text-red-400 dark:!text-red-400' : ''}>
         {task.dueDate ? formatHubDate(task.dueDate) : '—'}
       </td>
       <td>

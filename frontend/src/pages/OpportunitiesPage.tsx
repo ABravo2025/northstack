@@ -841,7 +841,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
       <div className="page-toolbar">
         <h2>{t('opportunities.toolbar.heading')}</h2>
         {currentPipeline && weightedPipelineCurrency && (
-          <span className="text-sm text-ink-muted" title={t('opportunities.toolbar.weightedValueTitle')}>
+          <span className="text-sm text-ink-muted dark:text-dark-ink-muted" title={t('opportunities.toolbar.weightedValueTitle')}>
             {t('opportunities.toolbar.weightedValue', {
               amount: formatMoney(Math.round(weightedPipelineTotalCents), weightedPipelineCurrency),
             })}

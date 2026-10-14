@@ -29,7 +29,7 @@ export default function StatusColumnMenu({ token, entityType, statuses, onChange
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [newName, setNewName] = useState('');
-  const [newColor, setNewColor] = useState('#3c6da1');
+  const [newColor, setNewColor] = useState('#5b21e6');
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -110,7 +110,7 @@ export default function StatusColumnMenu({ token, entityType, statuses, onChange
         order: sorted.length,
       });
       setNewName('');
-      setNewColor('#3c6da1');
+      setNewColor('#5b21e6');
       toast.success(t('entityViews.status.added'));
       onChanged();
     } catch (error) {

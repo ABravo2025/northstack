@@ -263,13 +263,13 @@ export default function OpportunityDetailModal({
           {pendingPipelineId && (
             <Field label={t('opportunityDetail.pendingPipelineChange.fieldLabel')} full>
               <div className="mt-1 flex flex-col gap-2 rounded-md border border-line p-2 dark:border-dark-line">
-                <p className="text-xs text-ink-muted">
+                <p className="text-xs text-ink-muted dark:text-dark-ink-muted">
                   {t('opportunityDetail.pendingPipelineChange.note', {
                     companyName: opportunity.company?.name,
                     pipelineName: pipelines.find((p) => p.id === pendingPipelineId)?.name,
                   })}
                 </p>
-                <label className="text-xs text-ink-muted" htmlFor="pending-company-industry">
+                <label className="text-xs text-ink-muted dark:text-dark-ink-muted" htmlFor="pending-company-industry">
                   {t('opportunityDetail.pendingPipelineChange.industry')}
                 </label>
                 <input
@@ -277,7 +277,7 @@ export default function OpportunityDetailModal({
                   value={companyDraft.industry}
                   onChange={(e) => setCompanyDraft((d) => ({ ...d, industry: e.target.value }))}
                 />
-                <label className="text-xs text-ink-muted" htmlFor="pending-company-website">
+                <label className="text-xs text-ink-muted dark:text-dark-ink-muted" htmlFor="pending-company-website">
                   {t('opportunityDetail.pendingPipelineChange.website')}
                 </label>
                 <input
@@ -285,7 +285,7 @@ export default function OpportunityDetailModal({
                   value={companyDraft.website}
                   onChange={(e) => setCompanyDraft((d) => ({ ...d, website: e.target.value }))}
                 />
-                <label className="text-xs text-ink-muted" htmlFor="pending-company-phone">
+                <label className="text-xs text-ink-muted dark:text-dark-ink-muted" htmlFor="pending-company-phone">
                   {t('opportunityDetail.pendingPipelineChange.phone')}
                 </label>
                 <input
@@ -412,7 +412,7 @@ export default function OpportunityDetailModal({
           {wonOfferPipelineId && (
             <Field label={t('opportunityDetail.wonOffer.fieldLabel')} full>
               <div className="mt-1 flex flex-col gap-2 rounded-md border border-line p-2 dark:border-dark-line">
-                <p className="text-xs text-ink-muted">{t('opportunityDetail.wonOffer.note')}</p>
+                <p className="text-xs text-ink-muted dark:text-dark-ink-muted">{t('opportunityDetail.wonOffer.note')}</p>
                 <select
                   value={wonOfferPipelineId}
                   onChange={(e) => setWonOfferPipelineId(e.target.value)}
@@ -545,14 +545,14 @@ export default function OpportunityDetailModal({
                   className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ${
                     isCurrent ? 'text-white' : 'bg-surface-2 text-ink-muted dark:bg-dark-raised dark:text-dark-ink-faint'
                   }`}
-                  style={isCurrent ? { backgroundColor: stage.color || '#3c6da1' } : undefined}
+                  style={isCurrent ? { backgroundColor: stage.color || '#5b21e6' } : undefined}
                 >
                   {stage.name}
                 </div>
               );
             })}
             {timeInStage !== null && (
-              <span className="ml-auto shrink-0 text-xs text-ink-faint">
+              <span className="ml-auto shrink-0 text-xs text-ink-faint dark:text-dark-ink-faint">
                 {timeInStage === 0
                   ? t('opportunityDetail.stageStrip.enteredToday')
                   : t('opportunityDetail.stageStrip.daysInStage', { count: timeInStage })}

@@ -29,17 +29,17 @@ function OpenInvoicesCell({ row }: { row: PaymentsOverviewRow }) {
   const { summary } = row;
   if (!summary.invoicesAccessible) {
     return (
-      <span className="text-ink-faint" title={t('payments.invoicesUnavailable')}>
+      <span className="text-ink-faint dark:text-dark-ink-faint" title={t('payments.invoicesUnavailable')}>
         —
       </span>
     );
   }
-  if (summary.openInvoicesCount === 0) return <span className="text-ink-faint">0</span>;
+  if (summary.openInvoicesCount === 0) return <span className="text-ink-faint dark:text-dark-ink-faint">0</span>;
   return (
     <span className="inline-flex flex-wrap items-center gap-1.5">
       <span className="font-medium">{summary.openInvoicesCount}</span>
       {summary.openInvoicesCurrency && (
-        <span className="text-xs text-ink-faint">
+        <span className="text-xs text-ink-faint dark:text-dark-ink-faint">
           ({formatMoney(summary.openInvoicesAmountCents, summary.openInvoicesCurrency.toUpperCase())})
         </span>
       )}
@@ -149,7 +149,7 @@ export default function PaymentsOverviewPage({ token }: PaymentsOverviewPageProp
         <div className="page-toolbar">
           <h2 className="page-title">{t('payments.pageTitle')}</h2>
         </div>
-        <p className="text-sm text-ink-muted">{t('payments.noPermission')}</p>
+        <p className="text-sm text-ink-muted dark:text-dark-ink-muted">{t('payments.noPermission')}</p>
       </div>
     );
   }
@@ -208,7 +208,7 @@ export default function PaymentsOverviewPage({ token }: PaymentsOverviewPageProp
                       <td>
                         {row.summary.paymentsCount}
                         {row.summary.paymentsCount > 0 && row.summary.currency && (
-                          <span className="ml-1 text-xs text-ink-faint">
+                          <span className="ml-1 text-xs text-ink-faint dark:text-dark-ink-faint">
                             ({formatMoney(row.summary.paymentsAmountCents, row.summary.currency.toUpperCase())})
                           </span>
                         )}
@@ -219,7 +219,7 @@ export default function PaymentsOverviewPage({ token }: PaymentsOverviewPageProp
                       <td>
                         {row.summary.refundsCount}
                         {row.summary.refundsCount > 0 && row.summary.currency && (
-                          <span className="ml-1 text-xs text-ink-faint">
+                          <span className="ml-1 text-xs text-ink-faint dark:text-dark-ink-faint">
                             ({formatMoney(row.summary.refundsAmountCents, row.summary.currency.toUpperCase())})
                           </span>
                         )}

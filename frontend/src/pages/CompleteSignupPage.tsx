@@ -177,7 +177,7 @@ export default function CompleteSignupPage({ onRegistered }: CompleteSignupPageP
         {surveyStep === 'you' && t('signup.youTitle')}
         {surveyStep === 'security' && t('signup.securityTitle')}
       </h2>
-      <p className="text-xs text-ink-faint mb-3">
+      <p className="text-xs text-ink-faint dark:text-dark-ink-faint mb-3">
         {t('signup.step', { n: surveyStep === 'company' ? 1 : surveyStep === 'you' ? 2 : 3 })} — {email}
       </p>
 

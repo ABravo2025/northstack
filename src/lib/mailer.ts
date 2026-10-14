@@ -1103,6 +1103,42 @@ export async function sendShiftRequestEmail(input: SendShiftRequestEmailInput): 
   );
 }
 
+// Shifts phase 2, block D — the hours report for a client, PDF attached plus the private link.
+// Goes to a client contact (not a Northstack user), so it has no preferences category.
+export interface SendClientReportEmailInput {
+  to: string;
+  locale?: string | null;
+  companyName: string;
+  tenantName: string;
+  period: string;
+  url: string;
+  pdf: Uint8Array;
+}
+
+export async function sendClientReportEmail(input: SendClientReportEmailInput): Promise<void> {
+  if (!mailerConfigured()) return;
+  const lng = resolveEmailLocale(input.locale);
+  const t = (key: string, opts?: Record<string, unknown>) => i18n.t(`shifts.clientReport.${key}`, { lng, ns: 'emails', ...opts });
+  const vars = { tenantName: input.tenantName, companyName: input.companyName, period: input.period };
+  await dispatchMail(
+    {
+      from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
+      to: input.to,
+      subject: t('subject', vars),
+      text: [t('greeting'), '', t('intro', vars), '', `${t('open')}: ${input.url}`, '', t('expires')].join('\n'),
+      html: [
+        `<p>${t('greeting')}</p>`,
+        `<p>${t('intro', { ...vars, tenantName: strong(input.tenantName), companyName: strong(input.companyName) })}</p>`,
+        `<p><a href="${input.url}">${t('open')}</a></p>`,
+        `<p style="color:#706b88;font-size:12px">${t('expires')}</p>`,
+      ].join('\n'),
+      attachments: [{ filename: 'hours-report.pdf', content: Buffer.from(input.pdf), contentType: 'application/pdf' }],
+    },
+    'Failed to send client hours report email:',
+    lng,
+  );
+}
+
 // Shifts module, Unidad 9 — the daily nudge: yesterday's shifts whose hours aren't logged yet.
 export interface SendTimesheetReminderEmailInput {
   to: string;

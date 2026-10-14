@@ -514,7 +514,8 @@
     "late": "Late",
     "absent": "Missed",
     "budget": "Budget",
-    "budgetOf": "{{budget}} · {{pct}}%"
+    "budgetOf": "{{budget}} · {{pct}}%",
+    "actions": "Actions"
   },
   "requests": {
     "title": "Requests",
@@ -680,5 +681,36 @@
       "radius": "Radius",
       "popupBlocked": "Your browser blocked the print window. Allow pop-ups and try again."
     }
+  },
+  "clientReport": {
+    "open": "Client report",
+    "title": "Hours report for {{name}}",
+    "body": "Approved hours of {{month}} only. Weeks not yet approved are left out.",
+    "project": "Project",
+    "allProjects": "All projects",
+    "showPeople": "Show who worked each line",
+    "email": "Client email",
+    "pdf": "Download PDF",
+    "link": "Create link",
+    "send": "Send by email",
+    "copy": "Copy",
+    "copied": "Link copied",
+    "sent": "Report sent to {{email}}",
+    "failed": "Couldn't create the report: {{message}}",
+    "hint": "The link is read-only, needs no login and expires after 30 days. The email includes the PDF and the link.",
+    "loading": "Loading report…",
+    "invalid": "This link has expired or doesn’t exist",
+    "invalidBody": "Ask whoever sent it for a new one.",
+    "publicTitle": "Hours report · {{company}}",
+    "publicFrom": "From {{tenant}} · {{from}} – {{to}}",
+    "total": "Total hours",
+    "billable": "Billable",
+    "date": "Date",
+    "person": "Person",
+    "details": "Details",
+    "hours": "Hours",
+    "none": "No approved hours in this period.",
+    "notBillable": "(not billable)",
+    "expires": "This link works until {{date}}."
   }
 }

@@ -1045,11 +1045,11 @@
     "group": {
       "projects": "Proyectos",
       "shifts": "Turnos y timesheet",
-      "projectBudget": "Un proyecto mío está por pasar o pasó sus horas presupuestadas",
       "timeOff": "Ausencias",
       "sales": "Ventas"
     },
     "category": {
+      "projectBudget": "Un proyecto mío está por pasar o pasó sus horas presupuestadas",
       "shifts": "Turnos nuevos, modificados o cancelados",
       "shiftReminders": "Recordatorios: turnos de mañana y turnos que esperan mi respuesta",
       "shiftSwaps": "Turnos cedidos e intercambios: pedidos, aprobaciones y resultados",

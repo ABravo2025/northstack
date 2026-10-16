@@ -1,10 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { api, type Task } from '../../api';
 import { useToast } from '../common/ToastProvider';
 import { useGoogleCalendarConnected } from '../../hooks/useGoogleCalendarConnected';
 import TaskFormPopover, { type TaskFormPayload } from './TaskFormPopover';
 import { VideoIcon } from '../common/Icons';
+
+// Overview shows a short list; the full one lives on the My tasks page.
+const WIDGET_LIMIT = 10;
 
 interface TenantUserLite {
   id: string;
@@ -112,7 +116,7 @@ export default function MyTasksWidget({ token, tenantUsers, currentUserId }: MyT
       {loading && <p className="text-xs text-ink-faint dark:text-dark-ink-faint">{t('myTasks.widget.loading')}</p>}
       {!loading && tasks.length === 0 && <p className="text-xs text-ink-faint dark:text-dark-ink-faint">{t('myTasks.widget.empty')}</p>}
       <div className="task-list">
-        {tasks.map((task) => (
+        {tasks.slice(0, WIDGET_LIMIT).map((task) => (
           <div key={task.id} className="task-row task-row-clickable" onClick={(e) => openEditForm(e, task)}>
             <input
               type="checkbox"
@@ -145,6 +149,11 @@ export default function MyTasksWidget({ token, tenantUsers, currentUserId }: MyT
           </div>
         ))}
       </div>
+      {tasks.length > WIDGET_LIMIT && (
+        <Link to="/tasks" className="btn btn-secondary btn-sm mt-3">
+          {t('myTasks.widget.viewMore')}
+        </Link>
+      )}
 
       <TaskFormPopover
         open={formOpen}

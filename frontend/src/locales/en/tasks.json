@@ -60,7 +60,8 @@
     "widget": {
       "title": "My tasks",
       "loading": "Loading…",
-      "empty": "Nothing assigned to you."
+      "empty": "Nothing assigned to you.",
+      "viewMore": "See more"
     },
     "time": {
       "label": "Time spent",

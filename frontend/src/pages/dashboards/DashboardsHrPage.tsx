@@ -53,26 +53,28 @@ export default function DashboardsHrPage() {
       {hr.customFields.fields.length > 0 && (
         <div className="card mt-4">
           <h3 className="card-title">{t('hr.customFieldCompletion')}</h3>
-          <table className="mini-table">
-            <thead>
-              <tr>
-                <th>{t('hr.colField')}</th>
-                <th>{t('hr.colFilled')}</th>
-                <th>{t('hr.colCompletion')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {hr.customFields.fields.map((f) => (
-                <tr key={f.id} className="border-t border-line-soft dark:border-dark-line-soft">
-                  <td>{f.name}</td>
-                  <td>
-                    {f.filledCount} / {hr.customFields.employeeCount}
-                  </td>
-                  <td>{f.completionPct === null ? '—' : `${f.completionPct}%`}</td>
+          <div className="full-table-wrap">
+            <table className="full-table">
+              <thead>
+                <tr>
+                  <th>{t('hr.colField')}</th>
+                  <th>{t('hr.colFilled')}</th>
+                  <th>{t('hr.colCompletion')}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {hr.customFields.fields.map((f) => (
+                  <tr key={f.id} className="border-t border-line-soft dark:border-dark-line-soft">
+                    <td>{f.name}</td>
+                    <td>
+                      {f.filledCount} / {hr.customFields.employeeCount}
+                    </td>
+                    <td>{f.completionPct === null ? '—' : `${f.completionPct}%`}</td>
+                  </tr>
+                ))}
+              </tbody>
+              </table>
+          </div>
         </div>
       )}
     </div>

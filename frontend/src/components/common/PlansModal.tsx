@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Modal from './Modal';
-import { CheckIcon } from './Icons';
+import { CheckIcon, XIcon } from './Icons';
 import { useToast } from './ToastProvider';
 import type { PlanTier, Tenant } from '../../api/types';
 import { daysRemainingUntil } from '../../lib/trial';
@@ -277,7 +277,7 @@ export default function PlansModal({ open, tenant, onClose, onSelectPlan, curren
                   free plan) — reserves the same height so the feature list below starts at the
                   same row across all 3 cards instead of trial's list starting higher. */}
               <div
-                className={`text-xs font-semibold text-accent bg-accent-tint rounded-md px-2 py-1.5 mb-3 leading-snug ${
+                className={`text-xs font-semibold text-accent dark:text-brand-blue-light bg-accent-tint rounded-md px-2 py-1.5 mb-3 leading-snug ${
                   card.key === 'trial' ? 'invisible' : ''
                 }`}
               >
@@ -292,11 +292,11 @@ export default function PlansModal({ open, tenant, onClose, onSelectPlan, curren
                     key={feature.label}
                     className={`flex items-start gap-2 ${feature.included ? '' : 'text-ink-faint dark:text-dark-ink-faint'}`}
                   >
-                    <CheckIcon
-                      className={`h-3.5 w-3.5 flex-shrink-0 mt-0.5 ${
-                        feature.included ? 'text-emerald-600 dark:text-emerald-400' : 'text-line-strong'
-                      }`}
-                    />
+                    {feature.included ? (
+                      <CheckIcon className="h-3.5 w-3.5 flex-shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
+                    ) : (
+                      <XIcon className="h-3.5 w-3.5 flex-shrink-0 mt-0.5 text-ink-faint dark:text-dark-ink-faint" />
+                    )}
                     <span className="flex flex-col">
                       <span>{feature.label}</span>
                       {feature.sub && <span className="text-xs text-ink-faint dark:text-dark-ink-faint">{feature.sub}</span>}
@@ -307,7 +307,7 @@ export default function PlansModal({ open, tenant, onClose, onSelectPlan, curren
 
               <button
                 type="button"
-                className={card.key === 'growth' ? 'btn btn-primary w-full' : 'btn btn-outline w-full'}
+                className={isCurrent ? 'btn btn-secondary w-full' : card.key === 'growth' ? 'btn btn-primary w-full' : 'btn btn-outline w-full'}
                 onClick={() => handleSelect(card)}
                 disabled={loadingKey !== null || isCurrent}
               >

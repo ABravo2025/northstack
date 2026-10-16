@@ -53,28 +53,30 @@ export default function DashboardsPayrollPage() {
       {payroll.compensationByDepartment.length > 0 && (
         <div className="card mt-4">
           <h3 className="card-title">{t('payroll.compensationByDepartment')}</h3>
-          <table className="mini-table">
-            <thead>
-              <tr>
-                <th>{t('payroll.colDepartment')}</th>
-                <th>{t('payroll.colType')}</th>
-                <th>{t('payroll.colMedian')}</th>
-                <th>{t('payroll.colAvg')}</th>
-                <th>{t('payroll.colSample')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {payroll.compensationByDepartment.map((c, i) => (
-                <tr key={i} className="border-t border-line-soft dark:border-dark-line-soft">
-                  <td>{c.departmentName}</td>
-                  <td>{c.compensationType}</td>
-                  <td>{formatMoney(c.medianRateCents, c.currency)}</td>
-                  <td>{formatMoney(c.avgRateCents, c.currency)}</td>
-                  <td>{c.sampleSize}</td>
+          <div className="full-table-wrap">
+            <table className="full-table">
+              <thead>
+                <tr>
+                  <th>{t('payroll.colDepartment')}</th>
+                  <th>{t('payroll.colType')}</th>
+                  <th>{t('payroll.colMedian')}</th>
+                  <th>{t('payroll.colAvg')}</th>
+                  <th>{t('payroll.colSample')}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {payroll.compensationByDepartment.map((c, i) => (
+                  <tr key={i} className="border-t border-line-soft dark:border-dark-line-soft">
+                    <td>{c.departmentName}</td>
+                    <td>{c.compensationType}</td>
+                    <td>{formatMoney(c.medianRateCents, c.currency)}</td>
+                    <td>{formatMoney(c.avgRateCents, c.currency)}</td>
+                    <td>{c.sampleSize}</td>
+                  </tr>
+                ))}
+              </tbody>
+              </table>
+          </div>
         </div>
       )}
     </div>

@@ -422,7 +422,7 @@ export default function BillingPage({ token, tenant }: BillingPageProps) {
           <p className="text-sm text-ink-muted dark:text-dark-ink-muted">{t('billing.noInvoices')}</p>
         ) : (
           <div className="full-table-wrap">
-          <table className="mini-table">
+          <table className="full-table">
             <thead>
               <tr>
                 <th>{t('billing.columns.date')}</th>
@@ -433,7 +433,7 @@ export default function BillingPage({ token, tenant }: BillingPageProps) {
             </thead>
             <tbody>
               {subscription.invoices.map((invoice) => (
-                <tr key={invoice.id} className="border-t border-line dark:border-dark-line">
+                <tr key={invoice.id}>
                   <td>{formatDate(invoice.paidAt ?? invoice.createdAt)}</td>
                   <td>
                     {formatMoney(invoice.amountCents, invoice.currency)}
@@ -453,7 +453,7 @@ export default function BillingPage({ token, tenant }: BillingPageProps) {
                     {invoice.provider === 'dodopayments' && (
                       <button
                         type="button"
-                        className="text-xs text-accent dark:text-brand-blue-light underline disabled:opacity-50"
+                        className="table-link disabled:opacity-50"
                         onClick={() => handleViewInvoice(invoice.id)}
                         disabled={viewingInvoiceId === invoice.id}
                       >

@@ -699,7 +699,7 @@ table.help-ref td.no {
 }
 
 .table th {
-  @apply border-b border-line bg-surface-2 px-3 py-2.5 text-left text-2xs font-semibold text-ink-muted dark:border-dark-line dark:bg-dark-raised dark:text-dark-ink-muted;
+  @apply border-b border-line bg-surface-2 px-3 py-2.5 text-2xs font-semibold text-ink-muted dark:border-dark-line dark:bg-dark-raised dark:text-dark-ink-muted;
 }
 
 .table td {
@@ -1287,17 +1287,17 @@ table.help-ref td.no {
 }
 
 .full-table thead th {
-  @apply sticky top-0  dark:bg-dark-raised;
+  @apply sticky top-0;
 }
 
 .full-table th {
-  @apply relative overflow-hidden border-b border-line py-2.5   text-ink-muted dark:border-dark-line dark:text-dark-ink-muted;
+  @apply relative overflow-hidden border-b border-line px-3 py-2.5 text-ink-muted dark:border-dark-line dark:text-dark-ink-muted;
 }
 
 /* Secondary columns get an explicit muted color (ClickUp visual direction, 1.3) —
    .name-cell below overrides this back to full-strength text for the name column. */
 .full-table td {
-  @apply overflow-hidden px-3 py-4  text-ellipsis whitespace-nowrap text-ink-muted dark:text-dark-ink-muted;
+  @apply overflow-hidden px-3 py-4 text-ellipsis whitespace-nowrap text-ink-muted dark:text-dark-ink-muted;
 }
 
 .name-cell {
@@ -3988,17 +3988,8 @@ textarea.overview-field-input {
   @apply border-accent bg-accent-tint font-semibold text-accent dark:border-brand-blue-light dark:text-brand-blue-light;
 }
 
-/* Compact table inside a card (Billing invoices, Dashboards breakdowns): same header and cell
-   type as .full-table, without the toolbar chrome. */
-.mini-table {
-  @apply w-full border-collapse text-sm;
-}
-.mini-table th {
-  @apply pb-2 text-left text-2xs font-semibold text-ink-muted dark:text-dark-ink-muted;
-}
-.mini-table td {
-  @apply border-t border-line-soft py-2 text-ink-muted dark:border-dark-line-soft dark:text-dark-ink-muted;
-}
-.mini-table td:first-child {
-  @apply text-ink dark:text-dark-ink;
+/* Table headers read left like their cells; :where() keeps this at the lowest specificity so a
+   text-right / text-center utility on a single <th> still wins. */
+:where(.full-table, .table) th {
+  text-align: left;
 }

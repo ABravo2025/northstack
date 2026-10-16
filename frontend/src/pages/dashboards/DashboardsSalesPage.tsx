@@ -83,82 +83,88 @@ export default function DashboardsSalesPage() {
       {sales.stageVelocity.byStage.length > 0 && (
         <div className="card mt-4">
           <h3 className="card-title">{t('sales.stageVelocity')}</h3>
-          <table className="mini-table">
-            <thead>
-              <tr>
-                <th>{t('sales.colPipeline')}</th>
-                <th>{t('sales.colStage')}</th>
-                <th>{t('sales.colHistoricalMedian')}</th>
-                <th>{t('sales.colSample')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sales.stageVelocity.byStage.map((s) => (
-                <tr key={s.stageId} className="border-t border-line-soft dark:border-dark-line-soft">
-                  <td>{s.pipelineName}</td>
-                  <td>{s.stageName}</td>
-                  <td>{t('common.daysValue', { count: s.historicalMedianDays })}</td>
-                  <td>{s.sampleSize}</td>
+          <div className="full-table-wrap">
+            <table className="full-table">
+              <thead>
+                <tr>
+                  <th>{t('sales.colPipeline')}</th>
+                  <th>{t('sales.colStage')}</th>
+                  <th>{t('sales.colHistoricalMedian')}</th>
+                  <th>{t('sales.colSample')}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {sales.stageVelocity.byStage.map((s) => (
+                  <tr key={s.stageId} className="border-t border-line-soft dark:border-dark-line-soft">
+                    <td>{s.pipelineName}</td>
+                    <td>{s.stageName}</td>
+                    <td>{t('common.daysValue', { count: s.historicalMedianDays })}</td>
+                    <td>{s.sampleSize}</td>
+                  </tr>
+                ))}
+              </tbody>
+              </table>
+          </div>
         </div>
       )}
 
       {sales.stageVelocity.atRisk.length > 0 && (
         <div className="card mt-4">
           <h3 className="card-title">{t('sales.dealsAtRisk')}</h3>
-          <table className="mini-table">
-            <thead>
-              <tr>
-                <th>{t('sales.colOpportunity')}</th>
-                <th>{t('sales.colStage')}</th>
-                <th>{t('sales.colDaysInStage')}</th>
-                <th>{t('sales.colStageMedian')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sales.stageVelocity.atRisk.map((o) => (
-                <tr key={o.opportunityId} className="border-t border-line-soft dark:border-dark-line-soft">
-                  <td>{o.name}</td>
-                  <td>{o.stageName}</td>
-                  <td className="font-medium" style={{ color: 'var(--chart-status-critical)' }}>
-                    {t('common.daysValue', { count: o.daysInStage })}
-                  </td>
-                  <td>{t('common.daysValue', { count: o.stageMedianDays })}</td>
+          <div className="full-table-wrap">
+            <table className="full-table">
+              <thead>
+                <tr>
+                  <th>{t('sales.colOpportunity')}</th>
+                  <th>{t('sales.colStage')}</th>
+                  <th>{t('sales.colDaysInStage')}</th>
+                  <th>{t('sales.colStageMedian')}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {sales.stageVelocity.atRisk.map((o) => (
+                  <tr key={o.opportunityId} className="border-t border-line-soft dark:border-dark-line-soft">
+                    <td>{o.name}</td>
+                    <td>{o.stageName}</td>
+                    <td className="font-medium" style={{ color: 'var(--chart-status-critical)' }}>
+                      {t('common.daysValue', { count: o.daysInStage })}
+                    </td>
+                    <td>{t('common.daysValue', { count: o.stageMedianDays })}</td>
+                  </tr>
+                ))}
+              </tbody>
+              </table>
+          </div>
         </div>
       )}
 
       {sales.dealsByOwner.length > 0 && (
         <div className="card mt-4">
           <h3 className="card-title">{t('sales.dealsByOwner')}</h3>
-          <table className="mini-table">
-            <thead>
-              <tr>
-                <th>{t('sales.colOwner')}</th>
-                <th>{t('sales.colOpen')}</th>
-                <th>{t('sales.colWon')}</th>
-                <th>{t('sales.colWonAmount')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sales.dealsByOwner.map((o) => (
-                <tr key={o.ownerId} className="border-t border-line-soft dark:border-dark-line-soft">
-                  <td>{o.ownerName}</td>
-                  <td>{o.openCount}</td>
-                  <td>{o.wonCount}</td>
-                  <td>
-                    {o.wonAmountByCurrency.map((a) => formatMoney(a.amountCents, a.currency)).join(' + ') || '—'}
-                  </td>
+          <div className="full-table-wrap">
+            <table className="full-table">
+              <thead>
+                <tr>
+                  <th>{t('sales.colOwner')}</th>
+                  <th>{t('sales.colOpen')}</th>
+                  <th>{t('sales.colWon')}</th>
+                  <th>{t('sales.colWonAmount')}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {sales.dealsByOwner.map((o) => (
+                  <tr key={o.ownerId} className="border-t border-line-soft dark:border-dark-line-soft">
+                    <td>{o.ownerName}</td>
+                    <td>{o.openCount}</td>
+                    <td>{o.wonCount}</td>
+                    <td>
+                      {o.wonAmountByCurrency.map((a) => formatMoney(a.amountCents, a.currency)).join(' + ') || '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              </table>
+          </div>
         </div>
       )}
     </div>

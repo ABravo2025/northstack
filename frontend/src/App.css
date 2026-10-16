@@ -2951,11 +2951,10 @@ html.dark {
 .multi-select-trigger {
   max-width: 20rem;
 }
-.form-group input[type='date'],
-.form-group input[type='time'],
-.form-group input[type='datetime-local'],
-.form-group input[type='number'],
-.form-group input[type='tel'] {
+/* Same :not() chain as the L rule above so this one outranks it — with a plain
+   input[type='date'] selector the L cap (more specific) won and every date, time, number and
+   phone field rendered 26rem wide. */
+.form-group input:not([type='checkbox']):not([type='radio']):not([type='color']):is([type='date'], [type='time'], [type='datetime-local'], [type='number'], [type='tel']) {
   max-width: 11rem;
 }
 .form-group textarea {

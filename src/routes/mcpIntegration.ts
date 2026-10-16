@@ -3,11 +3,11 @@ import { createAsyncRouter } from '../lib/asyncRouter.js';
 import { validateSession } from '../lib/httpAuth.js';
 import { canManageApiAccess, canUseAiAssistants } from '../modules/auth/permissionService.js';
 import { isApiAccessAllowed } from '../modules/tenant/planLimits.js';
-import { createPersonalToken, listAiConnections, revokeAiConnection } from '../modules/integrations/mcp/aiConnectionService.js';
+import { listAiConnections, revokeAiConnection } from '../modules/integrations/mcp/aiConnectionService.js';
 import type { SessionUser } from '../lib/payrollAccess.js';
 
 // Settings → Integrations → AI assistants (spec-mcp-server.md §2b, §7). Session-authenticated SPA
-// traffic for managing connections; the MCP server itself (Unit 3) calls /api/external/v1/* with
+// traffic for listing and revoking connections (they're created by the OAuth flow, routes/mcpOAuth.ts); the MCP server itself (Unit 3) calls /api/external/v1/* with
 // the token, never these routes. Growth-only, same plan flag as API keys (apiAccessEnabled).
 
 export const mcpIntegrationRouter = createAsyncRouter();
@@ -39,20 +39,6 @@ mcpIntegrationRouter.get('/api/integrations/ai-connections', async (req, res) =>
 
   if (!requireAiAssistants(user, res)) return;
   return res.json(await listAiConnections(user.tenantId!, user.id));
-});
-
-mcpIntegrationRouter.post('/api/integrations/ai-connections', async (req, res) => {
-  const user = await validateSession(req, res);
-  if (!user) return;
-  if (!requireAiAssistants(user, res)) return;
-
-  const name = typeof req.body?.name === 'string' ? req.body.name : '';
-  try {
-    const created = await createPersonalToken(user.tenantId!, user.id, name);
-    return res.status(201).json(created);
-  } catch (error) {
-    return res.status(400).json({ error: (error as Error).message });
-  }
 });
 
 // Anyone may revoke their own connection — even after losing use_ai_assistants or the Growth plan,

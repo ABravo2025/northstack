@@ -73,6 +73,9 @@ describe('connecting', () => {
     const res = await fetch(mcpUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
     expect(res.status).toBe(401);
     expect(res.headers.get('www-authenticate')).toContain('Bearer');
+    // RFC 9728: points the client at the metadata so it can start OAuth on its own.
+    expect(res.headers.get('www-authenticate')).toContain('resource_metadata="http://127.0.0.1:');
+    expect(res.headers.get('www-authenticate')).toContain('/.well-known/oauth-protected-resource/mcp"');
   });
 
   it('lists the tool catalog with read-only / destructive annotations', async () => {

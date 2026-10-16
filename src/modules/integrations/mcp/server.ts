@@ -37,6 +37,13 @@ function resolveBaseUrl(req: IncomingMessage): string {
   return `${proto}://${req.headers.host}`;
 }
 
+// Tells an MCP client where to start OAuth (RFC 9728): it fetches this document, finds our
+// authorization server, registers and sends the person to sign in. Every 401 from /mcp carries it.
+function authenticateHeader(baseUrl: string, error?: string): string {
+  const metadata = `resource_metadata="${baseUrl}/.well-known/oauth-protected-resource/mcp"`;
+  return error ? `Bearer error="${error}", ${metadata}` : `Bearer ${metadata}`;
+}
+
 function sendJson(res: ServerResponse, status: number, body: unknown, headers: Record<string, string> = {}): void {
   res.writeHead(status, { 'Content-Type': 'application/json', ...headers });
   res.end(JSON.stringify(body));
@@ -62,9 +69,10 @@ export async function handleMcpRequest(req: IncomingMessage & { body?: unknown }
     return;
   }
 
+  const baseUrl = resolveBaseUrl(req);
   const token = bearerToken(req);
   if (!token) {
-    sendJson(res, 401, { error: 'Missing bearer token. Create one in Northstack → Settings → Integrations → AI assistants.' }, { 'WWW-Authenticate': 'Bearer' });
+    sendJson(res, 401, { error: 'Sign in with your Northstack account to connect this assistant.' }, { 'WWW-Authenticate': authenticateHeader(baseUrl) });
     return;
   }
 
@@ -76,8 +84,6 @@ export async function handleMcpRequest(req: IncomingMessage & { body?: unknown }
     return;
   }
 
-  const baseUrl = resolveBaseUrl(req);
-
   // Check the token once, when a client connects — an invalid/revoked/not-allowed token gets a real
   // HTTP error at connect time (which is also what will trigger OAuth in clients, Unit 4) instead of
   // a session that only fails on its first tool call. Later calls are checked by the Private API.
@@ -85,7 +91,7 @@ export async function handleMcpRequest(req: IncomingMessage & { body?: unknown }
     const me = await createPrivateApiClient(baseUrl, token).get<{ error?: string; code?: string }>('/me');
     if (!me.ok) {
       const status = me.status === 401 || me.status === 403 ? me.status : 502;
-      sendJson(res, status, { error: me.body?.error ?? 'Could not verify the token with Northstack.', code: me.body?.code }, status === 401 ? { 'WWW-Authenticate': 'Bearer error="invalid_token"' } : {});
+      sendJson(res, status, { error: me.body?.error ?? 'Could not verify the token with Northstack.', code: me.body?.code }, status === 401 ? { 'WWW-Authenticate': authenticateHeader(baseUrl, 'invalid_token') } : {});
       return;
     }
   }

@@ -45,6 +45,7 @@ import { activityRouter } from './routes/activity.js';
 import { rolesRouter } from './routes/roles.js';
 import { apiAccessIntegrationRouter } from './routes/apiAccessIntegration.js';
 import { mcpIntegrationRouter } from './routes/mcpIntegration.js';
+import { mcpOAuthRouter } from './routes/mcpOAuth.js';
 import { externalApiRouter } from './routes/externalApi.js';
 import { referralsRouter } from './routes/referrals.js';
 
@@ -84,7 +85,12 @@ app.use(
   cors((req, callback) => {
     // GET /api/plans/prices (2026-09-26) — public price list, read by the landing from its own
     // origin. Not session-bearing, same reasoning as the forms carve-out.
-    if (req.path.startsWith('/api/public/') || req.path === '/api/plans/prices') {
+    // OAuth discovery/registration/token/revocation for AI assistants (spec-mcp-server.md §4.1) — called
+    // by third-party clients from any origin, carry no session, so open like the forms carve-out. The
+    // consent endpoints (/api/oauth/authorize*) are session-bearing and stay behind the allowlist.
+    const isPublicOAuth =
+      req.path.startsWith('/.well-known/') || ['/api/oauth/register', '/api/oauth/token', '/api/oauth/revoke'].includes(req.path);
+    if (req.path.startsWith('/api/public/') || req.path === '/api/plans/prices' || isPublicOAuth) {
       return callback(null, { origin: true });
     }
     const requestOrigin = req.headers.origin;
@@ -111,6 +117,8 @@ app.use('/api/webhooks/mercadopago', express.raw({ type: '*/*', limit: '2mb' }))
 // Referral payouts carry the transfer receipt (≤2 MB file, base64 in JSON) — Vercel caps bodies at 4.5 MB.
 app.use(/^\/api\/platform\/admin\/referrals\/[^/]+\/payouts$/, express.json({ limit: '4mb' }));
 app.use(express.json({ limit: '2mb' })); // default 100kb is too small for a CSV import body
+// OAuth token/revocation requests are application/x-www-form-urlencoded by spec (RFC 6749 §4.1.3).
+app.use(['/api/oauth/token', '/api/oauth/revoke'], express.urlencoded({ extended: false, limit: '16kb' }));
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
@@ -164,6 +172,7 @@ app.use(activityRouter);
 app.use(rolesRouter);
 app.use(apiAccessIntegrationRouter);
 app.use(mcpIntegrationRouter);
+app.use(mcpOAuthRouter);
 app.use(externalApiRouter);
 app.use(referralsRouter);
 

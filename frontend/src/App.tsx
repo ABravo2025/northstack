@@ -68,7 +68,8 @@ import AppLayout from './layouts/AppLayout';
 import WorkspaceSettingsLayout from './layouts/WorkspaceSettingsLayout';
 import SettingsHomePage from './pages/SettingsHomePage';
 import { isPublicFormsEnabled } from './lib/featureFlags';
-import { clearReturnTo, peekReturnTo } from './lib/returnTo';
+import { clearReturnTo, peekReturnTo, rememberReturnTo } from './lib/returnTo';
+import OAuthConsentPage from './pages/OAuthConsentPage';
 import './App.css';
 
 export default function App() {
@@ -332,6 +333,11 @@ export default function App() {
         }
       />
       <Route path="/reset-password/:token" element={<ResetPasswordPage onReset={handlePasswordReset} />} />
+      {/* OAuth consent for AI assistants (spec-mcp-server.md §4.1) — signed out, sign in first and come back. */}
+      <Route
+        path="/oauth/authorize"
+        element={isAuthenticated ? <OAuthConsentPage token={token!} user={user!} tenantName={tenant?.name ?? null} /> : <OAuthSignInFirst />}
+      />
       <Route
         path="/accept-invite/:token"
         element={<AcceptInvitePage onAccepted={handleInvitationAccepted} />}
@@ -456,6 +462,12 @@ function ShiftsHome({ token }: { token: string }) {
 }
 
 // Back to the page that sent you to the login (read once), or the overview.
+function OAuthSignInFirst() {
+  // Remembered during render like AppLayout does, so AfterLogin returns here with the same query.
+  rememberReturnTo(`${window.location.pathname}${window.location.search}`);
+  return <Navigate to="/login" replace />;
+}
+
 function AfterLogin() {
   const [to] = useState(() => peekReturnTo() ?? '/overview');
   useEffect(() => clearReturnTo(), []);

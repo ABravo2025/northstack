@@ -2816,6 +2816,10 @@ model AiConnection {
   accessTokenExpiresAt  DateTime?
   refreshTokenHash      String?          @unique
   refreshTokenExpiresAt DateTime?
+  // The refresh token this connection rotated away from last (OAuth 2.1 refresh-token rotation):
+  // if it's ever presented again, someone replayed a stolen token, so the whole connection is revoked.
+  previousRefreshTokenHash String?       @unique
+  oauthClient           OAuthClient?     @relation(fields: [oauthClientId], references: [clientId])
   lastUsedAt            DateTime?
   revokedAt             DateTime?
   createdAt             DateTime         @default(now())
@@ -2823,6 +2827,42 @@ model AiConnection {
   requestLogs ApiRequestLog[]
 
   @@index([tenantId, userId])
+}
+
+// An AI client registered through OAuth Dynamic Client Registration (RFC 7591) — "Claude",
+// "ChatGPT", "Cursor"… Global, not per tenant: one registration is reused by every workspace that
+// connects that client. Public clients only (no secret; PKCE protects the code exchange).
+// spec-mcp-server.md §4.1.
+model OAuthClient {
+  id           String   @id @default(uuid())
+  clientId     String   @unique
+  // Shown on the consent screen and, through AiConnection.clientName, in the Activity Log.
+  clientName   String
+  redirectUris String[]
+  createdAt    DateTime @default(now())
+
+  connections        AiConnection[]
+  authorizationCodes OAuthAuthorizationCode[]
+}
+
+// One-time authorization code from the consent screen, exchanged at the token endpoint. Stored
+// hashed; single use (usedAt), 10 minutes, bound to the client, redirect URI and PKCE challenge.
+model OAuthAuthorizationCode {
+  id            String      @id @default(uuid())
+  codeHash      String      @unique
+  clientId      String
+  client        OAuthClient @relation(fields: [clientId], references: [clientId])
+  userId        String
+  tenantId      String
+  redirectUri   String
+  codeChallenge String
+  // RFC 8707 resource indicator the client asked for (our /mcp URL), echoed into the token.
+  resource      String?
+  expiresAt     DateTime
+  usedAt        DateTime?
+  createdAt     DateTime    @default(now())
+
+  @@index([userId])
 }
 
 // Private API + outbound webhooks, Unit 4 (docs/tareas/spec-private-api-webhooks.md §7) — Northstack

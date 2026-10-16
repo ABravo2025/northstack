@@ -726,7 +726,11 @@ export default function IntegrationsSettingsPage({ token }: IntegrationsSettings
 
       <StripeCard token={token} canManagePayments={permissions.has('manage_payments')} />
       <ApiKeysCard token={token} canManageApiAccess={permissions.has('manage_api_access')} />
-      <AiAssistantsCard token={token} canUseAiAssistants={permissions.has('use_ai_assistants')} />
+      <AiAssistantsCard
+        token={token}
+        canUseAiAssistants={permissions.has('use_ai_assistants')}
+        canManageApiAccess={permissions.has('manage_api_access')}
+      />
     </div>
   );
 }

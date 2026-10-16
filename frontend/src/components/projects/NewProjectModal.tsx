@@ -437,7 +437,7 @@ function TemplateDetailsStep({ open, token, templateId, defaultCompanyId, onBack
               </div>
               <div className="form-group min-w-0">
                 <label htmlFor="tpl-project-status">{t('form.status')}</label>
-                <select id="tpl-project-status" value={status} onChange={(e) => setStatus(e.target.value as ProjectStatus)}>
+                <select id="tpl-project-status" className="field-s" value={status} onChange={(e) => setStatus(e.target.value as ProjectStatus)}>
                   <option value="active">{t('status.active')}</option>
                   <option value="planning">{t('status.planning')}</option>
                 </select>

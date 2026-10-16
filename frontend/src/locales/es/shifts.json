@@ -583,10 +583,13 @@
     "swapConfirm": "Proponer el cambio",
     "swapHint": "Primero acepta tu compañera; después puede necesitar aprobación.",
     "swapSent": "Cambio propuesto",
-    "reasonLabel": "Motivo (opcional)",
+    "reasonLabel": "Motivo",
     "reasonPlaceholder": "p. ej. Turno médico",
     "openToClaim": "Abierto a compañeros: cualquiera que pueda toma un lugar libre",
-    "openToClaimHint": "Los lugares libres aparecen en Mis turnos → Para tomar de todos."
+    "openToClaimHint": "Los lugares libres aparecen en Mis turnos → Para tomar de todos.",
+    "changeRequested": "Cambio pedido",
+    "giveRequested": "Pidió que lo cubran",
+    "swapRequested": "Pidió un intercambio"
   },
   "clock": {
     "title": "Fichar",

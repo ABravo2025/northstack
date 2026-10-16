@@ -200,6 +200,12 @@ export default function ShiftDetailModal({ token, shift, canManage, onClose, onC
                   <div className="sh-assignee-name">
                     {a.employee.firstName} {a.employee.lastName}
                     {a.status === 'declined' && a.declineReason && <small>{t('detail.reason', { reason: a.declineReason })}</small>}
+                    {a.changeRequest && (
+                      <small className="text-sky-700 dark:text-sky-300">
+                        {t(a.changeRequest.type === 'give' ? 'requests.giveRequested' : 'requests.swapRequested')}
+                        {a.changeRequest.reason && ` — ${a.changeRequest.reason}`}
+                      </small>
+                    )}
                   </div>
                   <span className={`to-chip ${CHIP[state]}`}>{t(`status.${state === 'draft' ? 'notNotified' : state}`)}</span>
                   {editable && (

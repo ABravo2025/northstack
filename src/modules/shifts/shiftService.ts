@@ -35,6 +35,16 @@ export const SHIFT_INCLUDE = {
     include: { employee: { select: { id: true, firstName: true, lastName: true } } },
     orderBy: { createdAt: 'asc' },
   },
+  // Open hand-overs and swaps (phase 2): the schedule marks them in their own color with the reason
+  // (Alejandro, 2026-10-16). A swap shows on both shifts.
+  changeRequests: {
+    where: { type: { in: ['give', 'swap'] }, status: { in: ['open', 'pending_peer', 'pending_manager'] } },
+    select: { type: true, status: true, reason: true, fromAssignmentId: true },
+  },
+  swapOffers: {
+    where: { type: 'swap', status: { in: ['pending_peer', 'pending_manager'] } },
+    select: { type: true, status: true, reason: true, targetAssignmentId: true },
+  },
 } satisfies Prisma.ShiftInclude;
 
 export type ShiftWithRelations = Prisma.ShiftGetPayload<{ include: typeof SHIFT_INCLUDE }>;
@@ -44,6 +54,12 @@ export function toDateString(date: Date): string {
 }
 
 const toDbDate = (date: string) => new Date(`${date}T00:00:00.000Z`);
+
+// The open hand-over or swap that involves this place on the shift, if any.
+function changeRequestFor(shift: ShiftWithRelations, assignmentId: string) {
+  const r = shift.changeRequests.find((x) => x.fromAssignmentId === assignmentId) ?? shift.swapOffers.find((x) => x.targetAssignmentId === assignmentId);
+  return r ? { type: r.type, status: r.status, reason: r.reason } : null;
+}
 
 // The shape the API returns. responseTokenHash never leaves the server.
 export function serializeShift(shift: ShiftWithRelations) {
@@ -73,6 +89,7 @@ export function serializeShift(shift: ShiftWithRelations) {
       respondedAt: a.respondedAt,
       declineReason: a.declineReason,
       notifiedAt: a.notifiedAt,
+      changeRequest: changeRequestFor(shift, a.id),
     })),
   };
 }

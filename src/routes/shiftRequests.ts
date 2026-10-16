@@ -107,7 +107,10 @@ shiftRequestsRouter.post('/api/shifts/assignments/:assignmentId/give', async (re
   const assignment = await prisma.shiftAssignment.findFirst({ where: { id: req.params.assignmentId, tenantId: ctx.user.tenantId! }, select: { shiftId: true } });
   const shift = assignment ? await findShiftById(assignment.shiftId) : null;
   if (!shift) return res.status(404).json({ error: 'Shift not found' });
-  const r = await giveAwayShift(shift, req.params.assignmentId, ctx.employeeId, parseReason(req.body?.reason), ctx.user.id);
+  // The reason is required (Alejandro, 2026-10-16: "así no queda información perdida").
+  const reason = parseReason(req.body?.reason);
+  if (!reason) return res.status(400).json({ error: 'Tell us why', field: 'reason' });
+  const r = await giveAwayShift(shift, req.params.assignmentId, ctx.employeeId, reason, ctx.user.id);
   if (!r.success) return fail(res, r);
   return res.status(201).json(serializeRequest(r.value.request));
 });
@@ -145,7 +148,9 @@ shiftRequestsRouter.post('/api/shifts/assignments/:assignmentId/swap', async (re
   const theirs = typeof req.body?.targetAssignmentId === 'string' ? await prisma.shiftAssignment.findFirst({ where: { id: req.body.targetAssignmentId, tenantId }, select: { id: true, shiftId: true } }) : null;
   const [shift, targetShift] = await Promise.all([mine ? findShiftById(mine.shiftId) : null, theirs ? findShiftById(theirs.shiftId) : null]);
   if (!shift || !targetShift || !theirs) return res.status(404).json({ error: 'Shift not found' });
-  const r = await proposeSwap(shift, req.params.assignmentId, ctx.employeeId, { shift: targetShift, assignmentId: theirs.id }, parseReason(req.body?.reason), ctx.user.id);
+  const reason = parseReason(req.body?.reason);
+  if (!reason) return res.status(400).json({ error: 'Tell us why', field: 'reason' });
+  const r = await proposeSwap(shift, req.params.assignmentId, ctx.employeeId, { shift: targetShift, assignmentId: theirs.id }, reason, ctx.user.id);
   if (!r.success) return fail(res, r);
   await deliver(r.value);
   return res.status(201).json(serializeRequest(r.value.request));

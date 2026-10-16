@@ -10,9 +10,10 @@ export function useShiftLabel() {
 }
 
 export const REQUEST_CHIP: Record<ShiftRequest['status'], string> = {
-  open: 'to-chip-pending',
-  pending_peer: 'to-chip-pending',
-  pending_manager: 'to-chip-pending',
+  // In progress: the same sky blue the schedule uses for a requested change.
+  open: 'to-chip-change',
+  pending_peer: 'to-chip-change',
+  pending_manager: 'to-chip-change',
   approved: 'to-chip-approved',
   declined: 'to-chip-rejected',
   cancelled: 'to-chip-cancelled',

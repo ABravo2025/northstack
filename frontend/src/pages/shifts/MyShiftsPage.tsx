@@ -67,11 +67,13 @@ export default function MyShiftsPage({ token }: MyShiftsPageProps) {
     if (!change) return;
     setBusy(true);
     try {
-      if (change.type === 'give') await api.giveShift(token, change.assignmentId, changeReason.trim() || undefined);
-      else await api.proposeSwap(token, change.assignmentId, target, changeReason.trim() || undefined);
+      if (change.type === 'give') await api.giveShift(token, change.assignmentId, changeReason.trim());
+      else await api.proposeSwap(token, change.assignmentId, target, changeReason.trim());
       toast.success(change.type === 'give' ? t('requests.giveSent') : t('requests.swapSent'));
       setChange(null);
       setVersion((v) => v + 1);
+      // The shift now shows "Change requested" with its reason.
+      reload();
     } catch (error) {
       toast.error(t('requests.failed', { message: (error as Error).message }));
     } finally {
@@ -148,11 +150,13 @@ export default function MyShiftsPage({ token }: MyShiftsPageProps) {
                       ) : (
                         mine && <span className={`to-chip ${CHIP[mine.status]}`}>{t(`status.${mine.status}`)}</span>
                       )}
+                      {!cancelled && mine?.changeRequest && <span className="to-chip to-chip-change">{t('requests.changeRequested')}</span>}
                     </div>
                     <small>
                       {[s.position, s.location.name, s.location.address, formatDuration(shiftDurationMinutes(s.startMinute, s.endMinute))].filter(Boolean).join(' · ')}
                     </small>
                     {s.notes && <small className="whitespace-pre-line">{s.notes}</small>}
+                    {mine?.changeRequest?.reason && <small className="text-sky-700 dark:text-sky-300">{t('requests.reason', { reason: mine.changeRequest.reason })}</small>}
                     {cancelled && <small>{t('mine.cancelledNote')}</small>}
                     {!cancelled && mine && !started && (
                       <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -168,7 +172,7 @@ export default function MyShiftsPage({ token }: MyShiftsPageProps) {
                         )}
                       </div>
                     )}
-                    {!cancelled && mine && !started && allowSwaps && mine.status !== 'declined' && (
+                    {!cancelled && mine && !started && allowSwaps && mine.status !== 'declined' && !mine.changeRequest && (
                       <div className="mt-1 flex flex-wrap gap-3">
                         <button type="button" className="to-link text-xs" onClick={() => openChange('give', s, mine.id)}>
                           {t('requests.giveAction')}
@@ -220,7 +224,7 @@ export default function MyShiftsPage({ token }: MyShiftsPageProps) {
             <button type="button" className="btn-secondary" onClick={() => setChange(null)}>
               {t('form.cancel')}
             </button>
-            <button type="button" className="btn-primary" disabled={busy || (change?.type === 'swap' && !target)} onClick={sendChange}>
+            <button type="button" className="btn-primary" disabled={busy || !changeReason.trim() || (change?.type === 'swap' && !target)} onClick={sendChange}>
               {change?.type === 'give' ? t('requests.giveConfirm') : t('requests.swapConfirm')}
             </button>
           </>
@@ -251,7 +255,7 @@ export default function MyShiftsPage({ token }: MyShiftsPageProps) {
               ))}
             <div className="form-group !mb-0">
               <label htmlFor="change-reason">{t('requests.reasonLabel')}</label>
-              <input id="change-reason" value={changeReason} maxLength={300} placeholder={t('requests.reasonPlaceholder')} onChange={(e) => setChangeReason(e.target.value)} />
+              <input id="change-reason" required value={changeReason} maxLength={300} placeholder={t('requests.reasonPlaceholder')} onChange={(e) => setChangeReason(e.target.value)} />
             </div>
             <p className="rules-hint m-0">{change.type === 'give' ? t('requests.giveHint') : t('requests.swapHint')}</p>
           </div>

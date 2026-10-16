@@ -15,12 +15,19 @@ export function filledSlots(shift: Shift): number {
   return shift.assignments.filter((a) => a.status !== 'declined').length;
 }
 
-// The card's left stripe: red when it needs someone (open slot or a decline), amber while answers
-// are pending, green when everyone confirmed. Drafts and cancelled shifts have their own looks.
-export function shiftTone(shift: Shift): 'draft' | 'cancelled' | 'bad' | 'warn' | 'ok' {
+// Someone on the shift asked to hand it over or swap it (phase 2) and it isn't decided yet.
+export function hasChangeRequest(shift: Shift): boolean {
+  return shift.assignments.some((a) => !!a.changeRequest);
+}
+
+// The card's left stripe: red when it needs someone (open slot or a decline), sky blue while
+// someone asked to hand it over or swap it (Alejandro, 2026-10-16), amber while answers are
+// pending, green when everyone confirmed. Drafts and cancelled shifts have their own looks.
+export function shiftTone(shift: Shift): 'draft' | 'cancelled' | 'bad' | 'change' | 'warn' | 'ok' {
   if (shift.status === 'draft') return 'draft';
   if (shift.status === 'cancelled') return 'cancelled';
   if (shift.assignments.some((a) => a.status === 'declined') || filledSlots(shift) < shift.headcount) return 'bad';
+  if (hasChangeRequest(shift)) return 'change';
   if (shift.assignments.some((a) => a.status === 'pending')) return 'warn';
   return 'ok';
 }
@@ -57,6 +64,7 @@ export default function ShiftCard({ shift, mode, onOpen }: ShiftCardProps) {
       {open > 0 && <span className="sh-open block">{t('schedule.openSlots', { count: open })}</span>}
       {shift.status === 'draft' && <span className="sh-card-sub block">{t('status.draft')}</span>}
       {shift.isOvertime && <span className="sh-card-sub block font-semibold">{t('clock.overtime')}</span>}
+      {tone === 'change' && <span className="sh-card-sub block font-semibold">{t('requests.changeRequested')}</span>}
     </button>
   );
 }

@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
 import { App as CapacitorApp } from '@capacitor/app';
-import { api, type ApiKeySummary, type GoogleCalendarStatus, type StripeConnectionStatus, type Tenant } from '../api';
+import { api, type AiConnectionSummary, type ApiKeySummary, type GoogleCalendarStatus, type StripeConnectionStatus, type Tenant } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import { usePermissions } from '../contexts/PermissionsContext';
 import TableBody from '../components/common/TableBody';
@@ -13,7 +13,7 @@ import Modal from '../components/common/Modal';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import Popover from '../components/common/Popover';
 import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar';
-import { CopyIcon, InfoIcon, LockIcon, TrashIcon } from '../components/common/Icons';
+import { ChevronLeftIcon, CopyIcon, InfoIcon, LockIcon, SearchIcon, SparklesIcon, TrashIcon } from '../components/common/Icons';
 import i18n from '../lib/i18n';
 import AiAssistantsCard from '../components/integrations/AiAssistantsCard';
 
@@ -600,6 +600,18 @@ function ApiKeysCard({ token, canManageApiAccess }: { token: string; canManageAp
 // belong here too rather than a second entry point; gate an individual card
 // by role if one ends up admin-only, don't split the page — Stripe below
 // (Payments v1, owner-only) is the first case of that carve-out.
+type IntegrationKey = 'google' | 'stripe' | 'api' | 'ai';
+
+interface IntegrationTileData {
+  key: IntegrationKey;
+  name: string;
+  logo: React.ReactNode;
+  description: string;
+  connected: boolean;
+  warn: boolean;
+  subtitle: string | null;
+}
+
 export default function IntegrationsSettingsPage({ token }: IntegrationsSettingsPageProps) {
   const toast = useToast();
   const { t } = useTranslation('settingsPages');
@@ -675,58 +687,211 @@ export default function IntegrationsSettingsPage({ token }: IntegrationsSettings
     }
   };
 
+  // ---- hub: one tile per integration this user may use (each card's own permission check) ----
+  const canPayments = permissions.has('manage_payments');
+  const canApi = permissions.has('manage_api_access');
+  const canAi = permissions.has('use_ai_assistants');
+  const [stripeStatus, setStripeStatus] = useState<StripeConnectionStatus | null>(null);
+  const [apiKeys, setApiKeys] = useState<ApiKeySummary[] | null>(null);
+  const [aiConnections, setAiConnections] = useState<AiConnectionSummary[] | null>(null);
+  const [query, setQuery] = useState('');
+  const view = searchParams.get('view') as IntegrationKey | null;
+
+  const loadTileStatus = () => {
+    if (canPayments) api.getStripeStatus(token).then(setStripeStatus).catch(() => {});
+    if (canApi) api.listApiKeys(token).then(setApiKeys).catch(() => {});
+    if (canAi) api.listAiConnections(token).then(setAiConnections).catch(() => {});
+  };
+
+  useEffect(() => {
+    if (!view) loadTileStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, canPayments, canApi, canAi]);
+
+  const openView = (key: IntegrationKey | null) => {
+    const next = new URLSearchParams(searchParams);
+    if (key) next.set('view', key);
+    else next.delete('view');
+    setSearchParams(next);
+  };
+
+  const activeApiKeys = apiKeys?.filter((k) => !k.revokedAt).length ?? 0;
+  const activeAi = aiConnections?.filter((c) => !c.revokedAt).length ?? 0;
+
+  const tiles: IntegrationTileData[] = [
+    {
+      key: 'google',
+      name: 'Google Calendar',
+      logo: <GoogleLogo className="h-6 w-6" />,
+      description: t('integrations.google.description'),
+      connected: !!googleStatus?.connected,
+      warn: !!googleStatus?.needsReconnect,
+      subtitle: googleStatus?.connected ? googleStatus.googleAccountEmail ?? t('integrations.stripe.connectedLabel') : null,
+    },
+    ...(canPayments
+      ? [
+          {
+            key: 'stripe' as const,
+            name: 'Stripe',
+            logo: <span className="integration-tile-mark bg-[#635bff] text-white">S</span>,
+            description: t('integrations.stripe.description'),
+            connected: !!stripeStatus?.connected,
+            warn: !!stripeStatus?.needsAttention,
+            subtitle: stripeStatus?.connected ? t('integrations.stripe.connectedLabel') : null,
+          },
+        ]
+      : []),
+    ...(canApi
+      ? [
+          {
+            key: 'api' as const,
+            name: t('integrations.apiKeys.title'),
+            logo: <span className="integration-tile-mark bg-ink text-white dark:bg-dark-ink dark:text-dark-page">{'{ }'}</span>,
+            description: t('integrations.apiKeys.description'),
+            connected: activeApiKeys > 0,
+            warn: false,
+            subtitle: activeApiKeys > 0 ? t('integrations.hub.apiKeysCount', { count: activeApiKeys }) : null,
+          },
+        ]
+      : []),
+    ...(canAi
+      ? [
+          {
+            key: 'ai' as const,
+            name: t('integrations.aiAssistants.title'),
+            logo: (
+              <span className="integration-tile-mark bg-accent-tint text-accent dark:text-brand-blue-light">
+                <SparklesIcon className="h-4 w-4" />
+              </span>
+            ),
+            description: t('integrations.aiAssistants.description'),
+            connected: activeAi > 0,
+            warn: false,
+            subtitle: activeAi > 0 ? t('integrations.hub.aiCount', { count: activeAi }) : null,
+          },
+        ]
+      : []),
+  ];
+
+  const q = query.trim().toLowerCase();
+  const visibleTiles = q ? tiles.filter((tile) => `${tile.name} ${tile.description}`.toLowerCase().includes(q)) : tiles;
+  const current = view ? tiles.find((tile) => tile.key === view) : undefined;
+
+  if (current) {
+    return (
+      <div className="max-w-6xl">
+        <button type="button" className="integration-back" onClick={() => openView(null)}>
+          <ChevronLeftIcon className="h-4 w-4" />
+          {t('integrations.hub.back')}
+        </button>
+        {current.key === 'google' && (
+          <div className="card">
+            <div className="integration-header">
+              <GoogleLogo className="integration-logo" />
+              <div>
+                <h3 className="card-title" style={{ margin: 0 }}>
+                  Google Calendar
+                </h3>
+                <p className="text-xs text-ink-faint dark:text-dark-ink-faint">{t('integrations.google.description')}</p>
+              </div>
+            </div>
+
+            {googleStatus?.connected ? (
+              <div className="integration-status-row">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`integration-status-dot ${googleStatus.needsReconnect ? 'integration-status-dot-warn' : 'integration-status-dot-ok'}`}
+                  />
+                  <div>
+                    <div className="text-sm font-medium">{googleStatus.googleAccountEmail}</div>
+                    {googleStatus.needsReconnect ? (
+                      <div className="field-error">{t('integrations.google.accessRevoked')}</div>
+                    ) : (
+                      <div className="text-xs text-ink-faint dark:text-dark-ink-faint">{t('integrations.stripe.connectedLabel')}</div>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {googleStatus.needsReconnect && (
+                    <button type="button" className="btn-primary btn-md" onClick={handleGoogleConnect} disabled={googleBusy}>
+                      {t('integrations.google.reconnect')}
+                    </button>
+                  )}
+                  <button type="button" className="btn-danger btn-md" onClick={handleGoogleDisconnect} disabled={googleBusy}>
+                    {t('integrations.disconnect')}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button type="button" className="btn-google btn-md" onClick={handleGoogleConnect} disabled={googleBusy}>
+                <GoogleLogo className="h-4 w-4" />
+                {googleBusy ? t('integrations.google.connecting') : t('integrations.google.connectButton')}
+              </button>
+            )}
+          </div>
+        )}
+        {current.key === 'stripe' && <StripeCard token={token} canManagePayments={canPayments} />}
+        {current.key === 'api' && <ApiKeysCard token={token} canManageApiAccess={canApi} />}
+        {current.key === 'ai' && <AiAssistantsCard token={token} canUseAiAssistants={canAi} />}
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-6xl">
-      <div className="card">
-        <div className="integration-header">
-          <GoogleLogo className="integration-logo" />
-          <div>
-            <h3 className="card-title" style={{ margin: 0 }}>
-              Google Calendar
-            </h3>
-            <p className="text-xs text-ink-faint dark:text-dark-ink-faint">
-              {t('integrations.google.description')}
-            </p>
-          </div>
+      <div className="mb-4 flex justify-end">
+        <div className="toolbar-search w-full sm:w-72">
+          <SearchIcon />
+          <label htmlFor="integration-search" className="sr-only">
+            {t('integrations.hub.search')}
+          </label>
+          <input
+            id="integration-search"
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t('integrations.hub.search')}
+          />
         </div>
-
-        {googleStatus?.connected ? (
-          <div className="integration-status-row">
-            <div className="flex items-center gap-2">
-              <span
-                className={`integration-status-dot ${googleStatus.needsReconnect ? 'integration-status-dot-warn' : 'integration-status-dot-ok'}`}
-              />
-              <div>
-                <div className="text-sm font-medium">{googleStatus.googleAccountEmail}</div>
-                {googleStatus.needsReconnect ? (
-                  <div className="field-error">{t('integrations.google.accessRevoked')}</div>
+      </div>
+      {visibleTiles.length === 0 ? (
+        <p className="py-8 text-center text-sm text-ink-faint dark:text-dark-ink-faint">{t('integrations.hub.noResults')}</p>
+      ) : (
+        <div className="integration-grid">
+          {visibleTiles.map((tile) => (
+            <div key={tile.key} className="integration-tile">
+              <div className="integration-tile-head">
+                <span className="integration-tile-logo">{tile.logo}</span>
+                <div className="min-w-0">
+                  <div className="integration-tile-name">{tile.name}</div>
+                  {tile.subtitle && (
+                    <div className={`integration-tile-sub ${tile.warn ? 'warn' : ''}`}>
+                      {tile.warn ? t('integrations.hub.needsAttention') : tile.subtitle}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <p className="integration-tile-desc">{tile.description}</p>
+              <div className="integration-tile-foot">
+                {tile.connected ? (
+                  <button type="button" className="integration-tile-btn manage" onClick={() => openView(tile.key)}>
+                    {t('integrations.hub.manage')}
+                  </button>
                 ) : (
-                  <div className="text-xs text-ink-faint dark:text-dark-ink-faint">{t('integrations.stripe.connectedLabel')}</div>
+                  <button
+                    type="button"
+                    className="integration-tile-btn"
+                    disabled={tile.key === 'google' && googleBusy}
+                    onClick={() => (tile.key === 'google' ? handleGoogleConnect() : openView(tile.key))}
+                  >
+                    {tile.key === 'google' && googleBusy ? t('integrations.google.connecting') : t('integrations.hub.connect')}
+                  </button>
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              {googleStatus.needsReconnect && (
-                <button type="button" className="btn-primary btn-md" onClick={handleGoogleConnect} disabled={googleBusy}>
-                  {t('integrations.google.reconnect')}
-                </button>
-              )}
-              <button type="button" className="btn-danger btn-md" onClick={handleGoogleDisconnect} disabled={googleBusy}>
-                {t('integrations.disconnect')}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button type="button" className="btn-google btn-md" onClick={handleGoogleConnect} disabled={googleBusy}>
-            <GoogleLogo className="h-4 w-4" />
-            {googleBusy ? t('integrations.google.connecting') : t('integrations.google.connectButton')}
-          </button>
-        )}
-      </div>
-
-      <StripeCard token={token} canManagePayments={permissions.has('manage_payments')} />
-      <ApiKeysCard token={token} canManageApiAccess={permissions.has('manage_api_access')} />
-      <AiAssistantsCard token={token} canUseAiAssistants={permissions.has('use_ai_assistants')} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

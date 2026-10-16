@@ -174,7 +174,7 @@ export default function SendStripeInvoiceModal({
             {keyPermissionError && (
               <>
                 {' '}
-                <a href="/settings/integrations" className="table-link">
+                <a href="/settings/integrations?view=stripe" className="table-link">
                   {t('sendInvoice.openIntegrations')}
                 </a>
               </>

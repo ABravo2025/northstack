@@ -185,6 +185,18 @@
     "loadError": "No se pudieron cargar tus referidos: {{message}}"
   },
   "integrations": {
+    "hub": {
+      "search": "Buscar integraciones",
+      "connect": "Conectar",
+      "manage": "Gestionar",
+      "back": "Todas las integraciones",
+      "noResults": "Ninguna integración coincide con la búsqueda.",
+      "needsAttention": "Requiere atención",
+      "apiKeysCount_one": "{{count}} clave activa",
+      "apiKeysCount_other": "{{count}} claves activas",
+      "aiCount_one": "{{count}} asistente conectado",
+      "aiCount_other": "{{count}} asistentes conectados"
+    },
     "disconnect": "Desconectar",
     "google": {
       "loadError": "No se pudo cargar el estado de Google Calendar: {{message}}",

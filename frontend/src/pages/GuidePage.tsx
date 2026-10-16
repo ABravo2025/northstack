@@ -2288,7 +2288,7 @@ export default function GuidePage() {
             </div>
             <h2>Integraciones y API</h2>
             <p className="help-intro">
-              Todas las conexiones viven en un solo lugar: <strong>Configuración → Integraciones.</strong>
+              Todas las conexiones viven en un solo lugar: <strong>Configuración → Integraciones.</strong> Cada integración es una tarjeta: <strong>Conectar</strong> la configura y, una vez conectada, <strong>Gestionar</strong> abre su detalle. Solo ves las integraciones que tu rol puede usar.
             </p>
 
             <div className="help-sub">
@@ -2408,7 +2408,7 @@ export default function GuidePage() {
             </div>
             <h2>Integrations &amp; API</h2>
             <p className="help-intro">
-              All connections live in one place: <strong>Settings → Integrations.</strong>
+              All connections live in one place: <strong>Settings → Integrations.</strong> Each integration is a card: <strong>Connect</strong> sets it up and, once connected, <strong>Manage</strong> opens its details. You only see the integrations your role can use.
             </p>
 
             <div className="help-sub">

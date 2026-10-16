@@ -185,6 +185,18 @@
     "loadError": "Couldn't load your referrals: {{message}}"
   },
   "integrations": {
+    "hub": {
+      "search": "Search integrations",
+      "connect": "Connect",
+      "manage": "Manage",
+      "back": "All integrations",
+      "noResults": "No integration matches your search.",
+      "needsAttention": "Needs attention",
+      "apiKeysCount_one": "{{count}} active key",
+      "apiKeysCount_other": "{{count}} active keys",
+      "aiCount_one": "{{count}} assistant connected",
+      "aiCount_other": "{{count}} assistants connected"
+    },
     "disconnect": "Disconnect",
     "google": {
       "loadError": "Failed to load Google Calendar status: {{message}}",

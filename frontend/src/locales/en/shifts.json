@@ -583,10 +583,13 @@
     "swapConfirm": "Propose the swap",
     "swapHint": "Your colleague accepts first; then it may need a scheduler's approval.",
     "swapSent": "Swap proposed",
-    "reasonLabel": "Reason (optional)",
+    "reasonLabel": "Reason",
     "reasonPlaceholder": "e.g. Medical appointment",
     "openToClaim": "Open to colleagues: anyone eligible can take a free place",
-    "openToClaimHint": "Free places show up in everyone's My shifts → Available to take."
+    "openToClaimHint": "Free places show up in everyone's My shifts → Available to take.",
+    "changeRequested": "Change requested",
+    "giveRequested": "Asked for someone to cover",
+    "swapRequested": "Swap requested"
   },
   "clock": {
     "title": "Clock in",

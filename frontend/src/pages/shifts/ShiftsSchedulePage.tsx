@@ -501,6 +501,10 @@ export default function ShiftsSchedulePage({ token }: ShiftsSchedulePageProps) {
           {t('status.declined')}
         </span>
         <span>
+          <i className="sh-dot sh-dot-change" />
+          {t('requests.changeRequested')}
+        </span>
+        <span>
           <i className="sh-dot sh-dot-draft" />
           {t('schedule.legendDraft')}
         </span>

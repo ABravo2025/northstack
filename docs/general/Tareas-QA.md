@@ -5234,6 +5234,15 @@ Resuelve el pendiente de agosto ("un área en el perfil de las notificaciones qu
 
 **Verificado** (servicios contra `staging`, 6/6): turno fichado 10 min tarde con 15 min de pausa → sugerencia 220 min (planificado 240); turno sin fichaje → 120 planificados; reporte: fichado 220, 1 tardanza, 1 ausencia; sin fichaje en el plan no hay columnas; resumen al Owner y no dos veces el mismo día. 790/790 tests.
 
+## QA-120 — Turnos fase 2: pedidos de cambio en celeste y con motivo obligatorio (2026-10-16, en `staging`)
+
+Pedido de Alejandro: "si alguien solicita un cambio, debería marcarlo con otro color y la razón debería ser obligatoria. Así no queda información perdida".
+- **Buscar quien me cubra** y **Cambiar con alguien** piden **Motivo** obligatorio (el botón no se habilita sin él; la API responde 400).
+- Mientras el pedido está abierto, el turno se ve **celeste** en el cronograma (semana, día, mes y por persona) con "Cambio pedido", y está en la leyenda. En el detalle, bajo la persona: "Pidió que lo cubran — motivo" / "Pidió un intercambio — motivo". En Mis turnos: chip "Cambio pedido" y el motivo; los botones de pedir cambio se ocultan hasta que se resuelva o se cancele. Los chips de pedidos en curso (Mis pedidos, Pedidos) también son celestes.
+- El rojo (falta gente) sigue teniendo prioridad sobre el celeste.
+
+**Verificado** contra `staging`: API (sin motivo → 400, motivo en blanco → 400, el cronograma devuelve el pedido con su motivo; resto del bloque A igual); navegador EN y ES oscuro 4/4 (botón deshabilitado sin motivo, chip y motivo en Mis turnos, bloque celeste, motivo en el detalle).
+
 ## QA-119 — Turnos fase 2, bloque E: cronograma sugerido (2026-10-14, en `staging`, Growth)
 
 - Cronograma (vista Semana o Por persona) → **Sugerir semana**: propone a quién poner en cada turno **en borrador** de esa semana con lugares libres. Cada línea se puede destildar; **Asignar N personas** las agrega y los turnos siguen en borrador hasta publicar.

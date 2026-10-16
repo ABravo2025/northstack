@@ -1904,7 +1904,8 @@ export default function GuidePage() {
               <p>
                 En <strong>Mis turnos</strong>, cada turno que viene tiene <strong>Buscar quien me cubra</strong>
                 (ofrecérselo a tus compañeros) y <strong>Cambiar con alguien</strong> (elegís un turno de un compañero
-                en la misma locación; acepta o rechaza). En <strong>Para tomar</strong> ves los turnos que otros
+                en la misma locación; acepta o rechaza). Los dos piden un motivo, y mientras el pedido está abierto el
+                turno se ve celeste en el cronograma con ese motivo. En <strong>Para tomar</strong> ves los turnos que otros
                 cedieron y los turnos publicados con lugares libres que quien arma turnos marcó <strong>Abierto a
                 compañeros</strong>: <strong>Lo tomo</strong>. Nada cambia hasta que se aprueba: de entrada, los
                 cambios necesitan la aprobación de quien arma turnos y los turnos abiertos son del primero que los
@@ -2107,7 +2108,8 @@ export default function GuidePage() {
               <p>
                 In <strong>My shifts</strong>, each upcoming shift has <strong>Find someone to cover</strong> (offer
                 it to your colleagues) and <strong>Swap with someone</strong> (pick a colleague's shift at the same
-                location; they accept or decline). Under <strong>Available to take</strong> you see shifts others
+                location; they accept or decline). Both ask for a reason, and while the request is open the shift shows in
+                sky blue on the schedule with that reason. Under <strong>Available to take</strong> you see shifts others
                 handed over and published shifts with free places that the scheduler marked <strong>Open to
                 colleagues</strong>: <strong>Take it</strong>. Nothing changes until it's approved: by default swaps
                 need a scheduler's approval and open shifts go to whoever takes them first; both can be changed in

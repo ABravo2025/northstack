@@ -1386,6 +1386,8 @@ export interface ShiftAssignment {
   respondedAt: string | null;
   declineReason: string | null;
   notifiedAt: string | null;
+  // Phase 2: an open hand-over or swap involving this place (the reason is always given).
+  changeRequest?: { type: 'give' | 'swap'; status: string; reason: string | null } | null;
 }
 
 export interface Shift {

@@ -3788,6 +3788,10 @@ textarea.overview-field-input {
 .sh-card.sh-bad {
   @apply border-l-red-500;
 }
+/* Phase 2: someone asked to hand over or swap this shift. */
+.sh-card.sh-change {
+  @apply border-l-sky-500 bg-sky-50 dark:border-l-sky-400 dark:bg-sky-950/40;
+}
 .sh-card.sh-draft {
   @apply border-dashed border-l-gray-400 bg-surface-2 dark:bg-dark-raised;
   border-left-style: solid;
@@ -3830,6 +3834,12 @@ textarea.overview-field-input {
 }
 .sh-dot-draft {
   @apply bg-gray-400;
+}
+.sh-dot-change {
+  @apply bg-sky-500 dark:bg-sky-400;
+}
+.to-chip-change {
+  @apply bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-200;
 }
 .sh-open {
   @apply mt-1 text-[11px] font-semibold text-red-600 dark:text-red-300;
@@ -4006,6 +4016,9 @@ textarea.overview-field-input {
 .sh-block.sh-bad {
   @apply border-l-red-500;
 }
+.sh-block.sh-change {
+  @apply border-l-sky-500 bg-sky-50 dark:border-l-sky-400 dark:bg-sky-950/40;
+}
 .sh-block.sh-draft {
   @apply border-dashed border-l-gray-400 bg-surface-2 dark:bg-dark-surface;
   border-left-style: solid;
@@ -4084,6 +4097,9 @@ textarea.overview-field-input {
 }
 .sh-chip.sh-bad {
   @apply border-l-red-500;
+}
+.sh-chip.sh-change {
+  @apply border-l-sky-500 bg-sky-50 dark:border-l-sky-400 dark:bg-sky-950/40;
 }
 .sh-chip.sh-draft {
   @apply border-dashed border-l-gray-400;

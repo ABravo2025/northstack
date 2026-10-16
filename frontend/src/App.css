@@ -4019,3 +4019,46 @@ textarea.overview-field-input {
 .rules-switch.switch-row:last-child {
   @apply border-b-0;
 }
+
+/* Settings → Integrations hub: one tile per integration, then a detail view per tile. */
+.integration-grid {
+  @apply grid gap-4 sm:grid-cols-2 xl:grid-cols-3;
+}
+.integration-tile {
+  @apply flex flex-col rounded-xl border border-line bg-surface-1 dark:border-dark-line dark:bg-dark-surface;
+  box-shadow: var(--ns-shadow-sm);
+}
+.integration-tile-head {
+  @apply flex items-center gap-3 border-b border-line-soft px-4 py-3.5 dark:border-dark-line-soft;
+}
+.integration-tile-logo {
+  @apply flex h-8 w-8 shrink-0 items-center justify-center;
+}
+.integration-tile-mark {
+  @apply flex h-8 w-8 items-center justify-center rounded-lg text-sm font-bold;
+}
+.integration-tile-name {
+  @apply truncate text-sm font-semibold text-ink dark:text-dark-ink;
+}
+.integration-tile-sub {
+  @apply truncate text-xs text-accent dark:text-brand-blue-light;
+}
+.integration-tile-sub.warn {
+  @apply text-amber-700 dark:text-amber-400;
+}
+.integration-tile-desc {
+  @apply m-0 line-clamp-3 flex-1 px-4 py-3 text-sm text-ink-muted dark:text-dark-ink-muted;
+}
+.integration-tile-foot {
+  @apply border-t border-line-soft px-4 py-3 dark:border-dark-line-soft;
+}
+.integration-tile-btn {
+  @apply btn w-full cursor-pointer border border-accent bg-transparent text-accent hover:bg-accent/10 dark:border-brand-blue-light dark:text-brand-blue-light;
+  height: var(--size-control-md);
+}
+.integration-tile-btn.manage {
+  @apply border-emerald-600 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-400 dark:text-emerald-400 dark:hover:bg-emerald-400/10;
+}
+.integration-back {
+  @apply mb-3 inline-flex cursor-pointer items-center gap-1 border-0 bg-transparent p-0 text-sm font-medium text-accent hover:underline dark:text-brand-blue-light;
+}

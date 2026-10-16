@@ -1,6 +1,5 @@
 # Post 02 · Proyectos: el cierre de mes (ES)
-**Publicar:** miércoles 21/10, 8–10 h · **Dónde:** página de Northstack (Alejandro lo comparte con
-una línea propia) · **Pilar:** producto · **Visual:** `../../semana-03/gif/proyectos-es.gif` (botón de **foto**).
+**Publicar:** miércoles 21/10, 8–10 h · **Dónde:** perfil de Alejandro (solo en español; la página de Northstack lo comparte) · **Pilar:** producto · **Visual:** `../../semana-03/gif/proyectos-es.gif` (botón de **foto**).
 
 ---
 
@@ -21,4 +20,4 @@ Y si trabajas de otra forma, guardas tu propio proyecto como plantilla y lo reut
 
 ¿Quieres verlo con tus clientes y tu proceso? Comenta "CIERRE" o escríbenos a info@joinnorthstack.com y te lo mostramos en 20 minutos.
 
-#EstudiosContables #Contadores #GestiónDeProyectos
+#Contadores #Pymes #Emprendedores

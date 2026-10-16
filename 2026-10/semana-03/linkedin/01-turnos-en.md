@@ -1,6 +1,5 @@
 # Post 01 · Shifts (EN)
-**Publish:** Wednesday Oct 14, 8–10 am · **Where:** Alejandro's profile (the Northstack page
-reshares) · **Pillar:** pain + product · **Visual:** `../gif/turnos-en.gif` (upload with the **photo**
+**Publish:** Wednesday Oct 14, 8–10 am · **Where:** Northstack company page only (Alejandro's profile posts the Spanish version) · **Pillar:** pain + product · **Visual:** `../gif/turnos-en.gif` (upload with the **photo**
 button, not the video one, so it animates).
 
 ---

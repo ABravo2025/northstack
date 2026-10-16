@@ -25,7 +25,7 @@ Si marcaste dos o más, no es un problema de orden. Es que tu equipo creció y l
 
 En Northstack reunimos personas, vacaciones, turnos, proyectos y ventas en un solo lugar, con permisos para que cada uno vea solo lo que le corresponde. El link para probarlo gratis está en el primer comentario.
 
-#Pymes #Startups #RRHH
+#Pymes #Emprendedores #Startups
 
 ---
 

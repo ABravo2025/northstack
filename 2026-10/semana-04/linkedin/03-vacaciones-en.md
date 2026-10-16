@@ -1,6 +1,5 @@
 # Post 03 · Time off (EN)
-**Publish:** Thursday Oct 22, 8–10 am · **Where:** Alejandro's profile (the page reshares) ·
-**Pillar:** pain + product · **Visual:** `../../semana-03/gif/vacaciones-en.gif` (**photo** button).
+**Publish:** Thursday Oct 22, 8–10 am · **Where:** Northstack company page only (Alejandro's profile posts the Spanish version) · **Pillar:** pain + product · **Visual:** `../../semana-03/gif/vacaciones-en.gif` (**photo** button).
 
 ---
 

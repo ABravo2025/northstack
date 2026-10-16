@@ -1,6 +1,5 @@
 # Post 02 · Onboarding checklist (EN)
-**Publish:** Wednesday Oct 28, 8–10 am · **Where:** Alejandro's profile (the page reshares) ·
-**Pillar:** tips · **Visual:** `imagenes/onboarding-en.png`
+**Publish:** Wednesday Oct 28, 8–10 am · **Where:** Northstack company page only (Alejandro's profile posts the Spanish version) · **Pillar:** tips · **Visual:** `imagenes/onboarding-en.png`
 
 ---
 

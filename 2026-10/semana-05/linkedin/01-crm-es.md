@@ -23,7 +23,7 @@ No hace falta un CRM de empresa grande para dejar de perder ventas. Hace falta q
 
 El link para probarlo gratis 15 días está en el primer comentario.
 
-#Ventas #CRM #Pymes
+#Ventas #Pymes #Emprendedores
 
 ---
 

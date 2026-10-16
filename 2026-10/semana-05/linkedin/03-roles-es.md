@@ -1,6 +1,5 @@
 # Post 03 · Roles y permisos (ES)
-**Publicar:** jueves 29/10, 8–10 h · **Dónde:** página de Northstack (Alejandro lo comparte con una
-línea propia) · **Pilar:** producto · **Visual:** `imagenes/roles-es.png`
+**Publicar:** jueves 29/10, 8–10 h · **Dónde:** perfil de Alejandro (solo en español; la página de Northstack lo comparte) · **Pilar:** producto · **Visual:** `imagenes/roles-es.png`
 
 ---
 
@@ -23,4 +22,4 @@ Así, el líder de ventas aprueba las vacaciones de su equipo sin ver los sueldo
 
 ¿Quieres ver cómo quedaría con tus roles? Escríbenos a info@joinnorthstack.com o comenta "ROLES" y te lo mostramos en 20 minutos.
 
-#RRHH #SeguridadDeLaInformación #Pymes
+#RRHH #Pymes #Emprendedores

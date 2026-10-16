@@ -1,6 +1,5 @@
 # Post 03 · Roles and permissions (EN)
-**Publish:** Thursday Oct 29, 8–10 am · **Where:** Northstack page (Alejandro reshares with a line of
-his own) · **Pillar:** product · **Visual:** `imagenes/roles-en.png`
+**Publish:** Thursday Oct 29, 8–10 am · **Where:** Northstack company page only (Alejandro's profile posts the Spanish version) · **Pillar:** product · **Visual:** `imagenes/roles-en.png`
 
 ---
 

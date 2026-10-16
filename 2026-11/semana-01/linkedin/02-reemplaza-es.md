@@ -25,7 +25,7 @@ Lo armas en una tarde y lo pruebas gratis 15 días, sin tarjeta.
 
 Si quieres ver cómo quedaría con lo que ya tienes, comenta "TODO" y te escribo por privado.
 
-#Pymes #Startups #TransformaciónDigital
+#Pymes #Emprendedores #Startups
 
 ---
 

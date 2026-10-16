@@ -1,6 +1,5 @@
 # Post 02 · A question that became a module (EN)
-**Publish:** Friday Oct 16, 8–10 am · **Where:** Alejandro's personal profile ·
-**Pillar:** founder / behind the scenes · **Visual:** a photo of Alejandro at work (beats a
+**Publish:** Friday Oct 16, 8–10 am · **Where:** skip for now: it's a first-person story that only fits Alejandro's profile, which posts the Spanish version · **Pillar:** founder / behind the scenes · **Visual:** a photo of Alejandro at work (beats a
 screenshot) or, failing that, `../gif/turnos-en.gif`.
 
 > The lab asked but isn't a customer yet: the text says so and doesn't name them.

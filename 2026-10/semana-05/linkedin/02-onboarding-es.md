@@ -35,4 +35,4 @@ En Northstack, este onboarding es una plantilla: lo abres para cada persona nuev
 
 ¿Qué le agregarías a la lista? 👇
 
-#RRHH #Onboarding #Pymes
+#RRHH #RecursosHumanos #Pymes

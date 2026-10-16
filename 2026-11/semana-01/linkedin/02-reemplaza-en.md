@@ -1,6 +1,5 @@
 # Post 02 · What Northstack replaces (EN)
-**Publish:** Wednesday Nov 4, 8–10 am · **Where:** Alejandro's profile (the page reshares) ·
-**Pillar:** product · **Visual:** `imagenes/reemplaza-en.png`
+**Publish:** Wednesday Nov 4, 8–10 am · **Where:** Northstack company page only (Alejandro's profile posts the Spanish version) · **Pillar:** product · **Visual:** `imagenes/reemplaza-en.png`
 
 ---
 

@@ -1,6 +1,5 @@
 # Post 02 · Projects: the month-end close (EN)
-**Publish:** Wednesday Oct 21, 8–10 am · **Where:** Northstack page (Alejandro reshares with a line
-of his own) · **Pillar:** product · **Visual:** `../../semana-03/gif/proyectos-en.gif` (**photo** button).
+**Publish:** Wednesday Oct 21, 8–10 am · **Where:** Northstack company page only (Alejandro's profile posts the Spanish version) · **Pillar:** product · **Visual:** `../../semana-03/gif/proyectos-en.gif` (**photo** button).
 
 ---
 

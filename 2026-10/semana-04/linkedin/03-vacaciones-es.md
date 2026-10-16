@@ -22,7 +22,7 @@ Cada persona ve su saldo sin preguntarle a nadie. Y tú dejas de ser la planilla
 
 El link para probarlo gratis 15 días está en el primer comentario.
 
-#RRHH #Pymes #GestiónDeVacaciones
+#RRHH #Pymes #Emprendedores
 
 ---
 

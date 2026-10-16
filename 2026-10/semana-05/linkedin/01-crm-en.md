@@ -1,6 +1,5 @@
 # Post 01 · CRM: the deals that get lost in email (EN)
-**Publish:** Tuesday Oct 27, 8–10 am · **Where:** Alejandro's profile (the page reshares) ·
-**Pillar:** pain + product · **Visual:** `imagenes/crm-en.png`
+**Publish:** Tuesday Oct 27, 8–10 am · **Where:** Northstack company page only (Alejandro's profile posts the Spanish version) · **Pillar:** pain + product · **Visual:** `imagenes/crm-en.png`
 
 ---
 

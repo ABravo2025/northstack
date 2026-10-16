@@ -16,13 +16,36 @@ _Creado: 2026-10-13_
 ## Frecuencia y canales
 - **2 a 3 posts por semana**, martes a jueves (los días de más alcance en LinkedIn), entre 8 y 10 h
   (hora de Argentina).
-- **Cada post existe en español y en inglés.** Se publican como dos posts separados (no uno bilingüe:
-  el texto mezclado rinde peor y se corta en el "ver más").
+- **Un idioma por canal (desde 2026-10-16):** el perfil de Alejandro publica **solo en español**; la
+  página de Northstack publica la versión en inglés de los posts de producto y consejos. Publicar los
+  dos idiomas en el mismo perfil divide la poca atención inicial y LinkedIn lo trata como contenido
+  repetido. Nunca un post bilingüe.
 - **Dónde:** el perfil personal de Alejandro llega mucho más lejos que la página de empresa (unas 8
   veces más interacción). Regla: casi todo sale del perfil de Alejandro y la página lo comparte; la
   página publica en primera persona solo algunos posts de producto. Cada post indica dónde va.
 - Research completo (algoritmo, formatos, hashtags por industria, cómo llegar a la gente):
   `research-2026-10.md`.
+
+## Diagnóstico 2026-10-16: casi sin alcance
+Los dos primeros posts del perfil (Turnos 14/10, Proyectos 16/10) tuvieron 18 y 6 impresiones. Los
+hashtags no son la causa (aportan ~10 % de interacción, no alcance). Causas probables:
+1. **Red chica y poco alineada con el público:** LinkedIn muestra cada post primero a unos pocos
+   contactos y solo lo amplía si reaccionan en la primera hora.
+2. **Visuales ilegibles en el feed:** los GIFs arrancaban con la app chica y oscurecida. Ahora empiezan
+   con una placa grande con el gancho (`tools/gif/hook-gif.mjs`; las grabaciones sin placa quedan como
+   `*-app.gif`).
+3. **Mismo contenido en dos idiomas** en el mismo perfil (ver la regla de arriba).
+
+## Rutina para hacer crecer la red (lo que más mueve el alcance)
+- **Todos los días, 15 minutos:** comentar con algo concreto (no "¡gran post!") en 5 a 10 posts de
+  dueños de pymes, fundadores, RR.HH. y contadores de LATAM.
+- **Cada semana:** de 20 a 30 invitaciones a ese público, después de haber comentado algo suyo, con una
+  nota corta que lo mencione. Sin vender en el primer mensaje.
+- **El día que se publica:** avisar a 5–10 personas de confianza para que comenten en los primeros 30
+  minutos, responder cada comentario con una pregunta y no publicar otra cosa ese día.
+- **Perfil:** titular que diga a quién ayuda, foto y banner con el producto, link a joinnorthstack.com
+  en Destacados, modo creador activado.
+- **Revisar cada viernes:** impresiones y comentarios por post, contactos nuevos y mensajes privados.
 
 ## Pilares de contenido (rotar)
 | Pilar | Para qué | Peso |
@@ -42,8 +65,8 @@ _Creado: 2026-10-13_
 
 ## Reglas de escritura
 - Primera línea = gancho de menos de ~140 caracteres (es lo único que se ve antes del "ver más").
-- Párrafos de 1 a 3 líneas, **3 hashtags** al final (1 amplio + 1 de público + 1 de nicho; tabla por
-  industria en `research-2026-10.md`), emojis solo como viñetas.
+- Párrafos de 1 a 3 líneas, **3 hashtags** al final, de los más usados en LATAM (#Pymes, #Emprendedores,
+  #RRHH, #Startups, #Ventas, #Contadores) en vez de los de nicho; emojis solo como viñetas.
 - **Español neutro (tú)**, no rioplatense: el público es toda LATAM y España. Inglés neutro.
 - Respetar las reglas de contenido de `README.md`: nómina = solo seguimiento · no promocionar Payments
   ni el programa de referidos · no decir "disponible en inglés y español" · no mencionar la app de

@@ -21,4 +21,4 @@ Esto es lo que más me gusta de construir para pymes: no hay cinco comités entr
 
 Si diriges un equipo de 5 a 50 personas y hay algo que todavía resuelves con planillas y WhatsApp, cuéntamelo en los comentarios o escríbeme por privado. Te muestro Northstack en 20 minutos y, si falta algo, lo conversamos.
 
-#Startups #Pymes #Emprendimiento
+#Emprendedores #Startups #Pymes

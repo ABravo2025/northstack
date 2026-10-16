@@ -1,6 +1,5 @@
 # Post 01 · Turnos (ES)
-**Publicar:** miércoles 14/10, 8–10 h · **Dónde:** perfil de Alejandro (la página de Northstack lo
-comparte) · **Pilar:** dolor + producto · **Visual:** `../gif/turnos-es.gif` (subir con el botón de
+**Publicar:** miércoles 14/10, 8–10 h · **Dónde:** perfil de Alejandro (solo en español; la página de Northstack lo comparte) · **Pilar:** dolor + producto · **Visual:** `../gif/turnos-es.gif` (subir con el botón de
 **foto**, no el de video, para que se anime).
 
 ---
@@ -24,7 +23,7 @@ Pensado para laboratorios, clínicas, comercios, seguridad y limpieza: cualquier
 
 Si quieres verlo con tus sedes y horarios reales, comenta "TURNOS" y te escribo por privado.
 
-#GestiónDeTurnos #Pymes #RRHH
+#Pymes #Emprendedores #RRHH
 
 ---
 

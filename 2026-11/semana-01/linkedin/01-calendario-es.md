@@ -23,7 +23,7 @@ Planificar la semana empieza por saber quién está.
 
 El link para probarlo gratis 15 días está en el primer comentario.
 
-#RRHH #Pymes #TrabajoEnEquipo
+#RRHH #Pymes #Emprendedores
 
 ---
 

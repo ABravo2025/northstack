@@ -754,7 +754,8 @@ export default function IntegrationsSettingsPage({ token }: IntegrationsSettings
           },
         ]
       : []),
-    ...(canAi
+    // Also for whoever manages integrations: they can see and cut everyone's AI connections.
+    ...(canAi || canApi
       ? [
           {
             key: 'ai' as const,
@@ -832,7 +833,7 @@ export default function IntegrationsSettingsPage({ token }: IntegrationsSettings
         )}
         {current.key === 'stripe' && <StripeCard token={token} canManagePayments={canPayments} />}
         {current.key === 'api' && <ApiKeysCard token={token} canManageApiAccess={canApi} />}
-        {current.key === 'ai' && <AiAssistantsCard token={token} canUseAiAssistants={canAi} />}
+        {current.key === 'ai' && <AiAssistantsCard token={token} canUseAiAssistants={canAi} canManageApiAccess={canApi} />}
       </div>
     );
   }

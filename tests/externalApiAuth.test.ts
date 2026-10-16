@@ -16,9 +16,8 @@ vi.mock('../src/lib/prismaExternal.js', () => ({
       findUnique: vi.fn(async ({ where }: any) => users.find((u) => u.id === where.id) ?? null),
     },
     aiConnection: {
-      findFirst: vi.fn(async ({ where }: any) => {
-        const hashes = where.OR.map((c: any) => c.personalTokenHash ?? c.accessTokenHash);
-        const conn = aiConnections.find((c) => hashes.includes(c.personalTokenHash) || hashes.includes(c.accessTokenHash));
+      findUnique: vi.fn(async ({ where }: any) => {
+        const conn = aiConnections.find((c) => c.accessTokenHash === where.accessTokenHash);
         return conn ? { ...conn, tenant: conn.tenant ?? { plan: null, status: 'active' } } : null;
       }),
       update: vi.fn(async ({ where, data }: any) => {
@@ -228,7 +227,7 @@ describe('authenticateApiKey — AI assistant tokens', () => {
     const { fullKey } = generateAiToken();
     aiConnections.push({
       id: 'conn_1', tenantId: 'tenant_1', userId, clientName: 'Claude', revokedAt: null,
-      personalTokenHash: hashApiKey(fullKey), accessTokenHash: null, accessTokenExpiresAt: null, ...overrides,
+      personalTokenHash: null, accessTokenHash: hashApiKey(fullKey), accessTokenExpiresAt: new Date(Date.now() + 60_000), ...overrides,
     });
     return fullKey;
   }
@@ -284,6 +283,18 @@ describe('authenticateApiKey — AI assistant tokens', () => {
     const token = addConnection('user_7');
     const res = fakeRes();
     expect(await authenticateApiKey(fakeReq(token), res)).toBeNull();
+    expect(res.statusCode).toBe(401);
+  });
+
+  it('rejects a personal token from early staging testing — connections are OAuth-only', async () => {
+    addUser('user_7', role(['use_ai_assistants']));
+    const { fullKey } = generateAiToken();
+    aiConnections.push({
+      id: 'conn_p', tenantId: 'tenant_1', userId: 'user_7', clientName: 'Old token', revokedAt: null,
+      personalTokenHash: hashApiKey(fullKey), accessTokenHash: null, accessTokenExpiresAt: null,
+    });
+    const res = fakeRes();
+    expect(await authenticateApiKey(fakeReq(fullKey), res)).toBeNull();
     expect(res.statusCode).toBe(401);
   });
 

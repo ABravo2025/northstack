@@ -182,12 +182,13 @@ export async function authenticateApiKey(req: express.Request, res: express.Resp
 
 async function authenticateAiToken(token: string, res: express.Response): Promise<AuthenticatedApiKey | null> {
   const hash = hashApiKey(token);
-  const connection = await prismaExternal.aiConnection.findFirst({
-    where: { OR: [{ personalTokenHash: hash }, { accessTokenHash: hash }] },
+  // OAuth access tokens only (Alejandro, 2026-10-16: connections are OAuth-only). The personal
+  // tokens issued during staging testing are no longer accepted.
+  const connection = await prismaExternal.aiConnection.findUnique({
+    where: { accessTokenHash: hash },
     include: { tenant: { select: { plan: true, status: true, planOverride: true } } },
   });
-  const expired =
-    connection?.accessTokenHash === hash && connection.accessTokenExpiresAt !== null && connection.accessTokenExpiresAt < new Date();
+  const expired = !connection?.accessTokenExpiresAt || connection.accessTokenExpiresAt < new Date();
   if (!connection || connection.revokedAt || expired) {
     res.status(401).json({ error: 'Invalid, expired or revoked AI assistant token', code: 'invalid_ai_token' });
     return null;

@@ -4,34 +4,30 @@ import { api, type AiConnectionSummary } from '../../api';
 import { useToast } from '../common/ToastProvider';
 import TableBody from '../common/TableBody';
 import TableSkeleton from '../common/TableSkeleton';
-import Modal from '../common/Modal';
 import ConfirmDialog from '../common/ConfirmDialog';
 import HorizontalScrollbar from '../entity-views/HorizontalScrollbar';
 import { CopyIcon, SparklesIcon, TrashIcon } from '../common/Icons';
 
-// Settings → Integrations → AI assistants (spec-mcp-server.md §2b, §7). A user's OWN assistants:
-// each token acts as them, so there are no scopes to pick (unlike an API key) — what it can do is
-// whatever their role allows. Hidden without use_ai_assistants, which PermissionsContext also
-// folds the Growth plan into. Personal tokens only for now; OAuth connections (Unit 4) will show
-// up in this same list.
+// Settings → Integrations → AI assistants (spec-mcp-server.md §2b, §7). Connections are OAuth-only
+// (Alejandro, 2026-10-16): the person pastes the server URL into their assistant, which sends them to
+// Northstack's consent page (/oauth/authorize) — nothing to copy or create here. Each connection acts
+// as its user, so there are no scopes to pick: it can do whatever their role allows. Hidden without
+// use_ai_assistants, which PermissionsContext also folds the Growth plan into. Whoever manages
+// integrations (manage_api_access) can also see and cut everyone's connections.
 
-// The MCP endpoint lives on the same host as the app (vercel.json rewrites /mcp to api/mcp.ts),
-// so staging shows the staging URL and production the production one.
+// The MCP endpoint lives on the same host as the app (vercel.json rewrites /mcp to api/mcp.ts), so
+// staging shows the staging URL and production the production one.
 function mcpServerUrl(): string {
   return `${window.location.origin}/mcp`;
 }
 
-// Ready-to-paste setup for clients that accept a fixed Authorization header. claude.ai and ChatGPT
-// connectors need OAuth (spec-mcp-server.md Unit 4), so they aren't offered here yet.
-function setupSnippets(token: string): { key: 'claudeCode' | 'cursor'; text: string }[] {
+const CLIENT_GUIDES = ['claudeAi', 'chatgpt', 'claudeCode', 'cursor'] as const;
+
+function clientSnippet(key: (typeof CLIENT_GUIDES)[number]): string | null {
   const url = mcpServerUrl();
-  return [
-    { key: 'claudeCode', text: `claude mcp add --transport http northstack ${url} --header "Authorization: Bearer ${token}"` },
-    {
-      key: 'cursor',
-      text: JSON.stringify({ mcpServers: { northstack: { url, headers: { Authorization: `Bearer ${token}` } } } }, null, 2),
-    },
-  ];
+  if (key === 'claudeCode') return `claude mcp add --transport http northstack ${url}`;
+  if (key === 'cursor') return JSON.stringify({ mcpServers: { northstack: { url } } }, null, 2);
+  return null;
 }
 
 function formatDate(iso: string | null, never: string): string {
@@ -39,22 +35,27 @@ function formatDate(iso: string | null, never: string): string {
   return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
-export default function AiAssistantsCard({ token, canUseAiAssistants }: { token: string; canUseAiAssistants: boolean }) {
+interface AiAssistantsCardProps {
+  token: string;
+  canUseAiAssistants: boolean;
+  canManageApiAccess: boolean;
+}
+
+export default function AiAssistantsCard({ token, canUseAiAssistants, canManageApiAccess }: AiAssistantsCardProps) {
   const toast = useToast();
   const { t } = useTranslation('settingsPages');
   const [connections, setConnections] = useState<AiConnectionSummary[] | null>(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [name, setName] = useState('');
-  const [creating, setCreating] = useState(false);
-  const [revealedToken, setRevealedToken] = useState<string | null>(null);
+  const [showEveryone, setShowEveryone] = useState(false);
   const [revoking, setRevoking] = useState<AiConnectionSummary | null>(null);
   const [revokeBusy, setRevokeBusy] = useState(false);
   const tableWrapRef = useRef<HTMLDivElement>(null);
 
+  const visible = canUseAiAssistants || canManageApiAccess;
+
   const load = () => {
-    if (!canUseAiAssistants) return;
+    if (!visible) return;
     api
-      .listAiConnections(token)
+      .listAiConnections(token, showEveryone || !canUseAiAssistants ? 'all' : 'mine')
       .then(setConnections)
       .catch((error) => toast.error(t('integrations.aiAssistants.loadError', { message: (error as Error).message })));
   };
@@ -62,30 +63,11 @@ export default function AiAssistantsCard({ token, canUseAiAssistants }: { token:
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canUseAiAssistants]);
+  }, [visible, showEveryone]);
 
-  if (!canUseAiAssistants) return null;
+  if (!visible) return null;
 
-  const closeModal = () => {
-    setShowCreateModal(false);
-    setRevealedToken(null);
-    setName('');
-  };
-
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setCreating(true);
-    try {
-      const created = await api.createAiToken(token, name.trim());
-      setRevealedToken(created.fullToken);
-      setName('');
-      load();
-    } catch (error) {
-      toast.error((error as Error).message);
-    } finally {
-      setCreating(false);
-    }
-  };
+  const allMode = showEveryone || !canUseAiAssistants;
 
   const copyText = async (value: string) => {
     try {
@@ -112,6 +94,7 @@ export default function AiAssistantsCard({ token, canUseAiAssistants }: { token:
   };
 
   const never = t('integrations.aiAssistants.never');
+  const columns = allMode ? 5 : 4;
 
   return (
     <div className="card">
@@ -124,22 +107,56 @@ export default function AiAssistantsCard({ token, canUseAiAssistants }: { token:
         </div>
       </div>
 
-      <div className="mb-3 flex flex-col gap-1">
-        <span className="text-xs font-medium">{t('integrations.aiAssistants.serverUrl')}</span>
-        <div className="flex items-center gap-2">
-          <code className="text-xs" style={{ wordBreak: 'break-all' }}>
-            {mcpServerUrl()}
-          </code>
-          <button type="button" className="icon-btn" onClick={() => copyText(mcpServerUrl())}>
-            <span className="tip">{t('integrations.aiAssistants.copy')}</span>
-            <CopyIcon />
-          </button>
+      {canUseAiAssistants && (
+        <div className="mb-4 flex flex-col gap-2">
+          <span className="text-xs font-medium">{t('integrations.aiAssistants.serverUrl')}</span>
+          <div className="flex items-center gap-2">
+            <code className="text-xs" style={{ wordBreak: 'break-all' }}>
+              {mcpServerUrl()}
+            </code>
+            <button type="button" className="icon-btn" onClick={() => copyText(mcpServerUrl())}>
+              <span className="tip">{t('integrations.aiAssistants.copy')}</span>
+              <CopyIcon />
+            </button>
+          </div>
+          <p className="text-xs text-ink-muted dark:text-dark-ink-muted">{t('integrations.aiAssistants.howItWorks')}</p>
+          <details className="text-xs">
+            <summary className="cursor-pointer font-medium">{t('integrations.aiAssistants.guidesTitle')}</summary>
+            <div className="mt-2 flex flex-col gap-3">
+              {CLIENT_GUIDES.map((key) => {
+                const snippet = clientSnippet(key);
+                return (
+                  <div key={key} className="flex flex-col gap-1">
+                    <span className="font-medium">{t(`integrations.aiAssistants.guides.${key}.name`)}</span>
+                    <span className="text-ink-muted dark:text-dark-ink-muted">{t(`integrations.aiAssistants.guides.${key}.steps`)}</span>
+                    {snippet && (
+                      <div className="flex items-start gap-2">
+                        <pre className="text-xs" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', flex: 1, margin: 0 }}>
+                          {snippet}
+                        </pre>
+                        <button type="button" className="icon-btn" onClick={() => copyText(snippet)}>
+                          <span className="tip">{t('integrations.aiAssistants.copy')}</span>
+                          <CopyIcon />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </details>
         </div>
-        <p className="text-xs text-ink-muted dark:text-dark-ink-muted">{t('integrations.aiAssistants.oauthSoon')}</p>
-      </div>
+      )}
+
+      {canManageApiAccess && canUseAiAssistants && (
+        <label className="mb-2 flex items-center gap-2 text-xs">
+          <input type="checkbox" checked={showEveryone} onChange={(e) => setShowEveryone(e.target.checked)} />
+          {t('integrations.aiAssistants.showEveryone')}
+        </label>
+      )}
 
       {connections === null ? (
-        <TableSkeleton rows={2} columns={4} />
+        <TableSkeleton rows={2} columns={columns} />
       ) : (
         <>
           <div className="full-table-wrap" ref={tableWrapRef}>
@@ -147,18 +164,16 @@ export default function AiAssistantsCard({ token, canUseAiAssistants }: { token:
               <thead>
                 <tr>
                   <th>{t('integrations.aiAssistants.columns.name')}</th>
-                  <th>{t('integrations.aiAssistants.columns.token')}</th>
+                  {allMode && <th>{t('integrations.aiAssistants.columns.user')}</th>}
                   <th>{t('integrations.aiAssistants.columns.status')}</th>
                   <th>{t('integrations.aiAssistants.columns.lastUsed')}</th>
                   <th></th>
                 </tr>
               </thead>
               <TableBody
-                colSpan={5}
+                colSpan={columns}
                 isEmpty={connections.length === 0}
                 empty={{ icon: <SparklesIcon />, title: t('integrations.aiAssistants.emptyTitle'), body: t('integrations.aiAssistants.emptyBody') }}
-                onAdd={() => setShowCreateModal(true)}
-                addLabel={t('integrations.aiAssistants.createToken')}
               >
                 {connections.map((connection) => (
                   <tr key={connection.id}>
@@ -167,7 +182,11 @@ export default function AiAssistantsCard({ token, canUseAiAssistants }: { token:
                         {connection.clientName}
                       </span>
                     </td>
-                    <td>{connection.tokenPrefix ? <code className="text-xs">{connection.tokenPrefix}…</code> : '—'}</td>
+                    {allMode && (
+                      <td>
+                        {connection.user.firstName} {connection.user.lastName}
+                      </td>
+                    )}
                     <td>
                       {connection.revokedAt ? (
                         <span className="role-chip chip-neutral">{t('integrations.aiAssistants.revoked')}</span>
@@ -175,7 +194,7 @@ export default function AiAssistantsCard({ token, canUseAiAssistants }: { token:
                         <span className="role-chip chip-good">{t('integrations.aiAssistants.active')}</span>
                       )}
                     </td>
-                    <td>{formatDate(connection.lastUsedAt, never)}</td>
+                    <td>{formatDate(connection.lastUsedAt ?? connection.createdAt, never)}</td>
                     <td>
                       {!connection.revokedAt && (
                         <div className="icon-actions">
@@ -194,71 +213,6 @@ export default function AiAssistantsCard({ token, canUseAiAssistants }: { token:
           <HorizontalScrollbar targetRef={tableWrapRef} />
         </>
       )}
-
-      <Modal
-        open={showCreateModal}
-        title={revealedToken ? t('integrations.aiAssistants.createdTitle') : t('integrations.aiAssistants.createTitle')}
-        wide
-        onClose={closeModal}
-        footer={
-          revealedToken ? (
-            <button type="button" className="btn-primary btn-md" onClick={closeModal}>
-              {t('integrations.aiAssistants.doneCopiedIt')}
-            </button>
-          ) : (
-            <button type="submit" form="create-ai-token-form" className="btn-primary btn-md" disabled={creating || !name.trim()}>
-              {creating ? t('integrations.aiAssistants.creating') : t('integrations.aiAssistants.createToken')}
-            </button>
-          )
-        }
-      >
-        {revealedToken ? (
-          <div className="flex flex-col gap-3">
-            <p className="text-sm">{t('integrations.aiAssistants.copyNowWarning')}</p>
-            <div className="flex items-center gap-2">
-              <code className="text-xs" style={{ wordBreak: 'break-all', flex: 1 }}>
-                {revealedToken}
-              </code>
-              <button type="button" className="icon-btn" onClick={() => copyText(revealedToken)}>
-                <span className="tip">{t('integrations.aiAssistants.copy')}</span>
-                <CopyIcon />
-              </button>
-            </div>
-            <p className="text-sm font-medium">{t('integrations.aiAssistants.setupTitle')}</p>
-            {setupSnippets(revealedToken).map((snippet) => (
-              <div key={snippet.key} className="flex flex-col gap-1">
-                <span className="text-xs text-ink-muted dark:text-dark-ink-muted">{t(`integrations.aiAssistants.setup.${snippet.key}`)}</span>
-                <div className="flex items-start gap-2">
-                  <pre className="text-xs" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', flex: 1, margin: 0 }}>
-                    {snippet.text}
-                  </pre>
-                  <button type="button" className="icon-btn" onClick={() => copyText(snippet.text)}>
-                    <span className="tip">{t('integrations.aiAssistants.copy')}</span>
-                    <CopyIcon />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <form id="create-ai-token-form" onSubmit={handleCreate} className="flex flex-col gap-3">
-            <div className="nv-field">
-              <label htmlFor="new-ai-token-name">{t('integrations.aiAssistants.name')}</label>
-              <input
-                id="new-ai-token-name"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder={t('integrations.aiAssistants.namePlaceholder')}
-                maxLength={60}
-                autoFocus
-                required
-              />
-            </div>
-            <p className="text-xs text-ink-muted dark:text-dark-ink-muted">{t('integrations.aiAssistants.nameHelp')}</p>
-          </form>
-        )}
-      </Modal>
 
       {revoking && (
         <ConfirmDialog

@@ -249,36 +249,50 @@
     },
     "aiAssistants": {
       "title": "Asistentes de IA",
-      "description": "Conectá tu propio asistente de IA (Claude, ChatGPT, Cursor…) a Northstack. Actúa como vos: solo puede ver y hacer lo que tu rol ya permite, y todo lo que cambie aparece en el Registro de actividad como \"IA · <nombre>\".",
+      "description": "Conectá tu propio asistente de IA (Claude, ChatGPT, Cursor…) a Northstack. Actúa como vos: solo puede ver y hacer lo que tu rol ya permite, y todo lo que cambie aparece en el Registro de actividad como \"IA · <asistente>\".",
       "loadError": "No se pudieron cargar los asistentes de IA: {{message}}",
       "serverUrl": "URL del servidor MCP",
-      "oauthSoon": "Ya funciona con asistentes que aceptan un token en la cabecera (Claude Code, Cursor, VS Code…). Conectar desde claude.ai y los conectores de ChatGPT llega pronto.",
-      "setupTitle": "Listo para pegar:",
-      "setup": {"claudeCode": "Claude Code — corré esto en una terminal", "cursor": "Cursor — agregalo a .cursor/mcp.json"},
-      "createToken": "Crear token",
-      "createTitle": "Conectar un asistente de IA",
-      "createdTitle": "Token creado",
-      "name": "Nombre",
-      "namePlaceholder": "ej. Claude Desktop",
-      "nameHelp": "Para distinguir tus conexiones. También es como el Registro de actividad identifica lo que hace este asistente.",
-      "creating": "Creando…",
-      "copyNowWarning": "Copiá este token ahora — no se vuelve a mostrar. Pegalo en la configuración de tu asistente. Si lo perdés, revocalo y creá uno nuevo.",
+      "howItWorks": "Agregá esta URL como conector (servidor MCP) en tu asistente. Te va a abrir Northstack para que inicies sesión y apruebes la conexión — acá no hay nada que copiar ni crear.",
+      "guidesTitle": "Paso a paso para cada asistente",
+      "guides": {
+        "claudeAi": {
+          "name": "Claude (claude.ai y la app de escritorio)",
+          "steps": "Configuración → Conectores → Agregar conector personalizado → pegá la URL → Conectar, y después iniciá sesión en Northstack."
+        },
+        "chatgpt": {
+          "name": "ChatGPT",
+          "steps": "Configuración → Apps y conectores → agregá un conector personalizado (MCP) con esta URL y autenticación OAuth, y después iniciá sesión en Northstack."
+        },
+        "claudeCode": {
+          "name": "Claude Code",
+          "steps": "Corré esto en una terminal; después escribí /mcp en Claude Code y elegí Authenticate:"
+        },
+        "cursor": {
+          "name": "Cursor",
+          "steps": "Agregá esto a .cursor/mcp.json; Cursor te pide iniciar sesión la primera vez:"
+        }
+      },
       "copy": "Copiar",
       "copied": "Copiado al portapapeles.",
-      "copyError": "No se pudo copiar el token: {{message}}",
-      "doneCopiedIt": "Listo — ya lo copié",
+      "copyError": "No se pudo copiar: {{message}}",
+      "showEveryone": "Ver las conexiones de todo el espacio de trabajo",
       "emptyTitle": "No hay asistentes de IA conectados",
-      "emptyBody": "Creá un token para que tu propio asistente de IA trabaje en Northstack en tu nombre.",
-      "columns": { "name": "Nombre", "token": "Token", "status": "Estado", "lastUsed": "Último uso" },
+      "emptyBody": "Agregá la URL de arriba en tu asistente y aprobá la conexión — va a aparecer acá.",
+      "columns": {
+        "name": "Asistente",
+        "user": "Persona",
+        "status": "Estado",
+        "lastUsed": "Último uso"
+      },
       "active": "Activo",
-      "revoked": "Revocado",
+      "revoked": "Desconectado",
       "never": "Nunca",
-      "revoke": "Revocar",
-      "revoking": "Revocando…",
+      "revoke": "Desconectar",
+      "revoking": "Desconectando…",
       "revokedToast": "\"{{name}}\" desconectado.",
-      "revokeError": "No se pudo revocar: {{message}}",
+      "revokeError": "No se pudo desconectar: {{message}}",
       "revokeConfirmTitle": "¿Desconectar \"{{name}}\"?",
-      "revokeConfirmMessage": "El asistente pierde el acceso a tu espacio de trabajo al instante. No se puede deshacer — tendrías que crear un token nuevo."
+      "revokeConfirmMessage": "El asistente pierde el acceso al espacio de trabajo al instante. Para volver a usarlo, conectalo de nuevo desde el asistente."
     },
     "apiKeys": {
       "never": "Nunca",

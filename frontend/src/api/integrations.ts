@@ -1,5 +1,11 @@
 import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
-import type { AiConnectionSummary, ApiKeySummary, CreateAiTokenResult, CreateApiKeyResult, GoogleCalendarStatus, GoogleCalendarViewEvent, StripeConnectionStatus } from './types.js';
+
+// OAuth endpoints answer { error, error_description } (RFC 6749), not the app's { error } shape.
+async function throwOAuthError(res: Response): Promise<never> {
+  const body = await res.json().catch(() => ({}));
+  throw new Error(body.error_description || body.error || `Request failed (${res.status})`);
+}
+import type { AiConnectionSummary, ApiKeySummary, CreateApiKeyResult, GoogleCalendarStatus, GoogleCalendarViewEvent, StripeConnectionStatus } from './types.js';
 
 export const integrationsApi = {
   getGoogleCalendarStatus: async (token: string): Promise<GoogleCalendarStatus> => {
@@ -101,22 +107,32 @@ export const integrationsApi = {
     if (!res.ok) await throwApiError(res);
   },
 
-  listAiConnections: async (token: string): Promise<AiConnectionSummary[]> => {
-    const res = await apiFetch(`${API_BASE_URL}/api/integrations/ai-connections`, {
+  // 'all' = every connection in the workspace (needs manage_api_access); 'mine' = the caller's own.
+  listAiConnections: async (token: string, scope: 'mine' | 'all' = 'mine'): Promise<AiConnectionSummary[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/integrations/ai-connections${scope === 'all' ? '?scope=all' : ''}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) await throwApiError(res);
     return res.json();
   },
 
-  // Returns the full token in `fullToken` — the only time it's ever visible.
-  createAiToken: async (token: string, name: string): Promise<CreateAiTokenResult> => {
-    const res = await apiFetch(`${API_BASE_URL}/api/integrations/ai-connections`, {
+  // OAuth consent page (spec-mcp-server.md §4.1): what to show for this authorize request…
+  getOAuthConsentContext: async (token: string, query: string): Promise<{ clientName: string; redirectHost: string; blocked: 'plan' | 'permission' | null }> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/oauth/authorize/context?${query}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwOAuthError(res);
+    return res.json();
+  },
+
+  // …and the person's decision; the response says where to send the browser back to the assistant.
+  decideOAuthConsent: async (token: string, body: Record<string, string>): Promise<{ redirectTo: string }> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/oauth/authorize`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify(body),
     });
-    if (!res.ok) await throwApiError(res);
+    if (!res.ok) await throwOAuthError(res);
     return res.json();
   },
 

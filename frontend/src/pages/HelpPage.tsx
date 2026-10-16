@@ -264,6 +264,26 @@ const FAQ_CATEGORIES: FaqCategory[] = [
         a: 'Only people with Payroll access, and only if the company turned on "Show schedule cost" in Settings → Shifts (Growth). It uses each person\'s hourly rate from Payroll; fixed salaries are shown as hours without a rate.',
       },
       {
+        q: 'If I give away a shift, is it still mine until someone takes it?',
+        a: 'Yes. You keep it until a colleague takes it and, if your company asks for it, a scheduler approves. If nobody takes it before it starts, the request expires and the shift stays yours.',
+      },
+      {
+        q: 'What if someone clocks in without a shift?',
+        a: 'It\'s allowed: Northstack adds an overtime shift at that location to the schedule (amber border) and tells the scheduler, who can review it in Shifts → Today.',
+      },
+      {
+        q: 'Does the clock-in QR change?',
+        a: 'No, each location has one fixed QR. If it gets copied or shared, regenerate it in Settings → Shifts → Clock-in and print the new one; the old one stops working.',
+      },
+      {
+        q: 'What does the client see in the hours report?',
+        a: 'Only approved weeks for their company in that month: date, details, hours and whether each line is billable, plus totals. Names are optional. The link needs no login and expires after 30 days.',
+      },
+      {
+        q: 'Does the suggested schedule publish shifts?',
+        a: 'Never. It only fills draft shifts with free places, and only with what you keep ticked. Nobody hears about it until you publish the week.',
+      },
+      {
         q: 'Can I stop getting some emails?',
         a: 'Yes. In Settings → Profile → Email notifications, turn off the ones you don\'t want. The bell keeps showing everything, and account emails always arrive.',
       },
@@ -572,6 +592,26 @@ const FAQ_CATEGORIES_ES: FaqCategory[] = [
       {
         q: '¿Quién puede ver el costo del cronograma?',
         a: 'Solo quienes tienen acceso a Payroll, y solo si la empresa activó "Mostrar el costo del cronograma" en Configuración → Turnos (Growth). Usa la tarifa por hora de cada persona en Payroll; los sueldos fijos se muestran como horas sin tarifa.',
+      },
+      {
+        q: 'Si cedo un turno, ¿sigue siendo mío hasta que alguien lo tome?',
+        a: 'Sí. Lo tenés vos hasta que un compañero lo toma y, si tu empresa lo pide, lo aprueba quien arma turnos. Si nadie lo toma antes de que empiece, el pedido vence y el turno sigue siendo tuyo.',
+      },
+      {
+        q: '¿Qué pasa si alguien ficha sin tener turno?',
+        a: 'Se puede: Northstack agrega un turno de tiempo extra en esa locación al cronograma (borde ámbar) y le avisa a quien arma turnos, que lo revisa en Turnos → Hoy.',
+      },
+      {
+        q: '¿El QR para fichar cambia?',
+        a: 'No, cada locación tiene un QR fijo. Si se copió o se compartió, regeneralo en Configuración → Turnos → Fichaje e imprimí el nuevo; el anterior deja de funcionar.',
+      },
+      {
+        q: '¿Qué ve el cliente en el informe de horas?',
+        a: 'Solo las semanas aprobadas de su empresa en ese mes: fecha, detalle, horas y si cada línea es facturable, más los totales. Los nombres son opcionales. El link no pide login y vence a los 30 días.',
+      },
+      {
+        q: '¿El cronograma sugerido publica turnos?',
+        a: 'Nunca. Solo completa turnos en borrador con lugares libres, y solo con lo que dejes tildado. Nadie se entera hasta que publiques la semana.',
       },
       {
         q: '¿Puedo dejar de recibir algunos emails?',

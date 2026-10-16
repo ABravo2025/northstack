@@ -102,7 +102,7 @@ const MODULE_MAP: { id: string; label: string; blurb: string; icon: JSX.Element 
   { id: 'g-payroll', label: 'Payroll', blurb: 'Compensation, pay runs, payslips.', icon: <BriefcaseIcon /> },
   { id: 'g-tasks', label: 'Tasks & notes', blurb: 'Follow-ups on any record.', icon: <ListIcon /> },
   { id: 'g-projects', label: 'Projects', blurb: 'Phases, tasks and teams, blank or from a template.', icon: <FolderIcon /> },
-  { id: 'g-shifts', label: 'Shifts', blurb: 'Shifts by location, timesheets, approvals and hours reports.', icon: <ClockIcon /> },
+  { id: 'g-shifts', label: 'Shifts', blurb: 'Shifts by location, swaps, clock-in, timesheets, approvals and hours reports.', icon: <ClockIcon /> },
   { id: 'g-forms', label: 'Public forms', blurb: 'No-login intake for hiring and leads.', icon: <FormIcon /> },
   { id: 'g-integrations', label: 'Integrations & API', blurb: 'Google Calendar, Stripe, API keys.', icon: <PlugIcon /> },
   { id: 'g-settings', label: 'Settings', blurb: 'Company profile, logo, currency, theme.', icon: <GearIcon /> },
@@ -167,7 +167,7 @@ const MODULE_MAP_ES: { id: string; label: string; blurb: string; icon: JSX.Eleme
   { id: 'g-payroll', label: 'Nómina', blurb: 'Compensación, corridas de pago, recibos de sueldo.', icon: <BriefcaseIcon /> },
   { id: 'g-tasks', label: 'Tareas y notas', blurb: 'Seguimientos sobre cualquier registro.', icon: <ListIcon /> },
   { id: 'g-projects', label: 'Proyectos', blurb: 'Fases, tareas y equipos, en blanco o desde un template.', icon: <FolderIcon /> },
-  { id: 'g-shifts', label: 'Turnos', blurb: 'Turnos por locación, timesheet, aprobaciones y reportes de horas.', icon: <ClockIcon /> },
+  { id: 'g-shifts', label: 'Turnos', blurb: 'Turnos por locación, cambios, fichaje, timesheet, aprobaciones y reportes de horas.', icon: <ClockIcon /> },
   { id: 'g-forms', label: 'Formularios públicos', blurb: 'Carga sin login para reclutamiento y leads.', icon: <FormIcon /> },
   { id: 'g-integrations', label: 'Integraciones y API', blurb: 'Google Calendar, Stripe, claves de API.', icon: <PlugIcon /> },
   { id: 'g-settings', label: 'Configuración', blurb: 'Datos de la empresa, logo, moneda, tema.', icon: <GearIcon /> },
@@ -1900,10 +1900,66 @@ export default function GuidePage() {
             </div>
 
             <div className="help-sub">
+              <h3>Cambios, cesiones y turnos abiertos</h3>
+              <p>
+                En <strong>Mis turnos</strong>, cada turno que viene tiene <strong>Buscar quien me cubra</strong>
+                (ofrecérselo a tus compañeros) y <strong>Cambiar con alguien</strong> (elegís un turno de un compañero
+                en la misma locación; acepta o rechaza). En <strong>Para tomar</strong> ves los turnos que otros
+                cedieron y los turnos publicados con lugares libres que quien arma turnos marcó <strong>Abierto a
+                compañeros</strong>: <strong>Lo tomo</strong>. Nada cambia hasta que se aprueba: de entrada, los
+                cambios necesitan la aprobación de quien arma turnos y los turnos abiertos son del primero que los
+                toma; las dos cosas se cambian en Configuración → Turnos. Quien arma turnos decide en
+                <strong> Turnos → Pedidos</strong> (con el número en el menú). Alguien bloqueado (otro turno a esa
+                hora) nunca puede tomarlo.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Fichaje de entrada y salida (Growth)</h3>
+              <p>
+                En <strong>Configuración → Turnos → Fichaje</strong> elegís, para cada locación, cómo se ficha:
+                escaneando el <strong>QR</strong> de la locación (lo imprimís y lo ponés en la entrada; se escanea con
+                el propio celular), desde la app, o las dos. También podés pedir la ubicación, dentro de un radio que
+                definís. Se ficha la entrada, las pausas y la salida desde la página del QR o desde
+                <strong> Mis turnos</strong>. Fichar sin turno agrega un turno de <strong>tiempo extra</strong> al
+                cronograma (borde ámbar). A quien sigue adentro al final del día se le cierra solo y queda para revisar.
+              </p>
+              <p>
+                <strong>Turnos → Hoy</strong> muestra, por locación, quién está, en pausa, se fue, llegó tarde o
+                falta, y <strong>Para revisar</strong> lista los fichajes a controlar; las correcciones piden motivo y
+                quedan registradas. Lo fichado es lo que el timesheet sugiere para esos turnos, y Reportes por persona
+                suma horas fichadas, llegadas tarde y ausencias. Quien arma turnos recibe un resumen diario de
+                asistencia.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Horas presupuestadas e informes para clientes (Growth)</h3>
+              <p>
+                En el detalle de un proyecto, <strong>Definir horas presupuestadas</strong>: una barra compara las
+                horas cargadas en timesheets con el presupuesto (ámbar desde 80 %, roja si se pasa), el dueño del
+                proyecto recibe un aviso al 80 % y al 100 %, y Reportes por proyecto muestra el presupuesto.
+                Agrupando por empresa, <strong>Informe cliente</strong> arma las horas <strong>aprobadas</strong> del
+                mes de esa empresa (un proyecto o todos, con o sin nombres) como PDF, como link privado que no pide
+                login y vence a los 30 días, o como email al cliente con las dos cosas.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Cronograma sugerido (Growth)</h3>
+              <p>
+                En la vista Semana o Por persona, <strong>Sugerir semana</strong> propone quién podría cubrir los
+                turnos en borrador de la semana que tienen lugares libres. Nunca sugiere a alguien bloqueado, de
+                licencia, en feriado, no disponible, sin el descanso mínimo o sin una habilidad, y reparte las horas de
+                forma pareja. Destildá lo que no quieras y asigná: los turnos siguen en borrador hasta que publiques.
+              </p>
+            </div>
+
+            <div className="help-sub">
               <h3>Qué emails recibís</h3>
               <p>
                 En <strong>Configuración → Perfil → Notificaciones por email</strong> cada persona elige qué emails
-                recibe (turnos, recordatorios, timesheet, ausencias, ventas). La campana sigue mostrando todo, y los
+                recibe (turnos, recordatorios, cambios, asistencia, timesheet, proyectos, ausencias, ventas). La campana sigue mostrando todo, y los
                 emails de la cuenta (contraseña, invitaciones, facturación) siempre llegan.
               </p>
             </div>
@@ -2047,10 +2103,64 @@ export default function GuidePage() {
             </div>
 
             <div className="help-sub">
+              <h3>Swaps, hand-overs and open shifts</h3>
+              <p>
+                In <strong>My shifts</strong>, each upcoming shift has <strong>Find someone to cover</strong> (offer
+                it to your colleagues) and <strong>Swap with someone</strong> (pick a colleague's shift at the same
+                location; they accept or decline). Under <strong>Available to take</strong> you see shifts others
+                handed over and published shifts with free places that the scheduler marked <strong>Open to
+                colleagues</strong>: <strong>Take it</strong>. Nothing changes until it's approved: by default swaps
+                need a scheduler's approval and open shifts go to whoever takes them first; both can be changed in
+                Settings → Shifts. Schedulers decide in <strong>Shifts → Requests</strong> (with a count in the menu).
+                Someone blocked (another shift at that time) can never take it.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Clocking in and out (Growth)</h3>
+              <p>
+                In <strong>Settings → Shifts → Clock-in</strong> choose, for each location, how people clock in: by
+                scanning the location's <strong>QR</strong> (print it and put it at the entrance; they scan it with
+                their own phone), from the app, or both. You can also ask for their position, within a radius you
+                set. People clock in, take breaks and clock out from the QR page or from <strong>My shifts</strong>.
+                Clocking in without a shift adds an <strong>overtime</strong> shift to the schedule (amber border).
+                Anyone still in at the end of the day is closed automatically and marked for review.
+              </p>
+              <p>
+                <strong>Shifts → Today</strong> shows, for each location, who is in, on a break, gone, late or still
+                missing, and <strong>To review</strong> lists punches to check; corrections need a reason and are
+                recorded. Clocked time is what the timesheet suggests for those shifts, and Reports by person add
+                clocked hours, late arrivals and absences. Schedulers get a daily attendance summary.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Hour budgets and reports for clients (Growth)</h3>
+              <p>
+                In a project's detail, <strong>Set an hour budget</strong>: a bar compares the hours logged in
+                timesheets with the budget (amber from 80 %, red when over), the project owner is notified at 80 % and
+                100 %, and Reports by project show the budget. Grouped by company, <strong>Client report</strong>
+                creates the month's <strong>approved</strong> hours for that company (one project or all, with or
+                without names) as a PDF, a private link that needs no login and expires in 30 days, or an email to the
+                client with both.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Suggested schedule (Growth)</h3>
+              <p>
+                In the Week or By person view, <strong>Suggest week</strong> proposes who could cover the week's draft
+                shifts with free places. It never suggests anyone blocked, on time off, on a holiday, unavailable,
+                short on rest or missing a skill, and spreads the hours evenly. Untick what you don't want and assign:
+                the shifts stay drafts until you publish.
+              </p>
+            </div>
+
+            <div className="help-sub">
               <h3>Which emails you get</h3>
               <p>
                 In <strong>Settings → Profile → Email notifications</strong> each person picks which emails they get
-                (shifts, reminders, timesheet, time off, sales). The bell still shows everything, and account emails
+                (shifts, reminders, swaps, attendance, timesheet, projects, time off, sales). The bell still shows everything, and account emails
                 (password, invitations, billing) always arrive.
               </p>
             </div>

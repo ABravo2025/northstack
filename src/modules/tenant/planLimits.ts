@@ -35,6 +35,11 @@ export interface PlanLimits {
 
 export type EffectivePlan = 'starter' | 'growth';
 
+// STANDING RULE (Alejandro, 2026-10-16): every NEW feature ships Growth-only. Add its flag/limit
+// here with Starter off (false / 0) and Growth on; Alejandro decides later, feature by feature,
+// whether Starter gets it. Also: enforce it via getPlanLimits(), make it Admin-overridable
+// (OVERRIDABLE_*), expose it in planFeatures(), and list it as Growth-only in the plans comparison
+// (PlansComparison, landing, /guide) once it's in production. Never add a feature to Starter unasked.
 export const PLAN_LIMITS: Record<EffectivePlan, PlanLimits> = {
   starter: {
     maxPipelines: 2,

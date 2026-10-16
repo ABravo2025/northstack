@@ -241,18 +241,18 @@ export default function ShiftsSettingsPage({ token }: ShiftsSettingsPageProps) {
         <section className="card rules-card">
           <h3 className="card-title">{t('settings.confirm.title')}</h3>
           <p className="rules-lead">{t('settings.confirm.lead')}</p>
-          <label className="rules-switch">
+          <label className="rules-switch switch-row">
             <input type="checkbox" checked={settings.requireConfirmation} onChange={() => save({ requireConfirmation: !settings.requireConfirmation })} />
             {t('settings.confirm.require')}
           </label>
           {!settings.requireConfirmation && <p className="rules-hint">{t('settings.confirm.requireHint')}</p>}
           {settings.requireConfirmation && (
-            <label className="rules-switch">
+            <label className="rules-switch switch-row">
               <input type="checkbox" checked={settings.remindUnanswered} onChange={() => save({ remindUnanswered: !settings.remindUnanswered })} />
               {t('settings.confirm.remindUnanswered')}
             </label>
           )}
-          <label className="rules-switch">
+          <label className="rules-switch switch-row">
             <input type="checkbox" checked={settings.remindDayBefore} onChange={() => save({ remindDayBefore: !settings.remindDayBefore })} />
             {t('settings.confirm.remindDayBefore')}
           </label>
@@ -303,17 +303,17 @@ export default function ShiftsSettingsPage({ token }: ShiftsSettingsPageProps) {
       <section className="card rules-card">
         <h3 className="card-title">{t('settings.swaps.title')}</h3>
         <p className="rules-lead">{t('settings.swaps.lead')}</p>
-        <label className="rules-switch">
+        <label className="rules-switch switch-row">
           <input type="checkbox" checked={settings.allowSwaps} onChange={() => save({ allowSwaps: !settings.allowSwaps })} />
           {t('settings.swaps.allow')}
         </label>
         {settings.allowSwaps && (
-          <label className="rules-switch">
+          <label className="rules-switch switch-row">
             <input type="checkbox" checked={settings.swapNeedsApproval} onChange={() => save({ swapNeedsApproval: !settings.swapNeedsApproval })} />
             {t('settings.swaps.swapApproval')}
           </label>
         )}
-        <label className="rules-switch">
+        <label className="rules-switch switch-row">
           <input type="checkbox" checked={settings.openShiftNeedsApproval} onChange={() => save({ openShiftNeedsApproval: !settings.openShiftNeedsApproval })} />
           {t('settings.swaps.openApproval')}
         </label>
@@ -323,19 +323,19 @@ export default function ShiftsSettingsPage({ token }: ShiftsSettingsPageProps) {
       <section className="card rules-card">
         <h3 className="card-title">{t('settings.timesheet.title')}</h3>
         <p className="rules-lead">{t('settings.timesheet.lead')}</p>
-        <label className="rules-switch">
+        <label className="rules-switch switch-row">
           <input type="checkbox" checked={settings.timesheetEnabled} onChange={() => save({ timesheetEnabled: !settings.timesheetEnabled })} />
           {t('settings.timesheet.enabled')}
         </label>
         {settings.timesheetEnabled && (
-          <label className="rules-switch">
+          <label className="rules-switch switch-row">
             <input type="checkbox" checked={settings.timesheetReminder} onChange={() => save({ timesheetReminder: !settings.timesheetReminder })} />
             {t('settings.timesheet.reminder')}
           </label>
         )}
         {features.payroll ? (
           <>
-            <label className="rules-switch">
+            <label className="rules-switch switch-row">
               <input type="checkbox" checked={settings.showScheduleCost} onChange={() => save({ showScheduleCost: !settings.showScheduleCost })} />
               {t('settings.timesheet.cost')}
             </label>

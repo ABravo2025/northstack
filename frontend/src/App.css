@@ -3503,6 +3503,8 @@ textarea.overview-field-input {
 }
 .rules-switch input:checked {
   @apply bg-accent;
+  /* the generic checkbox rule paints a check mark; a switch shows only its knob */
+  background-image: none;
 }
 .rules-switch input:checked::after {
   transform: translateX(16px);
@@ -4007,4 +4009,13 @@ textarea.overview-field-input {
    text-right / text-center utility on a single <th> still wins. */
 :where(.full-table, .table) th {
   text-align: left;
+}
+
+/* A switch as a settings row: label on the left, switch in its own right-hand column, rows
+   separated by a hairline (Email notifications, Shifts settings). */
+.rules-switch.switch-row {
+  @apply flex w-full max-w-2xl flex-row-reverse items-center justify-between gap-6 border-b border-line-soft py-2.5 text-ink dark:border-dark-line-soft dark:text-dark-ink;
+}
+.rules-switch.switch-row:last-child {
+  @apply border-b-0;
 }

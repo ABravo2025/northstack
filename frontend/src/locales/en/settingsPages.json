@@ -1111,11 +1111,11 @@
     "group": {
       "projects": "Projects",
       "shifts": "Shifts and timesheet",
-      "projectBudget": "A project I own is near or over its hour budget",
       "timeOff": "Time off",
       "sales": "Sales"
     },
     "category": {
+      "projectBudget": "A project I own is near or over its hour budget",
       "shifts": "New, changed or cancelled shifts",
       "shiftReminders": "Reminders: tomorrow's shifts and shifts waiting for my answer",
       "shiftSwaps": "Hand-overs and swaps: asks, approvals, outcomes",

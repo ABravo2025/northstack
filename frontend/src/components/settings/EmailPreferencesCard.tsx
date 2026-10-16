@@ -54,11 +54,11 @@ export default function EmailPreferencesCard({ token }: EmailPreferencesCardProp
         {groups.map((g) => (
           <div key={g.key}>
             <span className="rules-label">{t(`emailPreferences.group.${g.key}`)}</span>
-            <div className="mt-1.5 flex flex-col gap-2">
+            <div className="mt-1 flex flex-col">
               {g.categories.map((c) => {
                 const on = prefs.find((p) => p.key === c)?.email ?? true;
                 return (
-                  <label key={c} className="rules-switch">
+                  <label key={c} className="rules-switch switch-row">
                     <input type="checkbox" checked={on} onChange={() => toggle(c, !on)} />
                     {t(`emailPreferences.category.${c}`)}
                   </label>

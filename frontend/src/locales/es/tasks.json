@@ -60,7 +60,8 @@
     "widget": {
       "title": "Mis tareas",
       "loading": "Cargando…",
-      "empty": "No tenés tareas asignadas."
+      "empty": "No tenés tareas asignadas.",
+      "viewMore": "Ver más"
     },
     "time": {
       "label": "Tiempo dedicado",

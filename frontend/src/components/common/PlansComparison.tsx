@@ -99,7 +99,10 @@ export default function PlansComparison({ limits }: { limits: Record<PricedPlan,
       );
     }
     if (v === false) return <span aria-label={t('plansModal.compare.notIncluded')} className="text-ink-faint dark:text-dark-ink-faint">—</span>;
-    if (v === null) return <span className="font-medium">{t('plansModal.compare.unlimited')}</span>;
+    // Per-row word when the language needs agreement (ES: "Ilimitados" / "Ilimitadas").
+    if (v === null) {
+      return <span className="font-medium">{t(`plansModal.compare.rows.${row.key}.unlimited`, { defaultValue: t('plansModal.compare.unlimited') })}</span>;
+    }
     return (
       <span className="font-medium tabular-nums">
         {row.unit === 'days' ? t('plansModal.compare.days', { count: v }) : t('plansModal.compare.upTo', { count: v })}
@@ -118,8 +121,9 @@ export default function PlansComparison({ limits }: { limits: Record<PricedPlan,
           <thead>
             <tr>
               <th>{t('plansModal.compare.feature')}</th>
-              <th className="w-1/5 text-center">Starter</th>
-              <th className="w-1/5 text-center">Growth</th>
+              {/* Inline: the global `.table th` rule left-aligns headers and outranks a utility class on main. */}
+              <th className="w-1/5" style={{ textAlign: 'center' }}>Starter</th>
+              <th className="w-1/5" style={{ textAlign: 'center' }}>Growth</th>
             </tr>
           </thead>
           <tbody>
@@ -138,7 +142,7 @@ export default function PlansComparison({ limits }: { limits: Record<PricedPlan,
                     )}
                   </td>
                   {PLANS.map((plan) => (
-                    <td key={plan} className="text-center">
+                    <td key={plan} style={{ textAlign: 'center' }}>
                       {cell(row, plan)}
                     </td>
                   ))}

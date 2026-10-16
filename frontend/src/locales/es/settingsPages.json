@@ -523,10 +523,12 @@
           "label": "Autogestión para cada empleado"
         },
         "customRoles": {
-          "label": "Roles y permisos personalizados"
+          "label": "Roles y permisos personalizados",
+          "unlimited": "Ilimitados"
         },
         "policies": {
-          "label": "Políticas de ausencia"
+          "label": "Políticas de ausencia",
+          "unlimited": "Ilimitadas"
         },
         "holidays": {
           "label": "Calendarios de feriados y días de la empresa"
@@ -535,7 +537,8 @@
           "label": "Sincronización con Google Calendar"
         },
         "pipelines": {
-          "label": "Pipelines de ventas"
+          "label": "Pipelines de ventas",
+          "unlimited": "Ilimitados"
         },
         "crmRecords": {
           "label": "Empresas, contactos y oportunidades"
@@ -545,7 +548,8 @@
         },
         "activeProjects": {
           "label": "Proyectos abiertos a la vez",
-          "sub": "Los completados y cancelados no cuentan"
+          "sub": "Los completados y cancelados no cuentan",
+          "unlimited": "Ilimitados"
         },
         "taskChat": {
           "label": "Tareas con chat, menciones y links de Meet"
@@ -554,7 +558,8 @@
           "label": "Guardar tus propios templates de proyecto"
         },
         "locations": {
-          "label": "Sedes activas"
+          "label": "Sedes activas",
+          "unlimited": "Ilimitadas"
         },
         "scheduling": {
           "label": "Turnos, disponibilidad y confirmaciones"

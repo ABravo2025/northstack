@@ -361,6 +361,12 @@ with our own tax and accounting obligations, even after the rest of a Tenant's d
 deleted. Payment records held by our payment processors (Dodo Payments, Mercado Pago) are
 kept by them according to their own obligations, independent of ours.
 
+If you are a Referral Program Member, deleting or deactivating your account does not delete
+your payout method and details or the record of your referral commissions and transfers right
+away: we keep them, encrypted, for as long as needed to settle the commissions you had already
+earned and to comply with our tax and accounting obligations. See the Referral Program Terms
+and Conditions.
+
 Our internal record of administrative actions taken on a Tenant (Section 4.6) continues to
 exist after that Tenant's account is deleted, for our own operational and compliance
 purposes. It is no longer linked to the deleted Tenant, but it may still contain limited

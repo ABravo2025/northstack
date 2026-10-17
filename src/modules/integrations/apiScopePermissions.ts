@@ -10,6 +10,9 @@ import {
   canViewContact,
   canViewEmployee,
   canViewOpportunity,
+  canViewShifts,
+  canManageShifts,
+  canApproveTimesheets,
 } from '../auth/permissionService.js';
 import { getEmployeeScope, type RoleContext } from '../auth/roleService.js';
 import { API_SCOPES, type ApiScope } from '../../lib/externalApiAuth.js';
@@ -56,6 +59,12 @@ const SCOPE_RULES: Record<ApiScope, (role: RoleContext) => boolean> = {
   'tasks:write': () => true,
   'notes:read': () => true,
   'notes:write': () => true,
+  // A key acts as its creator, and the app's shift/timesheet routes apply their relationship rules
+  // to that person — but a company integration should only exist for someone who runs the area.
+  'shifts:read': (role) => canViewShifts(role) || canManageShifts(role),
+  'shifts:write': (role) => canManageShifts(role),
+  'timesheets:read': (role) => canApproveTimesheets(role),
+  'timesheets:write': (role) => canApproveTimesheets(role),
 };
 
 export function canGrantApiScope(role: RoleContext, scope: ApiScope): boolean {
@@ -88,6 +97,11 @@ const AI_SCOPE_RULES: Record<ApiScope, (role: RoleContext) => boolean> = {
   'tasks:write': () => true,
   'notes:read': () => true,
   'notes:write': () => true,
+  // Everyone has their own shifts and timesheet; the delegated routes decide the rest.
+  'shifts:read': () => true,
+  'shifts:write': () => true,
+  'timesheets:read': () => true,
+  'timesheets:write': () => true,
 };
 
 export function aiScopesForRole(role: RoleContext): ApiScope[] {

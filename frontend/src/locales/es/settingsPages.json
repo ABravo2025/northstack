@@ -329,7 +329,8 @@
       "scopeGroups": {
         "tasksNotes": "Tareas y Notas",
         "crm": "CRM",
-        "hr": "RR.HH."
+        "hr": "RR.HH.",
+        "shifts": "Turnos y horas"
       },
       "scopeResources": {
         "tasks": "Tareas",
@@ -340,7 +341,9 @@
         "pipelines": "Pipelines",
         "employees": "Empleados",
         "timeOff": "Ausencias",
-        "payroll": "Nómina"
+        "payroll": "Nómina",
+        "shifts": "Turnos",
+        "timesheets": "Timesheets"
       },
       "read": "Lectura",
       "write": "Escritura",

@@ -8,7 +8,11 @@ import { isRateLimited } from '../lib/rateLimit.js';
 import prismaExternal from '../lib/prismaExternal.js';
 import { authenticateApiKey, hasScope, type AuthenticatedApiKey } from '../lib/externalApiAuth.js';
 import { isApiAccessAllowed } from '../modules/tenant/planLimits.js';
-import { runWithRequestContext } from '../lib/requestContext.js';
+import { getRequestContext, runWithRequestContext } from '../lib/requestContext.js';
+import { shiftsRouter } from './shifts.js';
+import { shiftRequestsRouter } from './shiftRequests.js';
+import { timesheetsRouter } from './timesheets.js';
+import { findShiftById } from '../modules/shifts/shiftService.js';
 import { findEntityTenantId, isSupportedCrossModuleEntityType } from '../modules/crossModule/entityLookup.js';
 import type { EntityType } from '@prisma/client';
 import { findUserById } from '../modules/tenant/tenantService.js';
@@ -342,6 +346,140 @@ function toTime(value: unknown): number | null {
   if (value === null || value === undefined) return null;
   const time = new Date(value as string | Date).getTime();
   return Number.isNaN(time) ? null : time;
+}
+
+// ---- Shifts & Timesheets (2026-10-16, spec-mcp-server.md §10) ----
+//
+// Not reimplemented here: an allowlisted request is handed to the app's own Shifts/Timesheet
+// routers, running as the acting user (requestContext.actingUser, read by authenticateUser). Those
+// routers already encode every relationship rule — a location's manager schedules it, a direct
+// manager approves timesheets, everyone sees their own shifts — plus plan and suspension checks, so
+// the API, the MCP and the app can't drift apart. Anything not on the list (publishing a week,
+// cancelling a shift, settings, locations, skills, templates, swaps) stays in the app.
+
+const RESERVED_SHIFT_SEGMENTS =
+  'settings|locations|skills|templates|availability|publish|copy-week|suggestions|requests|available|mine|cost|timesheet|assignments';
+const SHIFT_ID = `(?!(?:${RESERVED_SHIFT_SEGMENTS})(?:/|$))[^/]+`;
+
+interface DelegatedRoute {
+  method: string;
+  pattern: RegExp;
+  scope: string;
+  // AI assistants may only touch DRAFT shifts here: changing a published one notifies other people.
+  draftOnlyForAi?: boolean;
+}
+
+const DELEGATED_ROUTES: DelegatedRoute[] = [
+  { method: 'GET', pattern: /^\/api\/shifts$/, scope: 'shifts:read' },
+  { method: 'GET', pattern: /^\/api\/shifts\/mine$/, scope: 'shifts:read' },
+  { method: 'GET', pattern: /^\/api\/shifts\/locations$/, scope: 'shifts:read' },
+  { method: 'GET', pattern: /^\/api\/shifts\/availability$/, scope: 'shifts:read' },
+  { method: 'GET', pattern: /^\/api\/shifts\/requests$/, scope: 'shifts:read' },
+  { method: 'GET', pattern: new RegExp(`^/api/shifts/${SHIFT_ID}/candidates$`), scope: 'shifts:read' },
+  { method: 'POST', pattern: /^\/api\/shifts$/, scope: 'shifts:write' },
+  { method: 'PATCH', pattern: new RegExp(`^/api/shifts/${SHIFT_ID}$`), scope: 'shifts:write', draftOnlyForAi: true },
+  { method: 'DELETE', pattern: new RegExp(`^/api/shifts/${SHIFT_ID}$`), scope: 'shifts:write', draftOnlyForAi: true },
+  { method: 'POST', pattern: new RegExp(`^/api/shifts/${SHIFT_ID}/assignments$`), scope: 'shifts:write', draftOnlyForAi: true },
+  { method: 'DELETE', pattern: new RegExp(`^/api/shifts/${SHIFT_ID}/assignments/[^/]+$`), scope: 'shifts:write', draftOnlyForAi: true },
+  { method: 'POST', pattern: /^\/api\/shifts\/assignments\/[^/]+\/respond$/, scope: 'shifts:write' },
+  { method: 'POST', pattern: /^\/api\/shifts\/availability$/, scope: 'shifts:write' },
+  { method: 'DELETE', pattern: /^\/api\/shifts\/availability\/[^/]+$/, scope: 'shifts:write' },
+  { method: 'GET', pattern: /^\/api\/shifts\/timesheet$/, scope: 'timesheets:read' },
+  { method: 'GET', pattern: /^\/api\/shifts\/timesheet\/approvals$/, scope: 'timesheets:read' },
+  { method: 'GET', pattern: /^\/api\/shifts\/timesheet\/reports$/, scope: 'timesheets:read' },
+  { method: 'POST', pattern: /^\/api\/shifts\/timesheet\/entries$/, scope: 'timesheets:write' },
+  { method: 'PATCH', pattern: /^\/api\/shifts\/timesheet\/entries\/[^/]+$/, scope: 'timesheets:write' },
+  { method: 'DELETE', pattern: /^\/api\/shifts\/timesheet\/entries\/[^/]+$/, scope: 'timesheets:write' },
+  { method: 'POST', pattern: /^\/api\/shifts\/timesheet\/submit$/, scope: 'timesheets:write' },
+  { method: 'POST', pattern: /^\/api\/shifts\/timesheet\/[^/]+\/decision$/, scope: 'timesheets:write' },
+];
+
+// /api/external/v1/shifts/... → /api/shifts/...; /api/external/v1/timesheets/... → /api/shifts/timesheet/...
+function internalShiftsPath(externalPath: string): string | null {
+  if (externalPath === '/api/external/v1/shifts' || externalPath.startsWith('/api/external/v1/shifts/')) {
+    return externalPath.replace('/api/external/v1/shifts', '/api/shifts');
+  }
+  if (externalPath === '/api/external/v1/timesheets' || externalPath.startsWith('/api/external/v1/timesheets/')) {
+    return externalPath.replace('/api/external/v1/timesheets', '/api/shifts/timesheet');
+  }
+  return null;
+}
+
+function runRouter(router: express.Router, req: express.Request, res: express.Response): Promise<boolean> {
+  return new Promise((resolve, reject) => {
+    router(req, res, (err?: unknown) => (err ? reject(err) : resolve(false)));
+    res.once('finish', () => resolve(true));
+  });
+}
+
+async function delegateToShifts(req: express.Request, res: express.Response, apiKey: AuthenticatedApiKey): Promise<void> {
+  const externalPath = req.path.startsWith('/api/external/v1') ? req.path : `/api/external/v1${req.path}`;
+  const internalPath = internalShiftsPath(externalPath);
+  const route = internalPath ? DELEGATED_ROUTES.find((r) => r.method === req.method && r.pattern.test(internalPath)) : undefined;
+  if (!internalPath || !route) {
+    return respond(req, res, apiKey, 404, { error: 'Not available through the API — use the app for this.', code: 'not_found' });
+  }
+  if (!(await requireScopeLogged(req, res, apiKey, route.scope))) return;
+
+  if (route.draftOnlyForAi && apiKey.kind === 'ai') {
+    const shiftId = internalPath.split('/')[3];
+    const shift = await findShiftById(shiftId);
+    if (!shift || shift.tenantId !== apiKey.tenantId) return notFound(req, res, apiKey);
+    if (shift.status !== 'draft') {
+      return respond(req, res, apiKey, 409, {
+        error: 'An AI assistant can only change draft shifts. Published shifts notify people, so change them in the app.',
+        code: 'published_shift',
+      });
+    }
+  }
+
+  // The request log is written before the response leaves, same rule as respond(): hold the real
+  // end() until the row is saved, since Vercel may freeze the function right after.
+  const originalEnd = res.end.bind(res) as (...args: unknown[]) => express.Response;
+  (res as unknown as { end: (...args: unknown[]) => express.Response }).end = (...args: unknown[]) => {
+    void bestEffort(
+      prismaExternal.apiRequestLog.create({
+        data: {
+          tenantId: apiKey.tenantId,
+          apiKeyId: apiKey.kind === 'api_key' ? apiKey.id : null,
+          aiConnectionId: apiKey.kind === 'ai' ? apiKey.id : null,
+          method: req.method,
+          path: req.path,
+          statusCode: res.statusCode,
+          ipAddress: getClientIp(req),
+        },
+      }),
+      `Failed to write ApiRequestLog for ${req.method} ${req.path}`,
+    ).finally(() => originalEnd(...args));
+    return res;
+  };
+
+  const originalUrl = req.url;
+  const query = originalUrl.includes('?') ? originalUrl.slice(originalUrl.indexOf('?')) : '';
+  req.url = `${internalPath}${query}`;
+  const context = getRequestContext();
+  await runWithRequestContext(
+    { source: context?.source ?? 'api', sourceClientName: context?.sourceClientName ?? apiKey.name, actingUser: apiKey.actor },
+    async () => {
+      for (const router of [shiftsRouter, shiftRequestsRouter, timesheetsRouter]) {
+        if (await runRouter(router as unknown as express.Router, req, res)) return;
+      }
+      if (!res.headersSent) res.status(404).json({ error: 'Not found', code: 'not_found' });
+    },
+  );
+  req.url = originalUrl;
+}
+
+// Registered per method and path (not .all/arrays) so createAsyncRouter wraps each handler.
+for (const base of ['/api/external/v1/shifts', '/api/external/v1/timesheets']) {
+  for (const path of [base, `${base}/*`]) {
+    for (const method of ['get', 'post', 'patch', 'delete'] as const) {
+      externalApiRouter[method](path, async (req, res) => {
+        const { apiKey } = req as unknown as ExternalApiRequest;
+        return delegateToShifts(req, res, apiKey);
+      });
+    }
+  }
 }
 
 // ---- Identity ----

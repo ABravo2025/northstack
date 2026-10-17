@@ -329,7 +329,8 @@
       "scopeGroups": {
         "tasksNotes": "Tasks & Notes",
         "crm": "CRM",
-        "hr": "HR"
+        "hr": "HR",
+        "shifts": "Shifts & hours"
       },
       "scopeResources": {
         "tasks": "Tasks",
@@ -340,7 +341,9 @@
         "pipelines": "Pipelines",
         "employees": "Employees",
         "timeOff": "Time off",
-        "payroll": "Payroll"
+        "payroll": "Payroll",
+        "shifts": "Shifts",
+        "timesheets": "Timesheets"
       },
       "read": "Read",
       "write": "Write",

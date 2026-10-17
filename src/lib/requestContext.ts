@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import type { ActivitySource } from '@prisma/client';
+import type { AuthenticatedUser } from '../modules/auth/authService.js';
 
 // Per-request "where did this action come from" (spec-mcp-server.md §6.1). Set once at the edge of
 // a non-UI entry point — the Private API router today, the MCP endpoint later — and read by
@@ -11,6 +12,10 @@ export interface RequestContext {
   // What the Activity Log shows next to the user: the API key's name, or the AI client's name
   // ("Claude", "ChatGPT") for MCP. Null when there's nothing more specific to show.
   sourceClientName: string | null;
+  // Set only by the Private API when it hands a request to one of the app's own routers on behalf
+  // of an API key / AI assistant (routes/externalApi.ts, Shifts & Timesheets): authenticateUser
+  // then uses this user instead of a session token. Never derived from anything in the request.
+  actingUser?: AuthenticatedUser;
 }
 
 const storage = new AsyncLocalStorage<RequestContext>();

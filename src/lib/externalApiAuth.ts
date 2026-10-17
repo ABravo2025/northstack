@@ -85,6 +85,10 @@ export const API_SCOPES = [
   'crm.pipelines:read',
   'tasks:read', 'tasks:write',
   'notes:read', 'notes:write',
+  // Shifts & Timesheets (2026-10-16, spec-mcp-server.md §10) — served by delegating to the app's own
+  // routers, so every relationship rule (location manager, direct manager) applies as-is.
+  'shifts:read', 'shifts:write',
+  'timesheets:read', 'timesheets:write',
 ] as const;
 export type ApiScope = (typeof API_SCOPES)[number];
 

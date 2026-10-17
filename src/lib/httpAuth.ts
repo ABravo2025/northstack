@@ -1,5 +1,6 @@
 import type express from 'express';
 import { authenticateToken } from '../modules/auth/authService.js';
+import { getRequestContext } from './requestContext.js';
 
 export function getBearerToken(req: express.Request): string | null {
   return req.headers.authorization?.replace('Bearer ', '') ?? null;
@@ -10,6 +11,11 @@ export function getClientIp(req: express.Request): string {
 }
 
 export async function authenticateUser(req: express.Request, res: express.Response) {
+  // A Private API call delegated to this router (externalApi.ts): already authenticated there, as
+  // this user with their current role. Only server code can put a user in the request context.
+  const actingUser = getRequestContext()?.actingUser;
+  if (actingUser) return actingUser;
+
   const token = getBearerToken(req);
   if (!token) {
     res.status(401).json({ error: 'Authentication required' });

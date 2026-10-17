@@ -27,6 +27,7 @@ fakeApi.get('/api/external/v1/me', (_req, res) => res.json({ user: { id: 'u1' },
 fakeApi.get('/api/external/v1/tasks', (_req, res) => res.json({ data: [{ id: 't1', title: 'Call Acme' }], nextCursor: null }));
 fakeApi.get('/api/external/v1/tasks/:id', (req, res) => res.json({ id: req.params.id, title: 'Call Acme' }));
 fakeApi.delete('/api/external/v1/tasks/:id', (_req, res) => res.status(204).end());
+fakeApi.post('/api/external/v1/shifts', (req, res) => res.status(201).json({ id: 'sh1', status: 'draft', ...req.body }));
 fakeApi.get('/api/external/v1/hr/payroll', (_req, res) =>
   forbidPayroll ? res.status(403).json({ error: "Your role in this workspace doesn't allow this action (hr.payroll:read).", code: 'missing_scope' }) : res.json({ data: [], nextCursor: null }),
 );
@@ -107,6 +108,22 @@ describe('tools', () => {
     const result: any = await client.callTool({ name: 'list_payroll_runs', arguments: {} });
     expect(result.isError).toBe(true);
     expect(text(result)).toContain("role or plan doesn't allow");
+    await client.close();
+  });
+});
+
+describe('shifts & timesheets tools', () => {
+  it('are registered, and create_shift_draft sends minutes to the Private API', async () => {
+    const client = await connect(GOOD_TOKEN);
+    const { tools } = await client.listTools();
+    const names = tools.map((t) => t.name);
+    expect(names).toEqual(expect.arrayContaining(['list_shifts', 'my_shifts', 'create_shift_draft', 'shift_candidates', 'log_time', 'my_timesheet', 'decide_timesheet', 'hours_summary']));
+    // Publishing or cancelling never goes through an assistant.
+    expect(names.some((n) => /publish|cancel_shift/.test(n))).toBe(false);
+
+    await client.callTool({ name: 'create_shift_draft', arguments: { locationId: 'loc1', date: '2026-10-22', start: '09:30', end: '17:00' } });
+    const call = calls.find((c) => c.method === 'POST' && c.path === '/shifts');
+    expect(call?.body).toMatchObject({ locationId: 'loc1', date: '2026-10-22', startMinute: 570, endMinute: 1020 });
     await client.close();
   });
 });

@@ -260,6 +260,13 @@ const API_SCOPE_GROUPS: { groupKey: string; resources: { key: string; labelKey: 
       { key: 'hr.payroll', labelKey: 'payroll', write: false },
     ],
   },
+  {
+    groupKey: 'shifts',
+    resources: [
+      { key: 'shifts', labelKey: 'shifts', write: true },
+      { key: 'timesheets', labelKey: 'timesheets', write: true },
+    ],
+  },
 ];
 
 function formatRelativeOrDate(iso: string | null): string {

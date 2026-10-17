@@ -19,6 +19,7 @@ vi.mock('../src/lib/prismaExternal.js', () => ({ default: { apiRequestLog: { cre
 const EMPLOYEES = [
   { id: 'emp_self', tenantId: 't1', firstName: 'Ana', salaryNote: 'secret-a' },
   { id: 'emp_other', tenantId: 't1', firstName: 'Beto', salaryNote: 'secret-b' },
+  { id: 'emp_foreign', tenantId: 't2', firstName: 'Otra', salaryNote: 'other-tenant' },
 ];
 
 vi.mock('../src/modules/hr/employeeService.js', async (importOriginal) => {
@@ -26,7 +27,7 @@ vi.mock('../src/modules/hr/employeeService.js', async (importOriginal) => {
   return {
     ...actual,
     resolveVisibleEmployeeIds: vi.fn(async (_t: string, role: any) => (role.permissions.has('view_employee_scope:all') ? null : new Set(['emp_self']))),
-    listEmployees: vi.fn(async (_t: string, visibleIds: Set<string> | null) => EMPLOYEES.filter((e) => !visibleIds || visibleIds.has(e.id))),
+    listEmployees: vi.fn(async (tenantId: string, visibleIds: Set<string> | null) => EMPLOYEES.filter((e) => e.tenantId === tenantId && (!visibleIds || visibleIds.has(e.id)))),
     findEmployeeById: vi.fn(async (id: string) => EMPLOYEES.find((e) => e.id === id) ?? null),
     findEmployeeByUserId: vi.fn(async (userId: string) => (userId === 'u_ana' ? EMPLOYEES[0] : null)),
   };
@@ -58,6 +59,14 @@ vi.mock('../src/modules/tasks/taskService.js', async (importOriginal) => {
       { id: 'tk2', title: 'Send Acme proposal', assigneeId: 'u_ana', completedAt: '2026-09-30T10:00:00Z', dueDate: null, entityType: 'company', entityId: 'c1' },
       { id: 'tk3', title: 'Payroll check', assigneeId: 'u_other', completedAt: null, dueDate: '2026-12-01T10:00:00Z', entityType: 'employee', entityId: 'e1' },
     ]),
+  };
+});
+
+vi.mock('../src/modules/crm/companyService.js', async (importOriginal) => {
+  const actual: any = await importOriginal();
+  return {
+    ...actual,
+    findCompanyById: vi.fn(async (id: string) => (id === 'co_foreign' ? { id, tenantId: 't2', name: 'Other tenant Inc' } : null)),
   };
 });
 
@@ -206,5 +215,22 @@ describe('list filters (used by the MCP search tools)', () => {
     caller = aiCaller(role([]), ['hr.timeoff:read']);
     const { body } = await call('GET', '/hr/timeoff?scope=pending-approval');
     expect(body.data.map((r: any) => r.id)).toEqual(['pend_1']);
+  });
+});
+
+describe('tenant isolation', () => {
+  it("never returns another workspace's records, even by exact id (404, not 403)", async () => {
+    caller = aiCaller(role(['view_employee', 'view_employee_scope:all', 'view_company']), ['hr.employees:read', 'crm.companies:read']);
+    const employee = await call('GET', '/hr/employees/emp_foreign');
+    expect(employee.status).toBe(404);
+    expect(JSON.stringify(employee.body)).not.toContain('other-tenant');
+    const company = await call('GET', '/crm/companies/co_foreign');
+    expect(company.status).toBe(404);
+  });
+
+  it("lists only the caller's workspace", async () => {
+    caller = aiCaller(role(['view_employee', 'view_employee_scope:all']), ['hr.employees:read']);
+    const { body } = await call('GET', '/hr/employees');
+    expect(body.data.every((e: any) => e.tenantId === 't1')).toBe(true);
   });
 });

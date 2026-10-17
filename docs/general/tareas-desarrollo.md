@@ -1,6 +1,13 @@
 # Tareas de desarrollo
 
 - Fecha de creación: 2026-07-02
+- **2026-10-17 — MCP / Asistentes de IA: DESARROLLO COMPLETO EN STAGING (sin producción, a pedido de Alejandro)**:
+  conexiones **solo por OAuth** (se retiró el token personal): la persona pega la URL en su IA, inicia sesión en
+  Northstack y aprueba en `/oauth/authorize`. Se sumaron Turnos y Timesheet (19 tools; la IA solo arma turnos en
+  borrador), vista de conexiones de todo el equipo para quien administra integraciones, validación de token en cada
+  request (renovación automática al vencer), Help Center y OpenAPI. Para probarlo hay que apagar la Deployment
+  Protection de staging. Checklist de producción en `spec-mcp-server.md` §11 (legales, base de prod, merge a main,
+  fila en planes, QA real).
 - **2026-10-05 — Módulo de Proyectos, unidades 1-7 (EN STAGING)**: proyectos con fases, tareas, equipo y progreso,
   vinculados opcionalmente a una Company; alta en blanco o desde 9 templates del sistema por nicho (EN/ES) con
   asignación de tareas por rol y vista previa; "Guardar como template" (Growth); sección Proyectos en Company y en cada

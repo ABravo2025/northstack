@@ -343,7 +343,7 @@ const FAQ_CATEGORIES: FaqCategory[] = [
       },
       {
         q: 'Can I use Claude, ChatGPT or another AI assistant with Northstack?',
-        a: "Yes, on Growth. Go to Settings → Integrations → AI assistants, copy the server URL and create a token for your assistant. It acts as you — it can only see and do what your role allows — and asks you to confirm before deleting anything.",
+        a: "Yes, on Growth. Go to Settings → Integrations → AI assistants, copy the server URL and add it as a connector in your assistant; it opens Northstack so you sign in and approve — no keys to copy. It acts as you — it can only see and do what your role allows — and asks you to confirm before deleting anything.",
       },
       {
         q: 'Can an AI assistant see more than I can?',
@@ -681,7 +681,7 @@ const FAQ_CATEGORIES_ES: FaqCategory[] = [
       },
       {
         q: '¿Puedo usar Claude, ChatGPT u otro asistente de IA con Northstack?',
-        a: 'Sí, en Growth. Entrá a Configuración → Integraciones → Asistentes de IA, copiá la URL del servidor y creá un token para tu asistente. Actúa como vos — solo puede ver y hacer lo que tu rol permite — y te pide confirmación antes de borrar algo.',
+        a: 'Sí, en Growth. Entrá a Configuración → Integraciones → Asistentes de IA, copiá la URL del servidor y agregala como conector en tu asistente; te abre Northstack para que inicies sesión y apruebes — sin claves que copiar. Actúa como vos — solo puede ver y hacer lo que tu rol permite — y te pide confirmación antes de borrar algo.',
       },
       {
         q: '¿Un asistente de IA puede ver más que yo?',

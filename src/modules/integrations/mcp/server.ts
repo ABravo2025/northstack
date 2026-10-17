@@ -57,9 +57,14 @@ async function readJsonBody(req: IncomingMessage & { body?: unknown }): Promise<
   return raw ? JSON.parse(raw) : undefined;
 }
 
-function isInitialize(body: unknown): boolean {
+// Any real request (initialize, tools/list, tools/call…) as opposed to a fire-and-forget
+// notification, which never reaches a tool.
+function needsTokenCheck(body: unknown): boolean {
   const messages = Array.isArray(body) ? body : [body];
-  return messages.some((m) => (m as { method?: string } | null)?.method === 'initialize');
+  return messages.some((m) => {
+    const method = (m as { method?: string } | null)?.method;
+    return typeof method === 'string' && !method.startsWith('notifications/');
+  });
 }
 
 export async function handleMcpRequest(req: IncomingMessage & { body?: unknown }, res: ServerResponse): Promise<void> {
@@ -84,10 +89,11 @@ export async function handleMcpRequest(req: IncomingMessage & { body?: unknown }
     return;
   }
 
-  // Check the token once, when a client connects — an invalid/revoked/not-allowed token gets a real
-  // HTTP error at connect time (which is also what will trigger OAuth in clients, Unit 4) instead of
-  // a session that only fails on its first tool call. Later calls are checked by the Private API.
-  if (isInitialize(body)) {
+  // Check the token on every real request, not just at connect time: OAuth access tokens last an
+  // hour, and only an HTTP 401 with WWW-Authenticate makes the client refresh it (or start sign-in
+  // again). A 401 surfacing inside a tool result would just look like a failed tool call. Costs one
+  // extra hop to /me per request; the tool's own Private API calls re-check anyway.
+  if (needsTokenCheck(body)) {
     const me = await createPrivateApiClient(baseUrl, token).get<{ error?: string; code?: string }>('/me');
     if (!me.ok) {
       const status = me.status === 401 || me.status === 403 ? me.status : 502;

@@ -12,11 +12,12 @@ import { issueConfirmationToken, verifyConfirmationToken } from '../src/modules/
 const GOOD_TOKEN = 'nk_mcp_good';
 const calls: { method: string; path: string; query: Record<string, unknown>; body: unknown }[] = [];
 let forbidPayroll = true;
+let tokenExpired = false;
 
 const fakeApi = express();
 fakeApi.use(express.json());
 fakeApi.use('/api/external/v1', (req, res, next) => {
-  if (req.headers.authorization !== `Bearer ${GOOD_TOKEN}`) {
+  if (req.headers.authorization !== `Bearer ${GOOD_TOKEN}` || tokenExpired) {
     res.status(401).json({ error: 'Invalid, expired or revoked AI assistant token', code: 'invalid_ai_token' });
     return;
   }
@@ -53,6 +54,7 @@ afterAll(() => {
 beforeEach(() => {
   calls.length = 0;
   forbidPayroll = true;
+  tokenExpired = false;
 });
 
 async function connect(token: string): Promise<Client> {
@@ -89,6 +91,22 @@ describe('connecting', () => {
     // Payroll is read-only by design — no tool can write it.
     expect(Object.keys(byName).some((name) => /payroll/.test(name) && !name.startsWith('list_') && !name.startsWith('get_'))).toBe(false);
     await client.close();
+  });
+});
+
+describe('token expiry', () => {
+  it('answers HTTP 401 (so the client refreshes) when the access token expires mid-session', async () => {
+    const client = await connect(GOOD_TOKEN);
+    tokenExpired = true;
+    await expect(client.callTool({ name: 'whoami', arguments: {} })).rejects.toThrow();
+    const res = await fetch(mcpUrl, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${GOOD_TOKEN}`, 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' }),
+    });
+    expect(res.status).toBe(401);
+    expect(res.headers.get('www-authenticate')).toContain('invalid_token');
+    await client.close().catch(() => {});
   });
 });
 

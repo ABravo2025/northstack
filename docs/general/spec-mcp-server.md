@@ -1,6 +1,9 @@
 # Spec MCP Server (Asistentes de IA)
 
-**Estado:** ✅ Spec aprobada por Alejandro (2026-10-01). **Unidad 0 en producción** (2026-10-01). **Unidad 1 completa, en `staging`** (`db push` a la DB de staging hecho; prod pendiente), esperando la revisión de Alejandro.
+**Estado (2026-10-17):** ✅ **Desarrollo completo en `staging`**, esperando la prueba de Alejandro. **Nada de las
+Unidades 2–7 está en producción** (decisión de Alejandro, 2026-10-16: terminar todo, probar, y después textos legales +
+producción). En producción: Unidad 0 (API solo Growth), Unidad 1 (origen en Activity Log) y el fix de scopes de API keys.
+Ver §11 para el resumen de lo construido y la checklist de salida a producción.
 **Fecha:** 2026-10-01.
 **Contexto:** Alejandro quiere que los clientes conecten **su propio Claude, o la IA que prefieran**,
 a su workspace de Northstack, y que esa IA pueda leer y operar (crear tareas, notas, mover
@@ -185,7 +188,12 @@ Implementación: el SDK trae un router de auth para Express (`mcpAuthRouter` + i
 no hay dependencia extra. Si no, implementamos los 4 endpoints a mano (son acotados) y **no** sumamos
 un servidor OAuth completo tipo `oidc-provider` sin justificarlo antes.
 
-### 4.2 Token personal (alternativa)
+### 4.2 Token personal — DESCARTADO (Alejandro, 2026-10-16)
+
+**Las conexiones son solo por OAuth.** El token personal se construyó en la Unidad 2 y se retiró en la Unidad 4: no hay
+endpoint ni UI para crearlo y la Private API ya no lo acepta (`authenticateAiToken` busca solo `accessTokenHash`). Las
+columnas `personalTokenHash` y el valor `personal_token` del enum quedan en el schema solo por las filas de prueba de
+staging. Texto original, como contexto:
 Para clientes que solo aceptan un header fijo. El usuario genera en Settings un token `nk_mcp_…`
 **atado a su usuario**, no al tenant como la ApiKey, así que respeta su rol igual que OAuth. Se
 muestra una sola vez y se guarda hasheado.
@@ -415,3 +423,44 @@ Reglas que heredan de este spec:
 - Las semanas cerradas no se modifican vía MCP. Las correcciones siguen el mismo flujo de ajuste que la UI.
 - Todo queda en el Activity Log con origen `ai` (§6.1). Tienen que respetar el tope de ≤ 35 tools de §5:
   si se pasa, se agrupan (por ejemplo `list_shifts` con filtro `mine` en vez de `my_shifts`).
+
+**Construido (2026-10-16/17, en `staging`):** ver §11.
+
+---
+
+## 11. Estado final del desarrollo (2026-10-17) y checklist de salida a producción
+
+### Qué está construido (todo en `staging`)
+
+| Unidad | Qué | Commits |
+|---|---|---|
+| 2 | Private API con credencial de IA atada al usuario, rol actual en cada request, `use_ai_assistants`, `/me`, decidir licencias, detalle de payroll | `a4e73ae` |
+| 3 | Función MCP separada `api/mcp.ts` (`/mcp`), tools, confirmación en dos pasos, límite de 10 DELETE/h, filtros en listados | `bb14c91` |
+| 4 | **OAuth 2.1 solo**: metadata RFC 9728 + RFC 8414 (+ alias openid-configuration), DCR RFC 7591 (clientes públicos, rate limit por IP), `/oauth/authorize` (pantalla de consentimiento EN/ES), token con PKCE S256 obligatorio, access 1 h / refresh 30 d rotativo con detección de reuso, revocación RFC 7009. Tablas `OAuthClient`, `OAuthAuthorizationCode`, `AiConnection.previousRefreshTokenHash`. El MCP valida el token en cada request real y responde 401 + `WWW-Authenticate` con `resource_metadata` | `b434a35` y el siguiente |
+| 5 | Tarjeta de Asistentes de IA: URL, paso a paso por asistente (claude.ai, ChatGPT, Claude Code, Cursor), lista de conexiones, vista de todo el equipo para `manage_api_access` | `b434a35` |
+| §10 | Turnos y Timesheet: scopes `shifts:*`/`timesheets:*`; la Private API **delega** rutas en lista blanca a los routers de la app corriendo como el actor (`requestContext.actingUser`), así aplican las mismas reglas de relación; la IA solo toca turnos en borrador. 19 tools nuevas (58 en total) | `1ba4364` |
+| 6–7 | Help Center (guía + FAQ, EN/ES) y OpenAPI actualizados; tests de aislamiento entre tenants, roles, confirmación, expiración de token, OAuth completo | último commit |
+
+**Desvío de la spec:** 58 tools contra el objetivo de ≤35. Si en la prueba real el modelo elige mal, se agrupan (p. ej.
+`search_*`/`get_*` en una tool por entidad).
+
+### Cómo probarlo en staging
+
+La Deployment Protection de Vercel bloquea a claude.ai y ChatGPT (y al discovery de OAuth de cualquier cliente) antes de
+llegar a la app. Para la prueba hay que **desactivar la protección de staging** mientras dure (Vercel → Settings →
+Deployment Protection), o agregar `staging.joinnorthstack.com` como excepción. Después: pegar
+`https://staging.joinnorthstack.com/mcp` como conector en la IA, iniciar sesión, aprobar.
+
+### Checklist de salida a producción (no hacer hasta que Alejandro lo pida)
+
+1. **Textos legales**: hoy dicen que el MCP "todavía no está disponible" (commit `842badd`); actualizar términos y privacidad
+   (qué datos ve el asistente, que actúa como el usuario, revocación) en la app y en la landing.
+2. **Base de prod** (lo corre Alejandro; aplicar solo este SQL, nunca `db push` a ciegas): `migrate diff` contra prod y
+   aplicar las tablas/columnas de las Unidades 2 y 4 (`AiConnection`, `AiConnectionKind`, `ApiRequestLog.aiConnectionId`,
+   `OAuthClient`, `OAuthAuthorizationCode`, `previousRefreshTokenHash`) + correr `scripts/backfill-use-ai-assistants.ts`.
+3. **Código**: llevar a `main` los commits de este spec desde staging (en la prueba de 2026-10-16 ya había conflictos con
+   permisos de Turnos/Proyectos; resolver con cuidado). Disparar el build de Android.
+4. **Comparación de planes**: agregar la fila "Asistentes de IA (MCP)" en `PlansComparison.tsx` y en la landing — la regla
+   de ese componente es sumar filas recién cuando la feature está en producción.
+5. **QA real** con claude.ai, ChatGPT, Claude Code y Cursor contra prod con un tenant de prueba; anuncio "What's new";
+   `handoff.md` en la rama `marketing`.

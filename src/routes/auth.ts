@@ -13,6 +13,7 @@ import {
 } from '../modules/auth/authService.js';
 import { serializeRoleContext } from '../modules/auth/roleService.js';
 import { mfaRequiredFor } from '../modules/auth/mfaService.js';
+import { isMfaEncryptionConfigured } from '../lib/mfaEncryption.js';
 import { planFeatures } from '../modules/tenant/planLimits.js';
 import { AUTH_RATE_LIMIT, isRateLimited } from '../lib/rateLimit.js';
 import { authenticateUser, getBearerToken, getClientIp } from '../lib/httpAuth.js';
@@ -132,7 +133,7 @@ authRouter.get('/api/auth/me', async (req, res) => {
     user: sanitizeUser(userWithoutRoleContext),
     permissions: { ...serializeRoleContext(roleContext), planFeatures: planFeatures(user.tenant) },
     // Drives the "turn on two-step verification" banner for people who must have it.
-    twoStep: { enabled: !!user.totpEnabledAt, required: mfaRequiredFor(user, roleContext) },
+    twoStep: { enabled: !!user.totpEnabledAt, required: isMfaEncryptionConfigured() && mfaRequiredFor(user, roleContext), available: isMfaEncryptionConfigured() },
   });
 });
 

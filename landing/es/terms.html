@@ -88,7 +88,7 @@ footer a { color: var(--ink-3); }
 
     <main>
       <h1>Términos de Servicio de Northstack</h1>
-      <p class="effective-date">Fecha de vigencia: 6 de octubre de 2026</p>
+      <p class="effective-date">Fecha de vigencia: 19 de octubre de 2026</p>
 
       <p>
         Bienvenido a Northstack. Estos Términos de Servicio ("<strong>Términos</strong>")
@@ -490,15 +490,25 @@ footer a { color: var(--ink-3); }
         datos.
       </p>
       <p>
-        También estamos construyendo una integración, usando el Model Context Protocol
-        abierto ("<strong>MCP</strong>"), que va a permitir que los propios usuarios de un
-        Tenant conecten un asistente de IA de terceros de su elección (como Claude, ChatGPT,
-        u otras herramientas similares) a los propios datos de ese Tenant en el Servicio.
-        <strong>Esta función todavía no está disponible.</strong> Una vez disponible: va a
-        actuar con los propios permisos del usuario que la conecta, cada acción que tome va
-        a quedar registrada en el Registro de Actividad, va a estar limitada al plan
-        Growth, y el principio de decisión-y-responsabilidad-propia-del-Tenant de arriba le
-        va a aplicar del mismo modo.
+        Asistentes de IA (MCP). En los planes que lo incluyen (hoy, Growth y la prueba
+        gratuita), los usuarios de un Tenant pueden conectar un asistente de IA de terceros de
+        su elección (como Claude, ChatGPT, Cursor u otras herramientas similares) a los datos de
+        ese Tenant en el Servicio, a través del Model Context Protocol abierto
+        ("<strong>MCP</strong>"). El usuario hace la conexión iniciando sesión en Northstack y
+        aprobándola; a partir de ahí el asistente actúa como ese usuario, con su rol y permisos
+        actuales, y nunca puede acceder a más de lo que ese usuario puede en el Servicio. Borrar
+        o desactivar un registro y decidir licencias u horas de otra persona requieren la
+        confirmación explícita del usuario dentro del asistente, y la Nómina es de solo lectura
+        a través de él. Cada cambio que hace, y cada conexión y desconexión, queda registrado en
+        el Registro de Actividad. El usuario, o quien administre las integraciones del Tenant,
+        puede desconectarlo en cualquier momento desde Configuración → Integraciones →
+        Asistentes de IA, y el owner del Tenant puede apagar la función para cualquier rol.
+        <strong>El asistente de IA es un servicio de terceros:</strong> su proveedor — no
+        Northstack — recibe y procesa los datos que el asistente lee a través de la conexión,
+        bajo los propios términos y prácticas de privacidad de ese proveedor, y Northstack no es
+        responsable de las respuestas del asistente ni de las acciones que toma por instrucción
+        del usuario. El principio de decisión-y-responsabilidad-propia-del-Tenant de arriba le
+        aplica del mismo modo.
       </p>
 
       <hr />

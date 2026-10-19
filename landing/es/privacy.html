@@ -88,7 +88,7 @@ footer a { color: var(--ink-3); }
 
     <main>
       <h1>Política de Privacidad de Northstack</h1>
-      <p class="effective-date">Fecha de vigencia: 16 de octubre de 2026</p>
+      <p class="effective-date">Fecha de vigencia: 19 de octubre de 2026</p>
 
       <p>
         Esta Política de Privacidad explica cómo Northstack ("<strong>Northstack</strong>,"
@@ -357,12 +357,22 @@ footer a { color: var(--ink-3); }
         8.2 de nuestros <a href="/es/terms.html">Términos de Servicio</a>.
       </p>
       <p>
-        También estamos construyendo una integración, usando el Model Context Protocol
-        ("MCP"), que va a permitir que los propios usuarios de un Tenant conecten un
-        asistente de IA de terceros de su elección a los propios datos de ese Tenant en el
-        Servicio. <strong>Esta función todavía no está disponible.</strong> Vamos a
-        actualizar esta Política con más detalle — incluyendo a qué categorías de datos
-        puede acceder — una vez que lo esté.
+        Asistentes de IA (MCP). Cuando un usuario de un Tenant conecta un asistente de IA de
+        terceros a través del Model Context Protocol ("MCP"), el asistente puede leer — y,
+        cuando el usuario se lo pide, modificar — los datos a los que ese usuario ya tiene
+        acceso en el Servicio con su rol actual, que pueden incluir tareas y notas, registros de
+        CRM (empresas, contactos, oportunidades), fichas de empleados, licencias, turnos y
+        timesheets, y corridas de nómina (solo lectura); nunca datos ocultos para el rol de ese
+        usuario. Los datos que el asistente lee se envían al proveedor del asistente, que los
+        procesa bajo sus propias prácticas de privacidad (ver la Sección 8.2 de nuestros <a
+        href="/es/terms.html">Términos de Servicio</a>); Northstack no controla ese
+        procesamiento. Para mantener la conexión guardamos: el nombre del asistente, el usuario
+        que lo conectó, y cuándo se conectó, se usó por última vez y se desconectó; sus tokens
+        de acceso y de renovación, guardados solo en forma de hash (los de acceso vencen a la
+        hora y los de renovación a los 30 días); un registro de los pedidos que hace (método,
+        ruta, resultado y dirección IP); y entradas en el Registro de Actividad por cada cambio
+        que hace y por cada conexión y desconexión. El usuario, o quien administre las
+        integraciones del Tenant, puede desconectar un asistente en cualquier momento.
       </p>
 
       <h3>4.6 Acceso de soporte de Northstack a tu cuenta (solo con tu permiso)</h3>

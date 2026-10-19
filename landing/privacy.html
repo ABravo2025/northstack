@@ -88,7 +88,7 @@ footer a { color: var(--ink-3); }
 
     <main>
       <h1>Northstack Privacy Policy</h1>
-      <p class="effective-date">Effective Date: October 16, 2026</p>
+      <p class="effective-date">Effective Date: October 19, 2026</p>
 
       <p>
         This Privacy Policy explains how Northstack ("<strong>Northstack</strong>,"
@@ -350,11 +350,21 @@ footer a { color: var(--ink-3); }
         <a href="/terms.html">Terms of Service</a>.
       </p>
       <p>
-        We are also building an integration, using the Model Context Protocol ("MCP"), that
-        will let a Tenant's own users connect a third-party AI assistant of their choice to
-        that Tenant's own data in the Service. <strong>This feature is not yet
-        available.</strong> We will update this Policy with more detail — including which
-        categories of data it can access — once it is.
+        AI assistants (MCP). When a Tenant's user connects a third-party AI assistant through
+        the Model Context Protocol ("MCP"), the assistant can read — and, when the user asks it
+        to, change — the data that user can already access in the Service with their current
+        role, which may include tasks and notes, CRM records (companies, contacts,
+        opportunities), employee records, time off, shifts and timesheets, and payroll runs
+        (read-only); never data hidden from that user's role. Data the assistant reads is sent
+        to the assistant's provider, which processes it under its own privacy practices (see
+        Section 8.2 of our <a href="/terms.html">Terms of Service</a>); Northstack does not
+        control that processing. To run the connection we keep: the assistant's name, the user
+        who connected it, and when it was connected, last used and disconnected; its access and
+        refresh tokens, stored only in hashed form (access tokens expire after one hour, refresh
+        tokens after 30 days); a log of the requests it makes (method, path, result and IP
+        address); and Activity Log entries for every change it makes and every connection and
+        disconnection. The user, or whoever manages the Tenant's integrations, can disconnect an
+        assistant at any time.
       </p>
 
       <h3>4.6 Northstack support access to your account (only with your permission)</h3>

@@ -88,7 +88,7 @@ footer a { color: var(--ink-3); }
 
     <main>
       <h1>Northstack Terms of Service</h1>
-      <p class="effective-date">Effective Date: October 6, 2026</p>
+      <p class="effective-date">Effective Date: October 19, 2026</p>
 
       <p>
         Welcome to Northstack. These Terms of Service ("<strong>Terms</strong>") are a
@@ -469,14 +469,23 @@ footer a { color: var(--ink-3); }
         privacy practices, and Northstack is not responsible for how it handles that data.
       </p>
       <p>
-        We are also building an integration, using the open Model Context Protocol
-        ("<strong>MCP</strong>"), that will let a Tenant's own users connect a third-party
-        AI assistant of their choice (such as Claude, ChatGPT, or similar tools) to that
-        Tenant's own data in the Service. <strong>This feature is not yet available.</strong>
-        Once available: it will act with the connecting user's own permissions, every
-        action it takes will be recorded in the Activity Log, it will be limited to the
-        Growth plan, and the Tenant's-own-choice-and-responsibility principle above will
-        apply to it in the same way.
+        AI assistants (MCP). On plans that include it (currently Growth and the Free Trial), a
+        Tenant's users can connect a third-party AI assistant of their choice (such as Claude,
+        ChatGPT, Cursor, or similar tools) to that Tenant's data in the Service through the open
+        Model Context Protocol ("<strong>MCP</strong>"). The user makes the connection by
+        signing in to Northstack and approving it; the assistant then acts as that user, with
+        that user's current role and permissions, and can never access more than that user can
+        in the Service. Deleting or deactivating a record and deciding someone else's time off
+        or hours require the user's explicit confirmation inside the assistant, and Payroll is
+        read-only through it. Every change it makes, and every connection and disconnection, is
+        recorded in the Activity Log. The user, or whoever manages the Tenant's integrations,
+        can disconnect it at any time from Settings → Integrations → AI assistants, and the
+        Tenant's owner can turn the feature off for any role. <strong>The AI assistant is a
+        third-party service:</strong> its provider, not Northstack, receives and processes the
+        data the assistant reads through the connection, under that provider's own terms and
+        privacy practices, and Northstack is not responsible for the assistant's answers or for
+        the actions it takes on the user's instructions. The
+        Tenant's-own-choice-and-responsibility principle above applies to it in the same way.
       </p>
 
       <hr />

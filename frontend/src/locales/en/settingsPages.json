@@ -235,6 +235,53 @@
       "connecting": "Connecting…",
       "testConnection": "Test connection"
     },
+    "aiAssistants": {
+      "title": "AI assistants",
+      "description": "Connect your own AI assistant (Claude, ChatGPT, Cursor…) to Northstack. It acts as you: it can only see and do what your role already allows, and everything it changes shows in the Activity Log as \"AI · <assistant>\".",
+      "loadError": "Failed to load AI assistants: {{message}}",
+      "serverUrl": "MCP server URL",
+      "howItWorks": "Add this URL as a connector (MCP server) in your assistant. It will open Northstack so you can sign in and approve the connection — there's nothing to copy or create here.",
+      "guidesTitle": "Step by step for each assistant",
+      "guides": {
+        "claudeAi": {
+          "name": "Claude (claude.ai and the desktop app)",
+          "steps": "Settings → Connectors → Add custom connector → paste the URL → Connect, then sign in to Northstack."
+        },
+        "chatgpt": {
+          "name": "ChatGPT",
+          "steps": "Settings → Apps & Connectors → add a custom connector (MCP) with this URL and OAuth authentication, then sign in to Northstack."
+        },
+        "claudeCode": {
+          "name": "Claude Code",
+          "steps": "Run this in a terminal, then type /mcp in Claude Code and choose Authenticate:"
+        },
+        "cursor": {
+          "name": "Cursor",
+          "steps": "Add this to .cursor/mcp.json; Cursor asks you to sign in the first time:"
+        }
+      },
+      "copy": "Copy",
+      "copied": "Copied to clipboard.",
+      "copyError": "Failed to copy: {{message}}",
+      "showEveryone": "Show everyone's connections in the workspace",
+      "emptyTitle": "No AI assistants connected",
+      "emptyBody": "Add the URL above to your assistant and approve the connection — it'll show up here.",
+      "columns": {
+        "name": "Assistant",
+        "user": "Person",
+        "status": "Status",
+        "lastUsed": "Last used"
+      },
+      "active": "Active",
+      "revoked": "Disconnected",
+      "never": "Never",
+      "revoke": "Disconnect",
+      "revoking": "Disconnecting…",
+      "revokedToast": "\"{{name}}\" disconnected.",
+      "revokeError": "Failed to disconnect: {{message}}",
+      "revokeConfirmTitle": "Disconnect \"{{name}}\"?",
+      "revokeConfirmMessage": "The assistant immediately loses access to the workspace. To use it again, connect it again from the assistant."
+    },
     "apiKeys": {
       "never": "Never",
       "loadError": "Failed to load API keys: {{message}}",
@@ -270,7 +317,8 @@
       "scopeGroups": {
         "tasksNotes": "Tasks & Notes",
         "crm": "CRM",
-        "hr": "HR"
+        "hr": "HR",
+        "shifts": "Shifts & hours"
       },
       "scopeResources": {
         "tasks": "Tasks",
@@ -281,7 +329,9 @@
         "pipelines": "Pipelines",
         "employees": "Employees",
         "timeOff": "Time off",
-        "payroll": "Payroll"
+        "payroll": "Payroll",
+        "shifts": "Shifts",
+        "timesheets": "Timesheets"
       },
       "read": "Read",
       "write": "Write",
@@ -466,6 +516,7 @@
       "customRolesSubUnlimited": "unlimited",
       "customRolesSubStarter": "up to 2 custom roles",
       "apiAccess": "API access",
+      "aiAssistants": "AI assistants (Claude, ChatGPT…)",
       "emailSupport": "Email support",
       "emailSupportPriority": "Priority email support"
     }
@@ -817,6 +868,7 @@
       "invitation": "Invitation",
       "subscription": "Subscription",
       "googleCalendarConnection": "Google Calendar Connection",
+      "aiConnection": "AI Assistant",
       "stripeConnection": "Stripe Connection",
       "stripeInvoice": "Stripe Invoice",
       "project": "Project",
@@ -957,7 +1009,11 @@
         "manage_payroll": { "label": "Manage payroll", "description": "Compensation, payroll runs, and the CSV export of employee data." },
         "manage_billing": { "label": "Manage billing", "description": "Change plan, payment method, and cancel the subscription." },
         "manage_payments": { "label": "Manage payments", "description": "Connect Stripe and view customer payment history." },
-        "manage_api_access": { "label": "Manage API & webhooks", "description": "Create and revoke private API keys and outbound webhooks." }
+        "manage_api_access": { "label": "Manage API & webhooks", "description": "Create and revoke private API keys and outbound webhooks." },
+        "use_ai_assistants": {
+          "label": "Use AI assistants",
+          "description": "Connect their own AI assistant (Claude, ChatGPT…). It acts as them and can only see and do what this role already allows."
+        }
       },
       "reporting": {
         "title": "Reporting",

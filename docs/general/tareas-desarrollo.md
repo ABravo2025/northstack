@@ -1,6 +1,11 @@
 # Tareas de desarrollo
 
 - Fecha de creación: 2026-07-02
+- **2026-10-19 — MCP / Asistentes de IA EN PRODUCCIÓN**: cada usuario de un tenant Growth conecta su propio asistente
+  (Claude, ChatGPT, Claude Code, Cursor) pegando la URL `/mcp` y aprobando en Northstack por OAuth. Actúa como esa persona
+  con su rol; 58 tools (CRM, tareas, notas, empleados, licencias, payroll solo lectura, turnos en borrador y horas); borrar
+  y decidir piden confirmación; todo en el Activity Log, incluido conectar/desconectar. Se llevaron a main solo los commits
+  del MCP desde staging (sin arrastrar features de otras sesiones). Legales y fila en planes actualizados el mismo día.
 - **2026-10-07 — Módulo de Proyectos (EN PRODUCCIÓN)**: proyectos con fases, tareas, equipo y progreso, vinculados
   opcionalmente a una Company; alta en blanco o desde 9 templates del sistema por nicho (EN/ES) con asignación de tareas
   por rol y vista previa; "Guardar como template" (Growth); sección Proyectos en Company y en cada persona; chat por

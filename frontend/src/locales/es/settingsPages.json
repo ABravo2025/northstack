@@ -235,6 +235,53 @@
       "connecting": "Conectando…",
       "testConnection": "Probar conexión"
     },
+    "aiAssistants": {
+      "title": "Asistentes de IA",
+      "description": "Conectá tu propio asistente de IA (Claude, ChatGPT, Cursor…) a Northstack. Actúa como vos: solo puede ver y hacer lo que tu rol ya permite, y todo lo que cambie aparece en el Registro de actividad como \"IA · <asistente>\".",
+      "loadError": "No se pudieron cargar los asistentes de IA: {{message}}",
+      "serverUrl": "URL del servidor MCP",
+      "howItWorks": "Agregá esta URL como conector (servidor MCP) en tu asistente. Te va a abrir Northstack para que inicies sesión y apruebes la conexión — acá no hay nada que copiar ni crear.",
+      "guidesTitle": "Paso a paso para cada asistente",
+      "guides": {
+        "claudeAi": {
+          "name": "Claude (claude.ai y la app de escritorio)",
+          "steps": "Configuración → Conectores → Agregar conector personalizado → pegá la URL → Conectar, y después iniciá sesión en Northstack."
+        },
+        "chatgpt": {
+          "name": "ChatGPT",
+          "steps": "Configuración → Apps y conectores → agregá un conector personalizado (MCP) con esta URL y autenticación OAuth, y después iniciá sesión en Northstack."
+        },
+        "claudeCode": {
+          "name": "Claude Code",
+          "steps": "Corré esto en una terminal; después escribí /mcp en Claude Code y elegí Authenticate:"
+        },
+        "cursor": {
+          "name": "Cursor",
+          "steps": "Agregá esto a .cursor/mcp.json; Cursor te pide iniciar sesión la primera vez:"
+        }
+      },
+      "copy": "Copiar",
+      "copied": "Copiado al portapapeles.",
+      "copyError": "No se pudo copiar: {{message}}",
+      "showEveryone": "Ver las conexiones de todo el espacio de trabajo",
+      "emptyTitle": "No hay asistentes de IA conectados",
+      "emptyBody": "Agregá la URL de arriba en tu asistente y aprobá la conexión — va a aparecer acá.",
+      "columns": {
+        "name": "Asistente",
+        "user": "Persona",
+        "status": "Estado",
+        "lastUsed": "Último uso"
+      },
+      "active": "Activo",
+      "revoked": "Desconectado",
+      "never": "Nunca",
+      "revoke": "Desconectar",
+      "revoking": "Desconectando…",
+      "revokedToast": "\"{{name}}\" desconectado.",
+      "revokeError": "No se pudo desconectar: {{message}}",
+      "revokeConfirmTitle": "¿Desconectar \"{{name}}\"?",
+      "revokeConfirmMessage": "El asistente pierde el acceso al espacio de trabajo al instante. Para volver a usarlo, conectalo de nuevo desde el asistente."
+    },
     "apiKeys": {
       "never": "Nunca",
       "loadError": "No se pudieron cargar las claves de API: {{message}}",
@@ -270,7 +317,8 @@
       "scopeGroups": {
         "tasksNotes": "Tareas y Notas",
         "crm": "CRM",
-        "hr": "RR.HH."
+        "hr": "RR.HH.",
+        "shifts": "Turnos y horas"
       },
       "scopeResources": {
         "tasks": "Tareas",
@@ -281,7 +329,9 @@
         "pipelines": "Pipelines",
         "employees": "Empleados",
         "timeOff": "Ausencias",
-        "payroll": "Nómina"
+        "payroll": "Nómina",
+        "shifts": "Turnos",
+        "timesheets": "Timesheets"
       },
       "read": "Lectura",
       "write": "Escritura",
@@ -466,6 +516,7 @@
       "customRolesSubUnlimited": "ilimitados",
       "customRolesSubStarter": "hasta 2 roles personalizados",
       "apiAccess": "Acceso a la API",
+      "aiAssistants": "Asistentes de IA (Claude, ChatGPT…)",
       "emailSupport": "Soporte por correo electrónico",
       "emailSupportPriority": "Soporte prioritario por correo electrónico"
     }
@@ -817,6 +868,7 @@
       "invitation": "Invitación",
       "subscription": "Suscripción",
       "googleCalendarConnection": "Conexión de Google Calendar",
+      "aiConnection": "Asistente de IA",
       "stripeConnection": "Conexión de Stripe",
       "stripeInvoice": "Factura de Stripe",
       "project": "Proyecto",
@@ -957,7 +1009,11 @@
         "manage_payroll": { "label": "Gestionar nómina", "description": "Compensación, corridas de nómina, y la exportación CSV de datos de empleados." },
         "manage_billing": { "label": "Gestionar facturación", "description": "Cambiar de plan, método de pago, y cancelar la suscripción." },
         "manage_payments": { "label": "Gestionar pagos", "description": "Conectar Stripe y ver el historial de pagos de clientes." },
-        "manage_api_access": { "label": "Gestionar API y webhooks", "description": "Crear y revocar claves de API privadas y webhooks salientes." }
+        "manage_api_access": { "label": "Gestionar API y webhooks", "description": "Crear y revocar claves de API privadas y webhooks salientes." },
+        "use_ai_assistants": {
+          "label": "Usar asistentes de IA",
+          "description": "Conectar su propio asistente de IA (Claude, ChatGPT…). Actúa como esa persona y solo puede ver y hacer lo que este rol ya permite."
+        }
       },
       "reporting": {
         "title": "Reportes",

@@ -1,9 +1,8 @@
 # Spec MCP Server (Asistentes de IA)
 
-**Estado (2026-10-17):** ✅ **Desarrollo completo en `staging`**, esperando la prueba de Alejandro. **Nada de las
-Unidades 2–7 está en producción** (decisión de Alejandro, 2026-10-16: terminar todo, probar, y después textos legales +
-producción). En producción: Unidad 0 (API solo Growth), Unidad 1 (origen en Activity Log) y el fix de scopes de API keys.
-Ver §11 para el resumen de lo construido y la checklist de salida a producción.
+**Estado (2026-10-19):** ✅ **EN PRODUCCIÓN.** Alejandro probó en staging (conexión real con Claude por OAuth) y pidió
+pasarlo a producción. QA end-to-end en staging 26/26 con el tenant `Test-MCP`. Ver §11 para lo construido y la checklist de
+salida (base de prod, legales, planes).
 **Fecha:** 2026-10-01.
 **Contexto:** Alejandro quiere que los clientes conecten **su propio Claude, o la IA que prefieran**,
 a su workspace de Northstack, y que esa IA pueda leer y operar (crear tareas, notas, mover

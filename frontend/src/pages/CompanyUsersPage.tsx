@@ -6,7 +6,8 @@ import ConfirmDialog from '../components/common/ConfirmDialog';
 import Pagination, { paginate } from '../components/common/Pagination';
 import Modal from '../components/common/Modal';
 import RequiredMark from '../components/common/RequiredMark';
-import { CheckIcon, CopyIcon, LockIcon, SearchIcon, TrashIcon } from '../components/common/Icons';
+import { CheckIcon, CopyIcon, LockIcon, SearchIcon, ShieldIcon, TrashIcon } from '../components/common/Icons';
+import { twoStepApi } from '../api/twoStep';
 import ColumnResizeHandle from '../components/entity-views/ColumnResizeHandle';
 import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar';
 import { useResizableColumns } from '../hooks/useResizableColumns';
@@ -70,6 +71,7 @@ function getSortValue(u: any, field: SortField): string {
 export default function CompanyUsersPage({ user, token, onUserUpdated }: CompanyUsersPageProps) {
   const toast = useToast();
   const { t } = useTranslation('settingsPages');
+  const { t: tAuth } = useTranslation('auth');
   const COLUMNS = useMemo<{ key: SortField; label: string }[]>(
     () => COLUMN_KEYS.map((key) => ({ key, label: t(`users.columns.${key}`) })),
     [t],
@@ -80,6 +82,8 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
   // replacing the old hardcoded member/admin options.
   const [assignableRoles, setAssignableRoles] = useState<{ id: string; name: string }[]>([]);
   const [pendingOwnerTransfer, setPendingOwnerTransfer] = useState<string | null>(null);
+  // Two-step verification (spec-2fa.md): reset for someone who lost their phone and codes.
+  const [pendingTwoStepReset, setPendingTwoStepReset] = useState<{ id: string; name: string } | null>(null);
 
   const [inviteOpen, setInviteOpen] = useState(false);
   // Desktop invites from the table's "+ Invite" row; this puts the same action behind the mobile FAB.
@@ -293,6 +297,26 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
         />
       )}
 
+      {pendingTwoStepReset && (
+        <ConfirmDialog
+          title={tAuth('twoStep.resetTitle', { name: pendingTwoStepReset.name })}
+          message={tAuth('twoStep.resetBody')}
+          confirmLabel={tAuth('twoStep.reset')}
+          onConfirm={async () => {
+            const target = pendingTwoStepReset;
+            setPendingTwoStepReset(null);
+            try {
+              await twoStepApi.resetForUser(token, target.id);
+              toast.success(tAuth('twoStep.resetDone'));
+              loadUsers();
+            } catch (error) {
+              toast.error((error as Error).message);
+            }
+          }}
+          onCancel={() => setPendingTwoStepReset(null)}
+        />
+      )}
+
       <Modal
         open={inviteOpen}
         title={t('users.inviteSlideOver.title')}
@@ -469,10 +493,18 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
                       <RoleChip {...roleChipProps(u)} />
                     ),
                     status: (
-                      <StatusChip
-                        color={u.status === 'active' ? '#047857' : '#6b7280'}
-                        label={u.status === 'active' ? t('users.active') : t('users.inactive')}
-                      />
+                      <span className="inline-flex items-center gap-2">
+                        <StatusChip
+                          color={u.status === 'active' ? '#047857' : '#6b7280'}
+                          label={u.status === 'active' ? t('users.active') : t('users.inactive')}
+                        />
+                        {u.totpEnabledAt && (
+                          <span className="inline-flex items-center gap-1 text-xs text-emerald-700 dark:text-emerald-300" title={tAuth('twoStep.cardTitle')}>
+                            <ShieldIcon className="h-3.5 w-3.5" />
+                            {tAuth('twoStep.columnOn')}
+                          </span>
+                        )}
+                      </span>
                     ),
                   };
                   return (
@@ -497,6 +529,12 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
                               <span className="tip">{u.status === 'active' ? t('users.deactivate') : t('users.activate')}</span>
                               {u.status === 'active' ? <LockIcon /> : <CheckIcon />}
                             </button>
+                            {u.totpEnabledAt && u.role !== 'owner' && (
+                              <button className="icon-btn" onClick={() => setPendingTwoStepReset({ id: u.id, name: `${u.firstName} ${u.lastName}` })}>
+                                <span className="tip">{tAuth('twoStep.reset')}</span>
+                                <ShieldIcon />
+                              </button>
+                            )}
                           </div>
                         )}
                       </td>

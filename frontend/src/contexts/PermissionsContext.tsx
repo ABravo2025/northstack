@@ -1,5 +1,5 @@
 import { createContext, useContext, useMemo } from 'react';
-import type { PermissionsPayload, PlanFeatures } from '../api';
+import type { PermissionsPayload, PlanFeatures, TwoStepFlags } from '../api';
 
 // Plan-tier hiding (2026-10-01) — permissions whose backend gate is "permission AND Growth plan"
 // (requirePayrollAccess / requirePaymentsAccess). Folding the plan into has() here mirrors that
@@ -33,6 +33,8 @@ interface PermissionsContextValue {
   roleName: string;
   has: (permission: string) => boolean;
   isFieldHidden: (entityType: string, fieldKey: string) => boolean;
+  // Two-step verification (spec-2fa.md): on, and whether this person's role requires it.
+  twoStep: TwoStepFlags;
 }
 
 // Deny-by-default rather than throwing when there's no Provider above: unlike ToastProvider (always
@@ -46,6 +48,7 @@ const DEFAULT_VALUE: PermissionsContextValue = {
   roleName: '',
   has: () => false,
   isFieldHidden: () => false,
+  twoStep: { enabled: false, required: false },
 };
 
 const PermissionsContext = createContext<PermissionsContextValue>(DEFAULT_VALUE);
@@ -76,6 +79,7 @@ export function PermissionsProvider({
         (payload.isOwner || payload.permissions.includes(permission)),
       isFieldHidden: (entityType: string, fieldKey: string) =>
         !payload.isOwner && (payload.hiddenFields[entityType]?.includes(fieldKey) ?? false),
+      twoStep: payload.twoStep ?? { enabled: false, required: false },
     };
   }, [payload, growthPlan, payroll, payments, apiAccess, projectTemplates, shiftSkills, billableHours, clockIn]);
 

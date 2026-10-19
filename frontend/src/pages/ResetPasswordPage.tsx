@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import PasswordInput from '../components/common/PasswordInput';
@@ -15,6 +15,7 @@ export default function ResetPasswordPage({ onReset }: ResetPasswordPageProps) {
   const { t } = useTranslation('auth');
   const toast = useToast();
   const { token } = useParams<{ token: string }>();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
   const [checking, setChecking] = useState(true);
@@ -41,6 +42,13 @@ export default function ResetPasswordPage({ onReset }: ResetPasswordPageProps) {
     setLoading(true);
     try {
       const response = await api.resetPassword(token, password);
+      // Two-step verification (spec-2fa.md): the link only proves the email, so whoever has a
+      // second step signs in again with password + code.
+      if (response.signInAgain) {
+        toast.success(t('twoStep.signInAgain'));
+        navigate('/login', { replace: true });
+        return;
+      }
       const sessionToken = response.session?.token;
       if (!sessionToken) {
         throw new Error(t('common.sessionError'));

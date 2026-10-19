@@ -7,6 +7,7 @@ import PasswordChecklist from '../components/common/PasswordChecklist';
 import { SUPPORTED_LOCALES, type SupportedLocale } from '../lib/i18n';
 import { getStoredThemePreference, setThemePreference, type ThemePreference } from '../theme';
 import MyReligiousHolidaysCard from '../components/timeOff/MyReligiousHolidaysCard';
+import TwoStepCard from '../components/settings/TwoStepCard';
 import EmailPreferencesCard from '../components/settings/EmailPreferencesCard';
 
 // Moved here from the old Settings → Appearance page (2026-09-25): the theme is stored per
@@ -209,6 +210,8 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
       </div>
 
       <MyReligiousHolidaysCard token={token} />
+
+      <TwoStepCard token={token} />
 
       <EmailPreferencesCard token={token} />
 

@@ -57,7 +57,7 @@ import {
   extendTrial,
   listAudit,
   reactivateClient,
-  sendPasswordReset,
+  sendPasswordReset, resetTwoStep,
   suspendClient,
   setAgreement,
   clearAgreement,
@@ -305,6 +305,19 @@ platformRouter.post('/api/platform/admin/clients/:id/users/:userId/reset-passwor
     return res.status(400).json({ error: 'Escribí un motivo (queda en el registro).' });
   }
   return sendAction(res, await sendPasswordReset(req.params.id, req.params.userId, user, reason));
+});
+
+// Two-step verification (spec-2fa.md): reset someone's (the only way for the account owner's).
+platformRouter.post('/api/platform/admin/clients/:id/users/:userId/reset-two-step', async (req, res) => {
+  const user = await requirePlatformRole('platform_support')(req, res);
+  if (!user) {
+    return;
+  }
+  const reason = cleanReason(req.body.reason);
+  if (!reason) {
+    return res.status(400).json({ error: 'Escribí un motivo (queda en el registro).' });
+  }
+  return sendAction(res, await resetTwoStep(req.params.id, req.params.userId, user, reason));
 });
 
 // Stage 2b — per-client agreement (modules on/off + limits). platform_admin only.

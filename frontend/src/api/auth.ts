@@ -1,4 +1,5 @@
 import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
+import type { TwoStepFlags } from './types.js';
 import type { AuthResponse, EmailCategory, EmailPreference, PermissionsPayload, PlanPricing, PlanTier, Tenant, SocialLinks, TenantProfileUpdate, TenantUser } from './types.js';
 
 // Tenant Signup — email verification (spec-tenant-signup.md). /start and /resend hit distinct
@@ -53,6 +54,7 @@ export const authApi = {
   login: async (data: {
     email: string;
     password: string;
+    deviceToken?: string | null;
   }): Promise<AuthResponse> => {
     const res = await apiFetch(`${API_BASE_URL}/api/auth/login`, {
       method: 'POST',
@@ -131,7 +133,7 @@ export const authApi = {
     if (!res.ok) await throwApiError(res);
   },
 
-  getCurrentUser: async (token: string): Promise<{ user: any; permissions: PermissionsPayload }> => {
+  getCurrentUser: async (token: string): Promise<{ user: any; permissions: PermissionsPayload; twoStep?: TwoStepFlags }> => {
     const res = await apiFetch(`${API_BASE_URL}/api/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
     });

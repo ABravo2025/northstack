@@ -105,7 +105,7 @@ const MODULE_MAP: { id: string; label: string; blurb: string; icon: JSX.Element 
   { id: 'g-shifts', label: 'Shifts', blurb: 'Shifts by location, swaps, clock-in, timesheets, approvals and hours reports.', icon: <ClockIcon /> },
   { id: 'g-forms', label: 'Public forms', blurb: 'No-login intake for hiring and leads.', icon: <FormIcon /> },
   { id: 'g-integrations', label: 'Integrations & API', blurb: 'Google Calendar, Stripe, API keys.', icon: <PlugIcon /> },
-  { id: 'g-settings', label: 'Settings', blurb: 'Company profile, logo, currency, theme.', icon: <GearIcon /> },
+  { id: 'g-settings', label: 'Settings', blurb: 'Company profile, logo, currency, theme, two-step verification.', icon: <GearIcon /> },
   { id: 'g-billing', label: 'Billing & plans', blurb: 'Starter vs. Growth, checkout, failures.', icon: <CreditCardIcon /> },
   { id: 'g-referrals', label: 'Referral program', blurb: 'Recommend Northstack and earn a commission.', icon: <SparklesIcon /> },
   { id: 'g-data', label: 'Import & export', blurb: 'Bulk CSV for People, Companies, Contacts.', icon: <DownloadIcon /> },
@@ -170,7 +170,7 @@ const MODULE_MAP_ES: { id: string; label: string; blurb: string; icon: JSX.Eleme
   { id: 'g-shifts', label: 'Turnos', blurb: 'Turnos por locación, cambios, fichaje, timesheet, aprobaciones y reportes de horas.', icon: <ClockIcon /> },
   { id: 'g-forms', label: 'Formularios públicos', blurb: 'Carga sin login para reclutamiento y leads.', icon: <FormIcon /> },
   { id: 'g-integrations', label: 'Integraciones y API', blurb: 'Google Calendar, Stripe, claves de API.', icon: <PlugIcon /> },
-  { id: 'g-settings', label: 'Configuración', blurb: 'Datos de la empresa, logo, moneda, tema.', icon: <GearIcon /> },
+  { id: 'g-settings', label: 'Configuración', blurb: 'Datos de la empresa, logo, moneda, tema, verificación en dos pasos.', icon: <GearIcon /> },
   { id: 'g-billing', label: 'Facturación y planes', blurb: 'Starter vs. Growth, checkout, fallas de pago.', icon: <CreditCardIcon /> },
   { id: 'g-referrals', label: 'Programa de referidos', blurb: 'Recomendá Northstack y cobrá una comisión.', icon: <SparklesIcon /> },
   { id: 'g-data', label: 'Importar y exportar', blurb: 'CSV masivo para Personas, Empresas, Contactos.', icon: <DownloadIcon /> },
@@ -2568,6 +2568,23 @@ export default function GuidePage() {
             </div>
 
             <div className="help-sub">
+              <h3>Verificación en dos pasos</h3>
+              <p>
+                En <strong>Configuración → Perfil → Verificación en dos pasos</strong> la activás con una app
+                autenticadora en tu celular (Google Authenticator, Microsoft Authenticator, Authy o tu gestor de
+                contraseñas): escaneás el QR, escribís el código y guardás los <strong>10 códigos de
+                recuperación</strong>, que sirven una vez cada uno si perdés el celular. Desde ahí entrar pide la
+                contraseña y el código de 6 dígitos, con la opción de <strong>recordar el dispositivo 30 días</strong>.
+              </p>
+              <p>
+                Es <strong>obligatoria</strong> para el dueño de la cuenta y para quien tenga permisos de facturación o
+                pagos: la configuran la próxima vez que entran. Para el resto es opcional. Si alguien pierde el celular
+                y los códigos, quien administra usuarios la restablece desde <strong>Configuración → Usuarios</strong>;
+                la del dueño la restablece el soporte de Northstack. Cada cambio llega por email a la persona.
+              </p>
+            </div>
+
+            <div className="help-sub">
               <h3>Registro de actividad</h3>
               <p>
                 Toda creación, edición y eliminación en el espacio de trabajo queda registrada con el valor
@@ -2615,6 +2632,23 @@ export default function GuidePage() {
               <p>
                 Theme — Light, Dark, or System — is under <strong>Settings → Profile</strong>, available to everyone.
                 It's a personal choice saved per device, not shared with your team.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Two-step verification</h3>
+              <p>
+                In <strong>Settings → Profile → Two-step verification</strong> you turn it on with an authenticator app
+                on your phone (Google Authenticator, Microsoft Authenticator, Authy or your password manager): scan the
+                QR, type the code and save the <strong>10 recovery codes</strong>, each good once if you lose your
+                phone. From then on, signing in asks for your password and the 6-digit code, with the option to
+                <strong> remember the device for 30 days</strong>.
+              </p>
+              <p>
+                It's <strong>required</strong> for the account owner and anyone with billing or payments permissions:
+                they set it up the next time they sign in. Everyone else can choose. If someone loses their phone and
+                codes, whoever manages users resets it from <strong>Settings → Users</strong>; the owner's is reset by
+                Northstack support. Every change is emailed to the person.
               </p>
             </div>
 

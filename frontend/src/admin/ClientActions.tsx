@@ -299,6 +299,60 @@ function ActionDialog({ action, client, session, onClose, onDone }: { action: Ac
 }
 
 // Per-user "Restablecer contraseña" (Users tab).
+// Two-step verification (spec-2fa.md): for someone who lost their phone and recovery codes — the
+// only way for the account owner's. Same flow as the password reset below: a reason, audited.
+export function ResetTwoStepButton({ client, user, session, onDone }: { client: ClientDetail; user: { id: string; name: string; email: string }; session: AdminSession; onDone: (m: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (reason.trim().length < 3) {
+      setError('Escribí un motivo. Queda en el registro de acciones.');
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await adminActions.resetTwoStep(session.token, client.id, user.id, reason.trim());
+      setOpen(false);
+      setReason('');
+      onDone(res.message ?? 'Listo.');
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <>
+      <button type="button" className="btn-secondary" onClick={() => setOpen(true)}>Restablecer 2FA</button>
+      {open && (
+        <Modal
+          open
+          title={`Restablecer verificación en dos pasos · ${user.name}`}
+          onClose={() => setOpen(false)}
+          footer={
+            <>
+              <button type="button" className="btn-secondary" onClick={() => setOpen(false)}>Cancelar</button>
+              <button type="submit" form="admin-reset-2fa-form" className="btn-primary" disabled={busy}>{busy ? 'Restableciendo…' : 'Restablecer'}</button>
+            </>
+          }
+        >
+          <form id="admin-reset-2fa-form" onSubmit={submit} className="grid gap-3">
+            <p className="text-sm text-ink-muted dark:text-dark-ink-muted">Se le cierra la sesión a <b>{user.email}</b> y la próxima vez que entre la configura de nuevo. Le llega un email avisando. Hacelo solo después de confirmar que es la persona (perdió el celular y los códigos).</p>
+            <label className="grid gap-1 text-sm font-medium" htmlFor="reset-2fa-reason">
+              Motivo (queda en el registro)
+              <input id="reset-2fa-reason" autoFocus value={reason} onChange={(e) => { setReason(e.target.value); setError(null); }} placeholder="Ej.: perdió el celular, confirmado por videollamada" />
+            </label>
+            {error && <p className="text-sm text-rose-600">{error}</p>}
+          </form>
+        </Modal>
+      )}
+    </>
+  );
+}
+
 export function ResetPasswordButton({ client, user, session, onDone }: { client: ClientDetail; user: { id: string; name: string; email: string }; session: AdminSession; onDone: (m: string) => void }) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState('');

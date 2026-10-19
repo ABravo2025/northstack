@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
+import { getSupportToken } from '../lib/supportSession';
 import SupportAccessBanner from '../components/common/SupportAccessBanner';
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Sidebar from '../components/layout/Sidebar';
 import SettingsSidebar from '../components/layout/SettingsSidebar';
@@ -177,6 +178,15 @@ export default function AppLayout({ user, token, tenant, onLogout }: AppLayoutPr
                   {startingCheckout ? t('banners.starting') : t('banners.addPaymentMethod')}
                 </button>
               )}
+            </div>
+          )}
+          {/* Two-step verification (spec-2fa.md): required for this role and not on yet. */}
+          {permissions.twoStep.required && !permissions.twoStep.enabled && !getSupportToken() && (
+            <div className="alert alert-warning mx-4 mt-4 sm:mx-6 flex items-center justify-between gap-3">
+              <span>{t('banners.twoStepRequired')}</span>
+              <Link to="/settings/profile#two-step" className="btn btn-outline btn-sm whitespace-nowrap">
+                {t('banners.twoStepTurnOn')}
+              </Link>
             </div>
           )}
           {needsPlanSelection && !showPlansModal && (

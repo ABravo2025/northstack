@@ -10,6 +10,9 @@ import { PermissionsProvider } from './contexts/PermissionsContext';
 import { isGrowthFeatureEnabled, planFeaturesFor } from './lib/planLimits';
 import TableSkeleton from './components/common/TableSkeleton';
 import LoginPage from './pages/LoginPage';
+import { readDeviceToken } from './api/twoStep';
+import { TWO_STEP_CHANGED } from './components/settings/TwoStepCard';
+import type { TwoStepPending } from './api/types';
 import RegisterPage from './pages/RegisterPage';
 import CompleteSignupPage from './pages/CompleteSignupPage';
 import ReferralsPage from './pages/ReferralsPage';
@@ -139,7 +142,7 @@ export default function App() {
         Promise.all([api.getCurrentUser(token), api.getCurrentTenant(token).catch(() => null)])
           .then(([userResponse, tenant]) => {
             setUser(userResponse.user);
-            setPermissions(userResponse.permissions);
+            setPermissions({ ...userResponse.permissions, twoStep: userResponse.twoStep });
             if (tenant) {
               setTenant(tenant);
             }
@@ -182,12 +185,12 @@ export default function App() {
     setCheckingSession(true);
     navigate('/overview');
     try {
-      const [{ user: fullUser, permissions }, tenant] = await Promise.all([
+      const [{ user: fullUser, permissions, twoStep: twoStepFlags }, tenant] = await Promise.all([
         api.getCurrentUser(newToken),
         api.getCurrentTenant(newToken).catch(() => null),
       ]);
       setUser(fullUser);
-      setPermissions(permissions);
+      setPermissions({ ...permissions, twoStep: twoStepFlags });
       if (tenant) {
         setTenant(tenant);
       }
@@ -200,14 +203,36 @@ export default function App() {
   const handlePasswordReset = (newToken: string) => adoptConfirmedSession(newToken);
   const handleInvitationAccepted = (newToken: string) => adoptConfirmedSession(newToken);
 
+  // Two-step verification (spec-2fa.md): the password was right and a code / setup comes next.
+  const [twoStep, setTwoStep] = useState<{ email: string; pending: TwoStepPending } | null>(null);
+
+  // Settings → Profile turned two-step verification on/off: the banner follows without a reload.
+  useEffect(() => {
+    const onChange = (e: Event) => {
+      const enabled = (e as CustomEvent<{ enabled: boolean }>).detail.enabled;
+      setPermissions((prev) => (prev ? { ...prev, twoStep: { ...(prev.twoStep ?? { required: false }), enabled } } : prev));
+    };
+    window.addEventListener(TWO_STEP_CHANGED, onChange);
+    return () => window.removeEventListener(TWO_STEP_CHANGED, onChange);
+  }, []);
+
+  const adoptLoginSession = (newToken: string) => {
+    setTwoStep(null);
+    setToken(newToken);
+    localStorage.setItem('token', newToken);
+  };
+
   const handleLogin = async (email: string, password: string) => {
     setLoading(true);
     try {
-      const response = await api.login({ email, password });
+      const response = await api.login({ email, password, deviceToken: readDeviceToken(email) });
+      if (response.mfa) {
+        setTwoStep({ email, pending: response.mfa });
+        return;
+      }
       const newToken = response.session?.token;
       if (newToken) {
-        setToken(newToken);
-        localStorage.setItem('token', newToken);
+        adoptLoginSession(newToken);
         // Deliberately NOT setUser(response.user) here (found live, 2026-09-15 — a customer's
         // first login showed a sidebar missing Payroll/the whole Sales group, permanently until
         // a manual reload): setting `user` this early made isAuthenticated true — and AppLayout
@@ -304,6 +329,12 @@ export default function App() {
           ) : (
             <LoginPage
               onLogin={handleLogin}
+              twoStep={twoStep}
+              onTwoStepDone={adoptLoginSession}
+              onTwoStepCancel={(message) => {
+                setTwoStep(null);
+                if (message) toast.error(message);
+              }}
               onSwitchToRegister={() => navigate('/register')}
               onForgotPassword={() => navigate('/forgot-password')}
               loading={loading}

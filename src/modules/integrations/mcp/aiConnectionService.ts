@@ -1,4 +1,5 @@
 import prisma from '../../../lib/prisma.js';
+import { recordAiConnectionActivity } from './oauthService.js';
 
 // Settings → Integrations → AI assistants (spec-mcp-server.md §2b, §7) — a user's own AI
 // connections. They're created only by the OAuth flow (oauthService.ts); here they're listed and
@@ -41,10 +42,13 @@ export async function listAiConnections(tenantId: string, userId: string | null)
 // `userId` set → may only revoke their own; null → any connection in the tenant. updateMany with
 // `revokedAt: null` makes a repeat revoke (or someone else's id) a silent no-op, same as
 // apiKeyService.revokeApiKey. Returns whether anything was revoked.
-export async function revokeAiConnection(tenantId: string, id: string, userId: string | null): Promise<boolean> {
-  const result = await prisma.aiConnection.updateMany({
-    where: { id, tenantId, revokedAt: null, ...(userId ? { userId } : {}) },
-    data: { revokedAt: new Date() },
-  });
-  return result.count > 0;
+// `actingUserId` is who clicked Disconnect — the owner of the connection, or an admin cutting
+// someone else's — and is who the Activity Log entry names.
+export async function revokeAiConnection(tenantId: string, id: string, userId: string | null, actingUserId: string): Promise<boolean> {
+  const connection = await prisma.aiConnection.findFirst({ where: { id, tenantId, revokedAt: null, ...(userId ? { userId } : {}) } });
+  if (!connection) return false;
+  const result = await prisma.aiConnection.updateMany({ where: { id: connection.id, revokedAt: null }, data: { revokedAt: new Date() } });
+  if (result.count === 0) return false;
+  await recordAiConnectionActivity(connection, 'delete', actingUserId);
+  return true;
 }

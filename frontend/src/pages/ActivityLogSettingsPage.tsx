@@ -43,6 +43,7 @@ const ENTITY_TYPE_VALUES: ActivityEntityType[] = [
   'invitation',
   'subscription',
   'googleCalendarConnection',
+  'aiConnection',
   'stripeConnection',
   'stripeInvoice',
   'project',

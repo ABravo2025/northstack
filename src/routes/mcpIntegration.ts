@@ -48,7 +48,7 @@ mcpIntegrationRouter.delete('/api/integrations/ai-connections/:id', async (req, 
   if (!user) return;
 
   const ownerScope = canManageApiAccess(user.roleContext) ? null : user.id;
-  const revoked = await revokeAiConnection(user.tenantId!, req.params.id, ownerScope);
+  const revoked = await revokeAiConnection(user.tenantId!, req.params.id, ownerScope, user.id);
   if (!revoked) return res.status(404).json({ error: 'Connection not found' });
   return res.status(204).end();
 });

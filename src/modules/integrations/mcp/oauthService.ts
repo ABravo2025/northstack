@@ -1,6 +1,27 @@
 import { createHash, randomBytes } from 'node:crypto';
 import prisma from '../../../lib/prisma.js';
 import { generateAiToken, hashApiKey } from '../../../lib/externalApiAuth.js';
+import { recordActivity } from '../../activity/activityLogService.js';
+import { aiConnectionActivityFieldConfig } from '../../activity/fieldConfigs/aiConnectionFieldConfig.js';
+import type { AiConnection } from '@prisma/client';
+
+// Connecting and disconnecting an assistant are logged like Google Calendar's own connection
+// (googleCalendarAuthService.ts): who gave which assistant access, and when it ended. Attributed
+// to the connection's own user — a revocation the assistant asked for, or one triggered by a
+// replayed refresh token, has no other person behind it.
+export async function recordAiConnectionActivity(connection: AiConnection, action: 'create' | 'delete', changedByUserId = connection.userId): Promise<void> {
+  await recordActivity({
+    tenantId: connection.tenantId,
+    entityType: 'aiConnection',
+    entityId: connection.id,
+    entityLabel: connection.clientName,
+    action,
+    changedByUserId,
+    before: action === 'delete' ? connection : null,
+    after: action === 'create' ? connection : null,
+    fieldConfig: aiConnectionActivityFieldConfig,
+  });
+}
 
 // OAuth 2.1 authorization server for AI assistants (spec-mcp-server.md §4.1, Alejandro 2026-10-16:
 // connections are OAuth-only). Implements just what MCP clients (claude.ai, ChatGPT, Claude Code,
@@ -190,7 +211,7 @@ export async function exchangeAuthorizationCode(input: { code: string; clientId:
   if (claimed.count === 0) throw new OAuthError('invalid_grant', 'Authorization code already used.');
 
   const pair = issueTokenPair();
-  await prisma.aiConnection.create({
+  const connection = await prisma.aiConnection.create({
     data: {
       tenantId: record.tenantId,
       userId: record.userId,
@@ -200,6 +221,7 @@ export async function exchangeAuthorizationCode(input: { code: string; clientId:
       ...pair.columns,
     },
   });
+  await recordAiConnectionActivity(connection, 'create');
   return tokenResponse(pair.accessToken, pair.refreshToken);
 }
 
@@ -212,6 +234,7 @@ export async function refreshAccessToken(input: { refreshToken: string; clientId
     const replayed = await prisma.aiConnection.findUnique({ where: { previousRefreshTokenHash: hash } });
     if (replayed && !replayed.revokedAt) {
       await prisma.aiConnection.update({ where: { id: replayed.id }, data: { revokedAt: new Date() } });
+      await recordAiConnectionActivity(replayed, 'delete');
     }
     throw new OAuthError('invalid_grant', 'Invalid refresh token.');
   }
@@ -232,8 +255,8 @@ export async function refreshAccessToken(input: { refreshToken: string; clientId
 // RFC 7009: always succeeds from the caller's point of view, whether or not the token existed.
 export async function revokeToken(token: string): Promise<void> {
   const hash = hashApiKey(token);
-  await prisma.aiConnection.updateMany({
-    where: { OR: [{ accessTokenHash: hash }, { refreshTokenHash: hash }], revokedAt: null },
-    data: { revokedAt: new Date() },
-  });
+  const connection = await prisma.aiConnection.findFirst({ where: { OR: [{ accessTokenHash: hash }, { refreshTokenHash: hash }], revokedAt: null } });
+  if (!connection) return;
+  const revoked = await prisma.aiConnection.updateMany({ where: { id: connection.id, revokedAt: null }, data: { revokedAt: new Date() } });
+  if (revoked.count > 0) await recordAiConnectionActivity(connection, 'delete');
 }

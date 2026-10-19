@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { PrivateApiClient } from './privateApiClient.js';
-import { apiError, compact, confirmable, data, respond } from './toolHelpers.js';
+import { apiError, compact, confirmable, data, message, respond } from './toolHelpers.js';
 import { registerShiftTools } from './shiftTools.js';
 
 // The MCP tool catalog (spec-mcp-server.md §5). Every tool is a thin wrapper over one or a few
@@ -184,9 +184,14 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
 
   server.registerTool('create_company', {
     title: 'Create company',
-    description: 'Create a company (account).',
+    description:
+      'Create a company (account). Every company needs a primary contact: pass contactId for an existing contact (see search_contacts), or contactFirstName + contactLastName + contactEmail to create one with it.',
     inputSchema: {
       name: z.string().min(1),
+      contactId: z.string().optional().describe('Existing contact to make primary'),
+      contactFirstName: z.string().optional(),
+      contactLastName: z.string().optional(),
+      contactEmail: z.string().email().optional(),
       industry: z.string().optional(),
       website: z.string().optional(),
       phone: z.string().optional(),
@@ -194,7 +199,17 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
       accountOwnerId: z.string().optional().describe('User id'),
     },
     annotations: WRITE,
-  }, async (input) => respond(api.post('/crm/companies', compact(input)), 'Company created.'));
+  }, async ({ contactId, contactFirstName, contactLastName, contactEmail, ...rest }) => {
+    const contact = contactId
+      ? { contactId }
+      : contactFirstName && contactLastName && contactEmail
+        ? { firstName: contactFirstName, lastName: contactLastName, email: contactEmail }
+        : null;
+    if (!contact) {
+      return message("A company needs a primary contact. Ask the user for an existing contact or the new contact's first name, last name and email, then call again.");
+    }
+    return respond(api.post('/crm/companies', { ...compact(rest), contact }), 'Company created.');
+  });
 
   server.registerTool('update_company', {
     title: 'Update company',

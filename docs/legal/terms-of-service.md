@@ -279,13 +279,23 @@ Section 3.1 Customer Data definition, same as every other module — no ToS text
 one real gap (Google Calendar's integration description in Privacy Policy's Section 4.5
 being factually incomplete) was fixed there, not here, since this file doesn't itemize
 integrations.
+
+2026-10-19 — MCP is LIVE in production (Alejandro tested it on staging with a real Claude connection,
+then asked to ship it). The "we are also building... not yet available" paragraph is replaced by a
+description of the live feature, checked against the code: OAuth-only connection, acts with the
+user's CURRENT role (Private API resolves it per request), confirmation for delete/deactivate/time
+off/hours decisions, Payroll read-only, Activity Log for every change AND connect/disconnect,
+disconnect by the user or whoever has manage_api_access, owner can switch it off per role
+(use_ai_assistants). Kept the Tenant's-own-choice-and-responsibility framing from §8.2 and made the
+third-party-AI-provider point explicit. Same text published on the landing (EN/ES).
+Effective Date bumped to October 19, 2026.
 -->
 
 
 
 # Northstack Terms of Service
 
-**Effective Date:** October 6, 2026
+**Effective Date:** October 19, 2026
 
 Welcome to Northstack. These Terms of Service ("**Terms**") are a binding agreement between
 Alejandro Bravo, an individual operating under the trade name "Northstack" and based in
@@ -597,13 +607,22 @@ responsibility.** The third party the Tenant connects, not Northstack, receives 
 processes the data exposed through that connection, under that third party's own terms and
 privacy practices, and Northstack is not responsible for how it handles that data.
 
-We are also building an integration, using the open Model Context Protocol ("**MCP**"),
-that will let a Tenant's own users connect a third-party AI assistant of their choice (such
-as Claude, ChatGPT, or similar tools) to that Tenant's own data in the Service. **This
-feature is not yet available.** Once available: it will act with the connecting user's own
-permissions, every action it takes will be recorded in the Activity Log, it will be limited
-to the Growth plan, and the Tenant's-own-choice-and-responsibility principle above will
-apply to it in the same way.
+AI assistants (MCP). On plans that include it (currently Growth and the Free Trial), a
+Tenant's users can connect a third-party AI assistant of their choice (such as Claude,
+ChatGPT, Cursor, or similar tools) to that Tenant's data in the Service through the open
+Model Context Protocol ("**MCP**"). The user makes the connection by signing in to
+Northstack and approving it; the assistant then acts as that user, with that user's
+current role and permissions, and can never access more than that user can in the Service.
+Deleting or deactivating a record and deciding someone else's time off or hours require
+the user's explicit confirmation inside the assistant, and Payroll is read-only through
+it. Every change it makes, and every connection and disconnection, is recorded in the
+Activity Log. The user, or whoever manages the Tenant's integrations, can disconnect it at
+any time from Settings → Integrations → AI assistants, and the Tenant's owner can turn the
+feature off for any role. **The AI assistant is a third-party service:** its provider, not
+Northstack, receives and processes the data the assistant reads through the connection,
+under that provider's own terms and privacy practices, and Northstack is not responsible
+for the assistant's answers or for the actions it takes on the user's instructions. The
+Tenant's-own-choice-and-responsibility principle above applies to it in the same way.
 
 ---
 

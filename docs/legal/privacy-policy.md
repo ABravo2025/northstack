@@ -140,12 +140,22 @@ Skill/EmployeeSkill, Timesheet/TimeEntry) and code for anything needing new disc
   Projects "no new precedent" reasoning above — same standard as the Dodo/Paddle and Stripe
   scope corrections earlier in this file.
 Bumped Effective Date to October 13, 2026 for this real, substantive (if narrow) correction.
+
+2026-10-19 — MCP is LIVE in production (Alejandro tested it on staging with a real Claude connection,
+then asked to ship it). The "we are also building... not yet available" paragraph is replaced by a
+description of the live feature, checked against the code: OAuth-only connection, acts with the
+user's CURRENT role (Private API resolves it per request), confirmation for delete/deactivate/time
+off/hours decisions, Payroll read-only, Activity Log for every change AND connect/disconnect,
+disconnect by the user or whoever has manage_api_access, owner can switch it off per role
+(use_ai_assistants). Kept the Tenant's-own-choice-and-responsibility framing from §8.2 and made the
+third-party-AI-provider point explicit. Same text published on the landing (EN/ES).
+Effective Date bumped to October 19, 2026.
 -->
 
 
 # Northstack Privacy Policy
 
-**Effective Date:** October 13, 2026
+**Effective Date:** October 19, 2026
 
 This Privacy Policy explains how Northstack ("**Northstack**," "**we**," "**us**," or
 "**our**"), operated by Alejandro Bravo, an individual based in Buenos Aires, Argentina,
@@ -307,11 +317,20 @@ third party it connects — not Northstack — receives and processes the data e
 that connection, under that third party's own privacy practices; see Section 8.2 of our
 Terms of Service.
 
-We are also building an integration, using the Model Context Protocol ("MCP"), that will
-let a Tenant's own users connect a third-party AI assistant of their choice to that
-Tenant's own data in the Service. **This feature is not yet available.** We will update
-this Policy with more detail — including which categories of data it can access — once it
-is.
+AI assistants (MCP). When a Tenant's user connects a third-party AI assistant through the
+Model Context Protocol ("MCP"), the assistant can read — and, when the user asks it to,
+change — the data that user can already access in the Service with their current role,
+which may include tasks and notes, CRM records (companies, contacts, opportunities),
+employee records, time off, shifts and timesheets, and payroll runs (read-only); never
+data hidden from that user's role. Data the assistant reads is sent to the assistant's
+provider, which processes it under its own privacy practices (see Section 8.2 of our Terms
+of Service); Northstack does not control that processing. To run the connection we keep:
+the assistant's name, the user who connected it, and when it was connected, last used and
+disconnected; its access and refresh tokens, stored only in hashed form (access tokens
+expire after one hour, refresh tokens after 30 days); a log of the requests it makes
+(method, path, result and IP address); and Activity Log entries for every change it makes
+and every connection and disconnection. The user, or whoever manages the Tenant's
+integrations, can disconnect an assistant at any time.
 
 ### 4.6 Northstack support access to your account (only with your permission)
 

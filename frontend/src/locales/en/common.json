@@ -172,6 +172,8 @@
     "ariaUnread": "Notifications ({{count}} unread)"
   },
   "banners": {
+    "twoStepRequired": "Your role requires two-step verification. Turn it on to keep your account safe.",
+    "twoStepTurnOn": "Turn it on",
     "newVersion": "A new version of Northstack is available.",
     "reload": "Reload",
     "suspended": "Your workspace is in view-only mode — your subscription lapsed and the grace period ended. Add a payment method to restore full access.",

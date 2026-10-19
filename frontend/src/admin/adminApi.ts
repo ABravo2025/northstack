@@ -112,7 +112,7 @@ export interface ClientDetail extends ClientRow {
     cancellationReason: string | null;
     card: string | null;
   } | null;
-  users: { id: string; name: string; email: string; role: string; status: string; lastSeenAt: string | null; createdAt: string }[];
+  users: { id: string; name: string; email: string; role: string; status: string; lastSeenAt: string | null; createdAt: string; twoStep?: boolean }[];
   dailyActive: { date: string; users: number }[];
   usage: { module: ModuleKey; included: boolean; users: number; adoptionPct: number; changes: number; lastUsedAt: string | null }[];
   invoices: { id: string; amountCents: number; currency: string; status: string; periodStart: string; periodEnd: string; paidAt: string | null; createdAt: string; provider: string }[];
@@ -150,8 +150,9 @@ export interface StaffTask {
 }
 
 export const adminApi = {
-  login: (email: string, password: string) =>
-    call<{ session?: { token: string } }>('/api/auth/login', null, { method: 'POST', body: JSON.stringify({ email, password }) }),
+  // Two-step verification (spec-2fa.md): staff always have it, so this usually returns `mfa`.
+  login: (email: string, password: string, deviceToken?: string | null) =>
+    call<{ session?: { token: string }; mfa?: { step: 'verify' | 'enroll'; token: string } }>('/api/auth/login', null, { method: 'POST', body: JSON.stringify({ email, password, deviceToken }) }),
   me: (token: string) => call<{ user: { id: string; firstName: string; lastName: string; email: string; platformRole: string | null } }>('/api/auth/me', token),
   logout: (token: string) => call<unknown>('/api/auth/logout', token, { method: 'POST' }).catch(() => null),
   overview: (token: string) => call<Overview>('/api/platform/admin/overview', token),
@@ -220,6 +221,8 @@ export const adminActions = {
   reactivate: (token: string, id: string, reason: string) => post<ActionResult>(`/api/platform/admin/clients/${cid(id)}/reactivate`, token, { reason }),
   resetPassword: (token: string, id: string, userId: string, reason: string) =>
     post<ActionResult>(`/api/platform/admin/clients/${cid(id)}/users/${cid(userId)}/reset-password`, token, { reason }),
+  resetTwoStep: (token: string, id: string, userId: string, reason: string) =>
+    post<ActionResult>(`/api/platform/admin/clients/${cid(id)}/users/${cid(userId)}/reset-two-step`, token, { reason }),
   setAgreement: (token: string, id: string, body: { modules: Record<string, boolean | 'plan'>; limits: Record<string, number | null | 'plan'>; expiresAt: string | null; reason: string }) =>
     call<ActionResult>(`/api/platform/admin/clients/${cid(id)}/agreement`, token, { method: 'PUT', body: JSON.stringify(body) }),
   clearAgreement: (token: string, id: string, reason: string) =>

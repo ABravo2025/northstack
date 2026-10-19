@@ -172,6 +172,8 @@
     "ariaUnread": "Notificaciones ({{count}} sin leer)"
   },
   "banners": {
+    "twoStepRequired": "Tu rol requiere verificación en dos pasos. Activala para proteger tu cuenta.",
+    "twoStepTurnOn": "Activarla",
     "newVersion": "Hay una nueva versión de Northstack disponible.",
     "reload": "Recargar",
     "suspended": "Tu espacio de trabajo está en modo solo lectura — tu suscripción venció y terminó el período de gracia. Agregá un método de pago para recuperar el acceso completo.",

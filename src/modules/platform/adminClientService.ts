@@ -175,7 +175,7 @@ async function loadClientRows(now: Date, onlyTenantId?: string) {
     }),
     prisma.user.findMany({
       where: { tenantId: onlyTenantId ?? { not: null }, platformRole: null },
-      select: { id: true, tenantId: true, status: true, role: true, createdAt: true, lastSeenAt: true, firstName: true, lastName: true, email: true },
+      select: { id: true, tenantId: true, status: true, role: true, createdAt: true, lastSeenAt: true, firstName: true, lastName: true, email: true, totpEnabledAt: true },
     }),
     prisma.activityLogEntry.groupBy({ by: ['tenantId', 'entityType'], where: { ...byTenant, changedAt: { gte: since30 } }, _count: { _all: true } }),
     prisma.ticket.groupBy({ by: ['tenantId'], where: { ...byTenant, status: { isTerminal: false } }, _count: { _all: true } }),
@@ -360,7 +360,7 @@ export async function getClientDetail(tenantId: string, now = new Date()) {
         }
       : null,
     users: users
-      .map((u) => ({ id: u.id, name: `${u.firstName} ${u.lastName}`.trim(), email: u.email, role: u.role, status: u.status, lastSeenAt: u.lastSeenAt, createdAt: u.createdAt }))
+      .map((u) => ({ id: u.id, name: `${u.firstName} ${u.lastName}`.trim(), email: u.email, role: u.role, status: u.status, lastSeenAt: u.lastSeenAt, createdAt: u.createdAt, twoStep: !!u.totpEnabledAt }))
       .sort((a, b) => (a.role === 'owner' ? -1 : b.role === 'owner' ? 1 : a.name.localeCompare(b.name))),
     dailyActive,
     usage,

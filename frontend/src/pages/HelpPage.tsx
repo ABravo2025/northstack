@@ -30,6 +30,18 @@ const FAQ_CATEGORIES: FaqCategory[] = [
     icon: <UserCircleIcon />,
     items: [
       {
+        q: 'Why does Northstack ask me for a code when I sign in?',
+        a: "You (or your role) have two-step verification on. Open your authenticator app and type the 6-digit code for Northstack. It's required for the account owner and for anyone who can manage billing or payments.",
+      },
+      {
+        q: 'I lost my phone. How do I get in?',
+        a: 'Use one of the recovery codes you saved when you turned it on ("Use a recovery code" on the code screen). If you don\'t have them, ask whoever manages users in your company to reset it from Settings → Users; if you are the account owner, write to info@joinnorthstack.com.',
+      },
+      {
+        q: 'Which authenticator app should I use?',
+        a: 'Any app that supports codes from a QR (TOTP): Google Authenticator, Microsoft Authenticator, Authy, 1Password, Bitwarden… They all work the same.',
+      },
+      {
         q: 'What happens when my 15-day trial ends?',
         a: "Nothing breaks right away. You get a 14-day grace period with a reminder banner to add a payment method — everything still works. Only after that lapses does the workspace switch to read-only, blocking new creates/edits/deletes until you subscribe.",
       },
@@ -367,6 +379,18 @@ const FAQ_CATEGORIES_ES: FaqCategory[] = [
     label: 'Cuenta y acceso',
     icon: <UserCircleIcon />,
     items: [
+      {
+        q: '¿Por qué Northstack me pide un código al entrar?',
+        a: 'Tenés activada la verificación en dos pasos (o tu rol la requiere). Abrí tu app autenticadora y escribí el código de 6 dígitos de Northstack. Es obligatoria para el dueño de la cuenta y para quien puede gestionar facturación o pagos.',
+      },
+      {
+        q: 'Perdí el celular. ¿Cómo entro?',
+        a: 'Usá uno de los códigos de recuperación que guardaste al activarla ("Usar un código de recuperación" en la pantalla del código). Si no los tenés, pedile a quien administra los usuarios de tu empresa que la restablezca desde Configuración → Usuarios; si sos el dueño de la cuenta, escribí a info@joinnorthstack.com.',
+      },
+      {
+        q: '¿Qué app autenticadora uso?',
+        a: 'Cualquiera que lea códigos desde un QR (TOTP): Google Authenticator, Microsoft Authenticator, Authy, 1Password, Bitwarden… Todas funcionan igual.',
+      },
       {
         q: '¿Qué pasa cuando termina mi prueba de 15 días?',
         a: 'No se rompe nada de entrada. Tenés un período de gracia de 14 días con un banner recordándote agregar un método de pago — todo sigue funcionando igual. Recién cuando ese plazo vence, el espacio de trabajo pasa a modo solo lectura, bloqueando creaciones, ediciones y eliminaciones nuevas hasta que te suscribas.',

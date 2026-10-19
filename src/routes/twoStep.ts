@@ -2,7 +2,6 @@ import type { Request, Response } from 'express';
 import type { User } from '@prisma/client';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 import { authenticateUser, getClientIp, validateSession } from '../lib/httpAuth.js';
-import { requirePlatformRole } from '../lib/platformAuth.js';
 import { AUTH_RATE_LIMIT, isRateLimited } from '../lib/rateLimit.js';
 import prisma from '../lib/prisma.js';
 import { sendTwoStepNoticeEmail, type TwoStepNoticeKind } from '../lib/mailer.js';
@@ -24,7 +23,7 @@ import {
 } from '../modules/auth/mfaService.js';
 
 // Two-step verification (spec-2fa.md): the second login step, the person's own settings, and the
-// reset by a tenant admin (manage_users) or by Northstack staff.
+// reset by a tenant admin (manage_users). Staff reset it from the Admin (routes/platform.ts).
 export const twoStepRouter = createAsyncRouter();
 
 const INVALID_STEP = 'This sign-in took too long or had too many tries. Sign in again.';
@@ -149,7 +148,8 @@ twoStepRouter.delete('/api/users/me/2fa/devices', async (req, res) => {
 // ---- reset by someone else ---------------------------------------------------------------------
 
 // A tenant admin (manage_users) for someone in their company. The account owner's can only be
-// reset by Northstack staff (spec-2fa.md §1), so an admin can't take over the owner's account.
+// reset by Northstack staff from the Admin (adminActionService.resetTwoStep, audited), so an admin
+// can't take over the owner's account.
 twoStepRouter.post('/api/tenants/users/:userId/2fa/reset', async (req, res) => {
   const actor = await validateSession(req, res);
   if (!actor) return;
@@ -159,19 +159,6 @@ twoStepRouter.post('/api/tenants/users/:userId/2fa/reset', async (req, res) => {
   if (target.id === actor.id) return res.status(400).json({ error: 'Use your own profile settings instead' });
   const targetRole = await resolveRoleContextForUser(target);
   if (targetRole.isOwner) return res.status(403).json({ error: 'Only Northstack support can reset the account owner’s two-step verification', code: 'owner' });
-  await resetForUser(target, actor.id);
-  await notify(target, 'reset');
-  return res.json({ ok: true });
-});
-
-const staffOnly = requirePlatformRole('platform_support');
-
-twoStepRouter.post('/api/platform/users/:userId/2fa/reset', async (req, res) => {
-  const actor = await staffOnly(req, res);
-  if (!actor) return;
-  const target = await prisma.user.findUnique({ where: { id: String(req.params.userId) } });
-  if (!target) return res.status(404).json({ error: 'User not found' });
-  if (target.id === actor.id) return res.status(400).json({ error: 'Ask another staff member' });
   await resetForUser(target, actor.id);
   await notify(target, 'reset');
   return res.json({ ok: true });

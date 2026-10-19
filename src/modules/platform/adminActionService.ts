@@ -1,4 +1,6 @@
 import { Prisma, type PlanTier, type TenantStatus } from '@prisma/client';
+import { resetForUser } from '../auth/mfaService.js';
+import { sendTwoStepNoticeEmail } from '../../lib/mailer.js';
 import prisma from '../../lib/prisma.js';
 import { requestPasswordReset } from '../auth/authService.js';
 import { getNextBillingDate, setNextBillingDate } from '../../lib/dodopayments.js';
@@ -133,6 +135,18 @@ export async function sendPasswordReset(tenantId: string, userId: string, actor:
   await requestPasswordReset(user.email);
   await audit(actor, tenantId, 'reset_password', reason, { userId, email: user.email });
   return { success: true, message: `Le mandamos a ${user.email} un link para elegir una contraseña nueva.` };
+}
+
+// Two-step verification (spec-2fa.md): the account owner's can only be reset here, by Northstack
+// staff, with a reason in the audit log. The person is signed out and gets an email.
+export async function resetTwoStep(tenantId: string, userId: string, actor: Actor, reason: string): Promise<AdminActionResult> {
+  const user = await prisma.user.findFirst({ where: { id: userId, tenantId } });
+  if (!user) return { success: false, error: 'Esa persona no es de este cliente.' };
+  if (!user.totpEnabledAt) return { success: false, error: 'Esa persona no tiene la verificación en dos pasos activada.' };
+  await resetForUser(user, actor.id);
+  await sendTwoStepNoticeEmail({ to: user.email, locale: user.locale, firstName: user.firstName, kind: 'reset' });
+  await audit(actor, tenantId, 'reset_two_step', reason, { userId, email: user.email });
+  return { success: true, message: `Listo: ${user.email} va a configurar la verificación en dos pasos de nuevo la próxima vez que entre.` };
 }
 
 export async function listAudit(input: { tenantId?: string; take?: number }) {

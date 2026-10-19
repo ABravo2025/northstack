@@ -9,6 +9,20 @@ export interface PermissionsPayload {
   // Plan-gated modules this tenant actually has (its plan + any Admin Center agreement). Missing on
   // a backend older than 2026-10-03 — the frontend then derives it from the plan name.
   planFeatures?: PlanFeatures;
+  // Two-step verification (spec-2fa.md), from GET /api/auth/me — added by App next to the role.
+  twoStep?: TwoStepFlags;
+}
+
+export interface TwoStepFlags {
+  enabled: boolean;
+  required: boolean;
+  available?: boolean;
+}
+
+// POST /api/auth/login when a second step comes first: no session yet.
+export interface TwoStepPending {
+  step: 'verify' | 'enroll';
+  token: string;
 }
 
 export interface PlanFeatures {
@@ -39,6 +53,10 @@ export interface AuthResponse {
   // Full shape only on POST /api/tenants/register — every other AuthResponse caller
   // (login, accept-invite, password reset) doesn't create/return a tenant.
   tenant?: Tenant;
+  // Two-step verification: the password was right, a code or a setup comes first (no session).
+  mfa?: TwoStepPending;
+  // Password reset for someone with two-step verification: no session, sign in again.
+  signInAgain?: boolean;
   session?: {
     token: string;
   };
@@ -978,6 +996,8 @@ export interface TenantUser {
   roleRef?: { name: string } | null;
   status: string;
   socialLinks?: SocialLinks | null;
+  // Two-step verification on (spec-2fa.md).
+  totpEnabledAt?: string | null;
 }
 
 export const SOCIAL_NETWORKS = ['linkedin', 'x', 'instagram', 'facebook', 'website'] as const;

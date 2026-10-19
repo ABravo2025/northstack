@@ -6,7 +6,7 @@ import { AdminApiError, adminApi, type ClientDetail, type StaffNote, type StaffT
 import type { AdminSession } from './AdminApp';
 import { MODULE_LABEL, STATUS, TONE_COLOR, ago, attentionText, date, daysUntil, healthTone, money, planLabel } from './format';
 import { Avatar, Chip, ErrorBox, Loading, Meter, Panel } from './ui';
-import ClientActions, { ResetPasswordButton } from './ClientActions';
+import ClientActions, { ResetPasswordButton, ResetTwoStepButton } from './ClientActions';
 import AgreementTab from './AgreementTab';
 import SupportAccessPanel from './SupportAccessPanel';
 
@@ -258,11 +258,16 @@ function UsersTab({ c, session, onDone }: { c: ClientDetail; session: AdminSessi
             <tr key={u.id}>
               <td className="font-semibold">{u.name}</td>
               <td className="font-mono text-xs">{u.email}</td>
-              <td>{ROLE_LABEL[u.role] ?? u.role}</td>
+              <td>{ROLE_LABEL[u.role] ?? u.role}{u.twoStep && <span className="ml-2 text-xs text-emerald-700 dark:text-emerald-300">2FA</span>}</td>
               <td>{ago(u.lastSeenAt)}</td>
               <td><Chip tone={u.status === 'active' ? 'good' : 'neutral'}>{u.status === 'active' ? 'Activo' : 'Inactivo'}</Chip></td>
               <td className="tabular-nums">{date(u.createdAt)}</td>
-              <td className="text-right">{u.status === 'active' && <ResetPasswordButton client={c} user={u} session={session} onDone={onDone} />}</td>
+              <td className="text-right">
+                <div className="inline-flex flex-wrap justify-end gap-2">
+                  {u.twoStep && <ResetTwoStepButton client={c} user={u} session={session} onDone={onDone} />}
+                  {u.status === 'active' && <ResetPasswordButton client={c} user={u} session={session} onDone={onDone} />}
+                </div>
+              </td>
             </tr>
           ))}
         </TableBody>

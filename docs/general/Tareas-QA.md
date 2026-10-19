@@ -5234,6 +5234,18 @@ Resuelve el pendiente de agosto ("un área en el perfil de las notificaciones qu
 
 **Verificado** (servicios contra `staging`, 6/6): turno fichado 10 min tarde con 15 min de pausa → sugerencia 220 min (planificado 240); turno sin fichaje → 120 planificados; reporte: fichado 220, 1 tardanza, 1 ausencia; sin fichaje en el plan no hay columnas; resumen al Owner y no dos veces el mismo día. 790/790 tests.
 
+## QA-121 — Verificación en dos pasos (app autenticadora) (2026-10-19, en `staging`)
+
+Spec: `docs/general/spec-2fa.md` (decisiones §0.1). **Necesita `MFA_ENCRYPTION_KEY` en Vercel** (Preview para staging, Production para prod; claves distintas). Sin la clave no se exige a nadie y "Activar" avisa que no está disponible.
+- **Obligatoria** para el dueño, `manage_billing`, `manage_payments` y el staff del Admin: al entrar, después de la contraseña, la configuran (QR + código → 10 códigos de recuperación). Quien ya tenía sesión abierta ve un aviso fijo hasta activarla.
+- **Opcional** para el resto: Configuración → Perfil → Verificación en dos pasos (activar, códigos nuevos, olvidar dispositivos, desactivar si no es obligatoria).
+- Login: código de 6 dígitos o código de recuperación; "Recordar este dispositivo 30 días". 5 intentos por paso; el paso vence a los 5 minutos.
+- Restablecer: Configuración → Usuarios (escudo, quien tiene `manage_users`, nunca al dueño); en el Admin, "Restablecer 2FA" con motivo (auditado), la única forma para el dueño. Cierra las sesiones de la persona.
+- Restablecer la contraseña ya no inicia sesión si la persona tiene (o debe tener) 2FA: vuelve al login.
+- Emails de aviso en cada cambio (activada, desactivada, restablecida, código de recuperación usado, códigos nuevos). Registro de actividad del usuario.
+
+**Verificado** contra `staging`: API 38/38 (dueño obligado a configurarla, código incorrecto, secreto cifrado y nunca en `/me`, código al entrar, el paso sirve una vez, dispositivo recordado / desconocido, código de recuperación una sola vez, 5 intentos, el dueño no puede desactivarla, estado y códigos nuevos, miembro la activa y desactiva, reset por admin y permisos, se cierra la sesión, reset de contraseña sin sesión, staff obligado, reset desde el Admin con motivo y auditoría); tests RFC 6238/4226; navegador EN y ES oscuro 10/10 (alta obligatoria, códigos, tarjeta del perfil, usuarios, recordar dispositivo, miembro desde el perfil) y login del Admin.
+
 ## QA-120 — Turnos fase 2: pedidos de cambio en celeste y con motivo obligatorio (2026-10-16, en `staging`)
 
 Pedido de Alejandro: "si alguien solicita un cambio, debería marcarlo con otro color y la razón debería ser obligatoria. Así no queda información perdida".

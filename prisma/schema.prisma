@@ -2582,7 +2582,7 @@ model PlatformAuditEntry {
   actor       User     @relation("PlatformAuditActor", fields: [actorUserId], references: [id])
   tenantId    String?
   tenant      Tenant?  @relation(fields: [tenantId], references: [id])
-  action      String // extend_trial | change_plan | suspend | reactivate | reset_password
+  action      String // extend_trial | change_plan | suspend | reactivate | reset_password | reset_two_step | …
   reason      String
   details     Json?
 

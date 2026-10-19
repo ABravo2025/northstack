@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import TwoStepLogin from '../components/auth/TwoStepLogin';
+import { readDeviceToken } from '../api/twoStep';
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom';
 import { ADMIN_TOKEN_KEY, AdminApiError, adminApi } from './adminApi';
 import AdminHome from './AdminHome';
@@ -126,27 +128,62 @@ function AdminLogin({ onLoggedIn }: { onLoggedIn: (token: string) => void }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Two-step verification (spec-2fa.md): required for every staff account.
+  const [twoStep, setTwoStep] = useState<{ step: 'verify' | 'enroll'; token: string } | null>(null);
+
+  const finish = async (t: string) => {
+    const { user } = await adminApi.me(t);
+    if (!user.platformRole) {
+      void adminApi.logout(t);
+      throw new Error('Esta cuenta no es del equipo de Northstack.');
+    }
+    onLoggedIn(t);
+  };
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setError(null);
     try {
-      const res = await adminApi.login(email.trim(), password);
+      const res = await adminApi.login(email.trim(), password, readDeviceToken(email));
+      if (res.mfa) {
+        setTwoStep(res.mfa);
+        return;
+      }
       const t = res.session?.token;
       if (!t) throw new Error('No se pudo iniciar sesión.');
-      const { user } = await adminApi.me(t);
-      if (!user.platformRole) {
-        void adminApi.logout(t);
-        throw new Error('Esta cuenta no es del equipo de Northstack.');
-      }
-      onLoggedIn(t);
+      await finish(t);
     } catch (err) {
       setError(err instanceof AdminApiError && err.status === 401 ? 'Email o contraseña incorrectos.' : (err as Error).message);
     } finally {
       setBusy(false);
     }
   };
+
+  if (twoStep) {
+    return (
+      <div className="grid min-h-screen place-items-center bg-[#17142b] px-4">
+        {/* The same navy panel as the app's login: TwoStepLogin is styled for it. */}
+        <div className="auth-left max-w-sm rounded-xl shadow-xl md:!w-full">
+          <div className="auth-left-inner">
+          <TwoStepLogin
+            key={twoStep.token}
+            email={email}
+            pending={twoStep}
+            onDone={(t) => {
+              setTwoStep(null);
+              finish(t).catch((err) => setError((err as Error).message));
+            }}
+            onCancel={(message) => {
+              setTwoStep(null);
+              setError(message ?? null);
+            }}
+          />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="grid min-h-screen place-items-center bg-[#17142b] px-4">

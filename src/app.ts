@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
+import { twoStepRouter } from './routes/twoStep.js';
 import { authRouter } from './routes/auth.js';
 import { tenantsRouter } from './routes/tenants.js';
 import { employeesRouter } from './routes/employees.js';
@@ -130,6 +131,7 @@ app.get('/health', (_req, res) => {
 // all one file. Every router is mounted with no prefix — each route inside
 // already carries its full path (e.g. '/api/hr/employees/:employeeId').
 app.use(authRouter);
+app.use(twoStepRouter);
 app.use(tenantsRouter);
 app.use(employeesRouter);
 app.use(catalogsRouter);

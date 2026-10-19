@@ -12,6 +12,7 @@ import {
   validatePasswordResetToken,
 } from '../modules/auth/authService.js';
 import { serializeRoleContext } from '../modules/auth/roleService.js';
+import { mfaRequiredFor } from '../modules/auth/mfaService.js';
 import { planFeatures } from '../modules/tenant/planLimits.js';
 import { AUTH_RATE_LIMIT, isRateLimited } from '../lib/rateLimit.js';
 import { authenticateUser, getBearerToken, getClientIp } from '../lib/httpAuth.js';
@@ -40,10 +41,14 @@ authRouter.post('/api/auth/login', async (req, res) => {
     return res.status(429).json({ error: 'Too many attempts. Please try again later.' });
   }
 
-  const result = await loginUser(req.body);
+  const result = await loginUser(req.body ?? {});
 
   if (!result.success) {
     return res.status(401).json({ error: result.error });
+  }
+  // Two-step verification (spec-2fa.md): no session yet, only the token for the next step.
+  if (result.mfa) {
+    return res.json({ mfa: result.mfa });
   }
 
   return res.json({ user: sanitizeUser(result.user!), session: result.session });
@@ -84,7 +89,8 @@ authRouter.post('/api/auth/reset-password', async (req, res) => {
     return res.status(400).json({ error: result.error, field: result.field });
   }
 
-  return res.json({ user: sanitizeUser(result.user!), session: result.session });
+  // No session when the person has two-step verification: they sign in again (spec-2fa.md).
+  return res.json({ user: sanitizeUser(result.user!), session: result.session ?? null, signInAgain: !result.session });
 });
 
 authRouter.post('/api/auth/logout', async (req, res) => {
@@ -125,6 +131,8 @@ authRouter.get('/api/auth/me', async (req, res) => {
   return res.json({
     user: sanitizeUser(userWithoutRoleContext),
     permissions: { ...serializeRoleContext(roleContext), planFeatures: planFeatures(user.tenant) },
+    // Drives the "turn on two-step verification" banner for people who must have it.
+    twoStep: { enabled: !!user.totpEnabledAt, required: mfaRequiredFor(user, roleContext) },
   });
 });
 

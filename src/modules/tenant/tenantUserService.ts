@@ -34,6 +34,8 @@ export async function listTenantUsers(tenantId: string) {
       // (see updateTenantUser's roleId branch below) — the enum alone can't represent it anymore.
       roleRef: { select: { name: true } },
       status: true,
+      // spec-2fa.md: shown on Company users, with "Reset two-step verification".
+      totpEnabledAt: true,
     },
     orderBy: { firstName: 'asc' },
   });

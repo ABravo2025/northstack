@@ -52,6 +52,30 @@
     "body": "El contrato de {{employeeName}} con {{tenantName}} acaba de confirmarse y firmarse.",
     "attachmentNote": "El contrato firmado está adjunto a este correo."
   },
+  "twoStep": {
+    "greeting": "Hola {{name}},",
+    "notYou": "Si no fuiste vos, cambiá tu contraseña ya mismo y avisale al administrador de tu empresa o a info@joinnorthstack.com.",
+    "enabled": {
+      "subject": "Activaste la verificación en dos pasos",
+      "body": "Se activó la verificación en dos pasos en tu cuenta de Northstack. Desde ahora, al entrar se pide un código de tu app autenticadora."
+    },
+    "disabled": {
+      "subject": "Se desactivó la verificación en dos pasos",
+      "body": "Se desactivó la verificación en dos pasos en tu cuenta de Northstack. Ahora para entrar solo se pide la contraseña."
+    },
+    "reset": {
+      "subject": "Se restableció tu verificación en dos pasos",
+      "body": "Un administrador restableció la verificación en dos pasos de tu cuenta de Northstack y se cerró tu sesión. La próxima vez que entres la vas a configurar de nuevo (si tu rol la exige) o podés activarla desde tu perfil."
+    },
+    "recoveryUsed": {
+      "subject": "Se usó un código de recuperación para entrar",
+      "body": "Alguien entró a tu cuenta de Northstack con uno de tus códigos de recuperación. Cada código sirve una sola vez; podés crear nuevos en Configuración → Perfil → Verificación en dos pasos."
+    },
+    "recoveryRegenerated": {
+      "subject": "Se crearon códigos de recuperación nuevos",
+      "body": "Se crearon códigos de recuperación nuevos para tu cuenta de Northstack. Los anteriores ya no funcionan."
+    }
+  },
   "passwordReset": {
     "subject": "Restablecé tu contraseña de Northstack",
     "body": "Recibimos una solicitud para restablecer tu contraseña de Northstack.",

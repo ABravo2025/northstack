@@ -6,6 +6,7 @@ import { sendPasswordResetEmail } from '../../lib/mailer.js';
 import { getEmailDomain } from '../../lib/email.js';
 import { resolveRoleContextForUser, type RoleContext } from './roleService.js';
 import { enterRequestContext } from '../../lib/requestContext.js';
+import { createChallenge, isMfaRequired, isTrustedDevice, mfaEnabled, type MfaPurpose } from './mfaService.js';
 
 export interface RegisterUserInput {
   firstName: string;
@@ -19,6 +20,8 @@ export interface RegisterUserInput {
 export interface LoginUserInput {
   email: string;
   password: string;
+  // Two-step verification: the "remember this device" token the browser kept (spec-2fa.md).
+  deviceToken?: unknown;
 }
 
 export interface AuthResult {
@@ -27,6 +30,9 @@ export interface AuthResult {
   session?: Session;
   error?: string;
   field?: string;
+  // Two-step verification: password was right, but a code (verify) or a setup (enroll) comes
+  // first. No session yet — mfaToken only works on the /api/auth/login/2fa endpoints.
+  mfa?: { step: MfaPurpose; token: string };
 }
 
 const SCRYPT_KEY_LENGTH = 64;
@@ -151,15 +157,27 @@ export async function loginUser(input: LoginUserInput): Promise<AuthResult> {
     return { success: false, error: 'Invalid credentials' };
   }
 
-  const session = await prisma.session.create({
+  // Two-step verification (spec-2fa.md): with it on, a code unless this device is remembered;
+  // without it but required for this person (owner, billing/payments, staff), set it up first.
+  if (mfaEnabled(user)) {
+    if (!(await isTrustedDevice(user.id, input.deviceToken))) {
+      return { success: true, user, mfa: { step: 'verify', token: await createChallenge(user.id, 'verify') } };
+    }
+  } else if (await isMfaRequired(user)) {
+    return { success: true, user, mfa: { step: 'enroll', token: await createChallenge(user.id, 'enroll') } };
+  }
+
+  return { success: true, user, session: await createSession(user.id) };
+}
+
+export async function createSession(userId: string): Promise<Session> {
+  return prisma.session.create({
     data: {
       token: crypto.randomUUID(),
-      userId: user.id,
+      userId,
       expiresAt: newSessionExpiry(),
     },
   });
-
-  return { success: true, user, session };
 }
 
 // Minimal tenant projection alongside the user — just enough for validateSession (httpAuth.ts)
@@ -290,9 +308,10 @@ export async function logoutUser(token: string): Promise<boolean> {
   return deleted.count > 0;
 }
 
-export function sanitizeUser<T extends { passwordHash: string }>(user: T): Omit<T, 'passwordHash'> {
-  const { passwordHash: _passwordHash, ...safeUser } = user;
-  return safeUser;
+// Also strips the two-step verification secret (encrypted, but it never needs to leave the server).
+export function sanitizeUser<T extends { passwordHash: string }>(user: T): Omit<T, 'passwordHash' | 'totpSecretEnc' | 'totpLastStep'> {
+  const { passwordHash: _passwordHash, totpSecretEnc: _secret, totpLastStep: _step, ...safeUser } = user as T & { totpSecretEnc?: unknown; totpLastStep?: unknown };
+  return safeUser as Omit<T, 'passwordHash' | 'totpSecretEnc' | 'totpLastStep'>;
 }
 
 export interface UpdateProfileInput {
@@ -506,6 +525,10 @@ export async function resetPassword(token: string, newPassword: string): Promise
   }
 
   const passwordHash = hashPassword(newPassword);
+  // Two-step verification (spec-2fa.md): the reset link only proves the email. Whoever has (or must
+  // have) a second step goes back to the login, which asks for it — no session from here.
+  const owner = await prisma.user.findUniqueOrThrow({ where: { id: resetToken.userId } });
+  const needsSecondStep = mfaEnabled(owner) || (await isMfaRequired(owner));
   const result = await prisma.$transaction(async (tx) => {
     const user = await tx.user.update({ where: { id: resetToken.userId }, data: { passwordHash } });
     await tx.passwordResetToken.update({ where: { id: resetToken.id }, data: { usedAt: new Date() } });
@@ -515,6 +538,7 @@ export async function resetPassword(token: string, newPassword: string): Promise
     // logged in, so every existing session is revoked before issuing the one
     // fresh session below.
     await tx.session.deleteMany({ where: { userId: resetToken.userId } });
+    if (needsSecondStep) return { user, session: undefined };
     const session = await tx.session.create({
       data: { token: randomUUID(), userId: resetToken.userId, expiresAt: newSessionExpiry() },
     });

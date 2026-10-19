@@ -1,6 +1,6 @@
 # Spec: Verificación en dos pasos (2FA)
 
-**Estado:** borrador para aprobar (2026-10-16). Era el bloque F de `spec-shifts-fase2.md`: Alejandro pidió
+**Estado:** aprobada por Alejandro el 2026-10-19 con las decisiones de §0.1. En construcción en `staging` (rama `feat/2fa`). Era el bloque F de `spec-shifts-fase2.md`: Alejandro pidió
 que el QR de fichaje fuera genérico para reusarlo acá ("QR sync con Google Authenticator y después cuando
 quieran loggear tengan que poner el número").
 
@@ -15,6 +15,23 @@ lo que conviene como primer paso:
 | Código por email | Media-baja | Ninguno (Zoho) | Si alguien entra al email, entra a todo (y ya puede resetear la contraseña). Sirve poco como segundo paso. |
 | Código por SMS | Media | Twilio u otro (pago por mensaje) | Servicio nuevo, costo por login, SIM swapping. No. |
 | **Passkeys (WebAuthn)** | Muy alta (no se puede phishear) | Ninguno | Huella/Face ID/Windows Hello. Más trabajo (y la app Android necesita un plugin). **Buena segunda etapa.** |
+
+
+## 0.1 Decisiones de Alejandro (2026-10-19)
+
+1. **Solo app autenticadora** (TOTP). Passkeys, SMS y email quedan afuera.
+2. **Todos los planes.** **Obligatoria** para el **dueño de la cuenta** y para quien tenga permisos de
+   movimientos sensibles: **`manage_billing`** (plan, facturación) y **`manage_payments`** (Stripe/cobros).
+   Para todos los demás, **opcional**. No hay política por empresa: la regla es fija.
+3. **Recordar este dispositivo: 30 días.**
+4. **Staff del Admin Center: obligatoria** desde el primer día.
+
+Consecuencias:
+- Quien la tiene obligatoria y todavía no la configuró, en su próximo login pasa por la activación antes de
+  entrar (sesiones ya abiertas siguen; ven un aviso fijo hasta activarla). Al registrarse una empresa nueva,
+  el dueño ve el mismo aviso.
+- Quien la tiene obligatoria no puede desactivarla (sí regenerar códigos o que se la restablezcan).
+- **Restablecer la contraseña ya no inicia sesión** si la persona tiene 2FA: vuelve al login, que pide el código.
 
 ## 1. Cómo se ve
 
@@ -32,8 +49,7 @@ de recuperación). Opción **"Recordar este dispositivo 30 días"**.
 empresa puede **restablecer** su 2FA (queda en el Activity Log y le llega un email a la persona). Para el
 dueño de la cuenta, lo restablece el equipo de Northstack desde el Admin.
 
-**Política de la empresa (Configuración → Seguridad):** "Exigir verificación en dos pasos" para todos o solo
-para roles con permisos de administración. Quien no la tiene configurada, al entrar va directo a activarla.
+**Obligatoria (§0.1):** dueño, `manage_billing`, `manage_payments` y staff de Northstack. Quien no la tiene configurada, al entrar va directo a activarla.
 
 ## 2. Reglas
 
@@ -52,25 +68,20 @@ para roles con permisos de administración. Quien no la tiene configurada, al en
 - `User`: `totpSecretEnc String?`, `totpEnabledAt DateTime?`, `totpLastStep Int?` (anti-reuso).
 - `RecoveryCode` (userId, codeHash, usedAt).
 - `TrustedDevice` (userId, tokenHash, expiresAt, userAgent, createdAt) — "recordar 30 días".
-- `Tenant`: `require2fa` (`off` | `admins` | `everyone`).
 - Librería: `otpauth` (chica, sin dependencias) o implementación propia de HMAC-SHA1 (~40 líneas).
 
 ## 4. Plan
 
-¿Todos los planes? Recomendación: **sí, activarla por persona en Starter y Growth** (la seguridad no se cobra);
-la **política para exigirla a toda la empresa**, también en ambos.
+Todos los planes (§0.1).
 
 ## 5. Unidades
 
 1. Schema + servicio TOTP (generar, verificar, códigos de recuperación) + tests.
 2. Login en dos pasos (API + pantalla), recordar dispositivo, rate limit.
 3. Perfil → activar / desactivar / regenerar códigos (EN/ES).
-4. Restablecer por un admin + política de empresa + Admin Center obligatorio.
+4. Obligatoriedad (dueño, `manage_billing`, `manage_payments`, staff) + aviso fijo + restablecer por un admin / por Northstack + reset de contraseña sin sesión.
 5. Centro de ayuda, anuncio.
 
-## 6. Preguntas para Alejandro
+## 6. Preguntas
 
-1. ¿Arrancamos con la app autenticadora y dejamos passkeys para una segunda etapa?
-2. ¿Disponible en todos los planes, incluida la política de exigirla?
-3. ¿"Recordar este dispositivo 30 días": sí, y cuántos días?
-4. ¿Obligatoria para el staff del Admin Center desde el primer día?
+Respondidas el 2026-10-19 (§0.1).

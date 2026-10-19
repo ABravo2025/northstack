@@ -52,6 +52,30 @@
     "body": "{{employeeName}}'s contract with {{tenantName}} was just confirmed and signed.",
     "attachmentNote": "The signed contract is attached to this email."
   },
+  "twoStep": {
+    "greeting": "Hi {{name}},",
+    "notYou": "If this wasn't you, change your password right away and contact your company's admin or info@joinnorthstack.com.",
+    "enabled": {
+      "subject": "Two-step verification is on",
+      "body": "Two-step verification was turned on for your Northstack account. From now on, signing in asks for a code from your authenticator app."
+    },
+    "disabled": {
+      "subject": "Two-step verification was turned off",
+      "body": "Two-step verification was turned off for your Northstack account. Signing in now only asks for your password."
+    },
+    "reset": {
+      "subject": "Your two-step verification was reset",
+      "body": "An admin reset two-step verification on your Northstack account, and you were signed out. Next time you sign in you'll set it up again (if your role requires it) or can turn it on from your profile."
+    },
+    "recoveryUsed": {
+      "subject": "A recovery code was used to sign in",
+      "body": "Someone signed in to your Northstack account with one of your recovery codes. Each code works only once; you can create new ones in Settings → Profile → Two-step verification."
+    },
+    "recoveryRegenerated": {
+      "subject": "New recovery codes were created",
+      "body": "New recovery codes were created for your Northstack account. The old ones no longer work."
+    }
+  },
   "passwordReset": {
     "subject": "Reset your Northstack password",
     "body": "We received a request to reset your Northstack password.",

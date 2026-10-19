@@ -620,6 +620,27 @@ export async function sendPasswordResetEmail(input: SendPasswordResetEmailInput)
   }, 'Failed to send password reset email:', lng);
 }
 
+// Two-step verification (spec-2fa.md): a security notice on every change, so a change the
+// person didn't make doesn't go unnoticed. No preferences category: security emails always go out.
+export type TwoStepNoticeKind = 'enabled' | 'disabled' | 'reset' | 'recoveryUsed' | 'recoveryRegenerated';
+
+export async function sendTwoStepNoticeEmail(input: { to: string; locale?: string | null; firstName: string; kind: TwoStepNoticeKind }): Promise<void> {
+  if (!mailerConfigured()) return;
+  const lng = resolveEmailLocale(input.locale);
+  const t = (key: string, opts?: Record<string, unknown>) => i18n.t(`twoStep.${key}`, { lng, ns: 'emails', ...opts });
+  await dispatchMail(
+    {
+      from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
+      to: input.to,
+      subject: t(`${input.kind}.subject`),
+      text: [t('greeting', { name: input.firstName }), '', t(`${input.kind}.body`), '', t('notYou')].join('\n'),
+      html: [`<p>${t('greeting', { name: input.firstName })}</p>`, `<p>${t(`${input.kind}.body`)}</p>`, `<p style="color:#706b88;font-size:12px">${t('notYou')}</p>`].join('\n'),
+    },
+    'Failed to send two-step verification notice:',
+    lng,
+  );
+}
+
 export interface SendSignupVerificationEmailInput {
   to: string;
   verifyUrl: string;

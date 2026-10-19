@@ -37,6 +37,7 @@ const ENTITY_TYPE_LABELS: Record<ActivityEntityType, string> = {
   invitation: 'Invitation',
   subscription: 'Subscription',
   googleCalendarConnection: 'Google Calendar Connection',
+  aiConnection: 'AI Assistant',
   stripeConnection: 'Stripe Connection',
   stripeInvoice: 'Stripe Invoice',
   project: 'Project',

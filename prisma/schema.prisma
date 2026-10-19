@@ -1209,6 +1209,9 @@ enum ActivityEntityType {
   invitation
   subscription
   googleCalendarConnection
+  // An AI assistant connected over OAuth (spec-mcp-server.md) — created on connect, deleted on
+  // disconnect/revocation, so the owner can always see who gave an assistant access and when.
+  aiConnection
   stripeConnection
   // Payments v1 Unidad 8 — an invoice sent to a Company through the tenant's own Stripe. Lives
   // only in Stripe (no local row), so entityId is the Stripe invoice id; always logged with

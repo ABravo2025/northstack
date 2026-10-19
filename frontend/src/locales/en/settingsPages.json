@@ -964,6 +964,7 @@
       "invitation": "Invitation",
       "subscription": "Subscription",
       "googleCalendarConnection": "Google Calendar Connection",
+      "aiConnection": "AI Assistant",
       "stripeConnection": "Stripe Connection",
       "stripeInvoice": "Stripe Invoice",
       "location": "Location",

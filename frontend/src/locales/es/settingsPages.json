@@ -969,6 +969,7 @@
       "invitation": "Invitación",
       "subscription": "Suscripción",
       "googleCalendarConnection": "Conexión de Google Calendar",
+      "aiConnection": "Asistente de IA",
       "stripeConnection": "Conexión de Stripe",
       "stripeInvoice": "Factura de Stripe",
       "location": "Locación",

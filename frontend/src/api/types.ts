@@ -634,6 +634,7 @@ export type ActivityEntityType =
   | 'invitation'
   | 'subscription'
   | 'googleCalendarConnection'
+  | 'aiConnection'
   | 'stripeConnection'
   | 'stripeInvoice'
   | 'timeOffAdjustment'

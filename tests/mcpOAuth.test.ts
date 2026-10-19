@@ -10,6 +10,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 let clients: any[] = [];
 let codes: any[] = [];
 let connections: any[] = [];
+let activity: any[] = [];
 let seq = 0;
 
 function matches(row: any, where: any): boolean {
@@ -45,6 +46,12 @@ vi.mock('../src/lib/prisma.js', () => ({
         return { count: rows.length };
       }),
     },
+    activityLogEntry: {
+      create: vi.fn(async ({ data }: any) => {
+        activity.push(data);
+        return data;
+      }),
+    },
     aiConnection: {
       create: vi.fn(async ({ data }: any) => {
         const row = { id: `conn${++seq}`, revokedAt: null, previousRefreshTokenHash: null, ...data };
@@ -52,6 +59,7 @@ vi.mock('../src/lib/prisma.js', () => ({
         return row;
       }),
       findUnique: vi.fn(async ({ where }: any) => connections.find((c) => matches(c, where)) ?? null),
+      findFirst: vi.fn(async ({ where }: any) => connections.find((c) => matches(c, where)) ?? null),
       update: vi.fn(async ({ where, data }: any) => {
         const row = connections.find((c) => c.id === where.id);
         Object.assign(row, data);
@@ -85,6 +93,7 @@ beforeEach(() => {
   clients = [];
   codes = [];
   connections = [];
+  activity = [];
 });
 
 describe('redirect URIs', () => {
@@ -136,6 +145,8 @@ describe('authorization code + PKCE', () => {
     expect(connections[0]).toMatchObject({ kind: 'oauth', clientName: 'Claude', userId: 'u1', tenantId: 't1' });
     // Only hashes are stored.
     expect(JSON.stringify(connections[0])).not.toContain(tokens.access_token);
+    // Connecting an assistant is in the Activity Log, attributed to the person who approved it.
+    expect(activity).toEqual([expect.objectContaining({ entityType: 'aiConnection', action: 'create', entityLabel: 'Claude', changedByUserId: 'u1', tenantId: 't1' })]);
   });
 
   it('rejects a wrong PKCE verifier', async () => {
@@ -178,6 +189,7 @@ describe('refresh tokens', () => {
     await refreshAccessToken({ refreshToken: tokens.refresh_token, clientId: client.client_id });
     await expect(refreshAccessToken({ refreshToken: tokens.refresh_token, clientId: client.client_id })).rejects.toThrow();
     expect(connections[0].revokedAt).toBeInstanceOf(Date);
+    expect(activity.at(-1)).toMatchObject({ entityType: 'aiConnection', action: 'delete' });
   });
 
   it('is bound to the client it was issued to', async () => {
@@ -189,6 +201,7 @@ describe('refresh tokens', () => {
     const { client, tokens } = await connected();
     await revokeToken(tokens.access_token);
     expect(connections[0].revokedAt).toBeInstanceOf(Date);
+    expect(activity.map((a) => a.action)).toEqual(['create', 'delete']);
     await expect(refreshAccessToken({ refreshToken: tokens.refresh_token, clientId: client.client_id })).rejects.toThrow();
   });
 });

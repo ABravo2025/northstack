@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import type { User } from '@prisma/client';
 import prisma from '../../lib/prisma.js';
-import { decryptMfaSecret, encryptMfaSecret } from '../../lib/mfaEncryption.js';
+import { decryptMfaSecret, encryptMfaSecret, isMfaEncryptionConfigured } from '../../lib/mfaEncryption.js';
 import { recordActivity } from '../activity/activityLogService.js';
 import { userActivityFieldConfig, userDisplayName } from '../activity/fieldConfigs/userFieldConfig.js';
 import { resolveRoleContextForUser, type RoleContext } from './roleService.js';
@@ -23,7 +23,10 @@ export function mfaRequiredFor(user: { platformRole: string | null }, role: Pick
   return role.isOwner || role.permissions.has('manage_billing') || role.permissions.has('manage_payments');
 }
 
+// Without MFA_ENCRYPTION_KEY nobody can set it up, so nobody can be required to: logins keep
+// working on an environment that doesn't have the key yet instead of locking owners out.
 export async function isMfaRequired(user: Pick<User, 'platformRole' | 'roleId' | 'role' | 'tenantId'>): Promise<boolean> {
+  if (!isMfaEncryptionConfigured()) return false;
   if (user.platformRole) return true;
   if (!user.tenantId) return false;
   return mfaRequiredFor(user, await resolveRoleContextForUser(user));
@@ -81,6 +84,7 @@ async function newRecoveryCodes(userId: string): Promise<string[]> {
 // Starts (or restarts) a setup: a fresh secret, stored encrypted but not enabled yet.
 export async function startSetup(user: User): Promise<Result<{ secret: string; otpauthUrl: string }>> {
   if (user.totpEnabledAt) return { success: false, error: 'Two-step verification is already on', code: 'already_enabled' };
+  if (!isMfaEncryptionConfigured()) return { success: false, error: 'Two-step verification isn’t available right now', code: 'unavailable' };
   const secret = generateSecret();
   await prisma.user.update({ where: { id: user.id }, data: { totpSecretEnc: encryptMfaSecret(secret), totpLastStep: null } });
   return { success: true, value: { secret, otpauthUrl: otpauthUrl(secret, user.email) } };

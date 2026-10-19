@@ -715,6 +715,17 @@ export default function IntegrationsSettingsPage({ token }: IntegrationsSettings
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, canPayments, canApi, canAi]);
 
+  // Connections (an AI assistant, Stripe) are often finished in another tab — refresh the tiles'
+  // "connected" state when the person comes back to this one.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible' && !view) loadTileStatus();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, canPayments, canApi, canAi]);
+
   const openView = (key: IntegrationKey | null) => {
     const next = new URLSearchParams(searchParams);
     if (key) next.set('view', key);

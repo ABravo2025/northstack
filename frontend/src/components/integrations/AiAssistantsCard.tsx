@@ -65,6 +65,17 @@ export default function AiAssistantsCard({ token, canUseAiAssistants, canManageA
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, showEveryone]);
 
+  // A connection is made in another tab (the assistant opens Northstack's consent page there and
+  // then goes back to the assistant), so reload when the person comes back to this one.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') load();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, showEveryone]);
+
   if (!visible) return null;
 
   const allMode = showEveryone || !canUseAiAssistants;

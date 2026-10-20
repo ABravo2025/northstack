@@ -345,7 +345,7 @@ export function ResetTwoStepButton({ client, user, session, onDone }: { client: 
               Motivo (queda en el registro)
               <input id="reset-2fa-reason" autoFocus value={reason} onChange={(e) => { setReason(e.target.value); setError(null); }} placeholder="Ej.: perdió el celular, confirmado por videollamada" />
             </label>
-            {error && <p className="text-sm text-rose-600">{error}</p>}
+            {error && <p className="text-sm text-rose-600 dark:text-rose-400">{error}</p>}
           </form>
         </Modal>
       )}

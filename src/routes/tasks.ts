@@ -30,8 +30,9 @@ export const tasksRouter = createAsyncRouter();
 
 // The Meet invite email typed on a task (2026-10-06). '' / null clear it. A project task's call
 // needs one — a project has no natural person to invite, unlike a Contact or a Company.
+// Exported for routes/externalApi.ts (Private API), so both validate the same way.
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-function parseMeetEmail(raw: unknown): string | null | undefined | 'invalid' {
+export function parseMeetEmail(raw: unknown): string | null | undefined | 'invalid' {
   if (raw === undefined) return undefined;
   if (raw === null || raw === '') return null;
   if (typeof raw !== 'string') return 'invalid';
@@ -41,7 +42,7 @@ function parseMeetEmail(raw: unknown): string | null | undefined | 'invalid' {
 
 // A task's phase must be one of the phases of the very project the task belongs to (Projects
 // module) — a phase id from another project, or on a non-project task, is rejected.
-async function isPhaseOfProject(phaseId: unknown, entityType: string, entityId: string): Promise<boolean> {
+export async function isPhaseOfProject(phaseId: unknown, entityType: string, entityId: string): Promise<boolean> {
   if (typeof phaseId !== 'string' || entityType !== 'project') return false;
   const phase = await findPhaseById(phaseId);
   return phase?.projectId === entityId;

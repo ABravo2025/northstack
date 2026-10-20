@@ -1,6 +1,14 @@
 # Tareas de desarrollo
 
 - Fecha de creación: 2026-07-02
+- **2026-10-20 — MCP / Private API: revisión de paridad con la app (EN PRODUCCIÓN 2026-10-20)**: un asistente no pudo cargar el contrato
+  de un empleado ni crear/asignar una política de licencias. Se revisó la API contra toda la app y se sumó todo lo
+  operativo que faltaba vía delegación a las rutas de la app (lista blanca en `externalApiDelegation.ts`, corre como el
+  usuario): políticas/saldos/historial/ajustes de licencias, campos de contrato del empleado, catálogos, usuarios,
+  campos personalizados, tags, comentarios/timer/carpetas de tareas, Proyectos completo, Activity Log, notificaciones,
+  publicar/cancelar/copiar turnos, mercado de turnos, extras de timesheet, reportes a clientes y fichaje. 6 scopes nuevos,
+  58 → 122 tools, confirmación en dos pasos para todo lo que avisa a terceros. Fuera: configuración y dinero. Detalle en
+  `spec-mcp-server.md` §12. Sin cambios de base de datos.
 - **2026-10-19 — MCP / Asistentes de IA EN PRODUCCIÓN**: cada usuario de un tenant Growth conecta su propio asistente
   (Claude, ChatGPT, Claude Code, Cursor) pegando la URL `/mcp` y aprobando en Northstack por OAuth. Actúa como esa persona
   con su rol; 58 tools (CRM, tareas, notas, empleados, licencias, payroll solo lectura, turnos en borrador y horas); borrar

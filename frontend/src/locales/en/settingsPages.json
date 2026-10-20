@@ -327,10 +327,11 @@
       "namePlaceholder": "e.g. Zapier — new Tasks",
       "scopesHelp": "A key starts with no access — tick exactly what it needs. You can only grant what your own role can already do.",
       "scopeGroups": {
-        "tasksNotes": "Tasks & Notes",
+        "tasksNotes": "Tasks, Notes & Projects",
         "crm": "CRM",
         "hr": "HR",
-        "shifts": "Shifts & hours"
+        "shifts": "Shifts & hours",
+        "workspace": "Workspace"
       },
       "scopeResources": {
         "tasks": "Tasks",
@@ -343,7 +344,11 @@
         "timeOff": "Time off",
         "payroll": "Payroll",
         "shifts": "Shifts",
-        "timesheets": "Timesheets"
+        "timesheets": "Timesheets",
+        "projects": "Projects",
+        "clock": "Clock in/out",
+        "workspace": "People & lists (users, departments, job titles, statuses, tags)",
+        "activity": "Activity Log"
       },
       "read": "Read",
       "write": "Write",

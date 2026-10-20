@@ -327,10 +327,11 @@
       "namePlaceholder": "ej. Zapier — nuevas Tareas",
       "scopesHelp": "Una clave arranca sin ningún acceso — marcá exactamente lo que necesita. Solo podés otorgar lo que tu propio rol ya puede hacer.",
       "scopeGroups": {
-        "tasksNotes": "Tareas y Notas",
+        "tasksNotes": "Tareas, Notas y Proyectos",
         "crm": "CRM",
         "hr": "RR.HH.",
-        "shifts": "Turnos y horas"
+        "shifts": "Turnos y horas",
+        "workspace": "Espacio de trabajo"
       },
       "scopeResources": {
         "tasks": "Tareas",
@@ -343,7 +344,11 @@
         "timeOff": "Ausencias",
         "payroll": "Nómina",
         "shifts": "Turnos",
-        "timesheets": "Timesheets"
+        "timesheets": "Timesheets",
+        "projects": "Proyectos",
+        "clock": "Fichaje",
+        "workspace": "Personas y listas (usuarios, departamentos, puestos, estados, etiquetas)",
+        "activity": "Registro de actividad"
       },
       "read": "Lectura",
       "write": "Escritura",

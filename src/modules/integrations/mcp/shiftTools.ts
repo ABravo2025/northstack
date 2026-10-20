@@ -5,9 +5,9 @@ import { apiError, compact, confirmable, data, respond } from './toolHelpers.js'
 
 // Shifts & Timesheets tools (spec-mcp-server.md §10). The Private API hands these calls to the app's
 // own Shifts/Timesheet routes as the connected person, so who can see or schedule what (location
-// managers, direct managers, everyone's own shifts) is exactly what the app does. By design an
-// assistant only prepares DRAFT shifts: publishing a week and cancelling or changing a published
-// shift notify people, so those stay in the app.
+// managers, direct managers, everyone's own shifts) is exactly what the app does. An assistant edits
+// only DRAFT shifts; publishing and cancelling (they notify people) live in schedulingTools.ts with
+// a confirmation step (2026-10-20). Changing a published shift's details stays in the app.
 
 const isoDate = z.string().describe('Calendar date, YYYY-MM-DD');
 const clock = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'HH:MM, 24-hour').describe('Local time HH:MM (24h)');
@@ -50,7 +50,7 @@ export function registerShiftTools(server: McpServer, ctx: ToolContext): void {
 
   server.registerTool('create_shift_draft', {
     title: 'Create draft shift',
-    description: 'Create a DRAFT shift at a location you schedule. Nobody is notified until someone publishes the week in the app.',
+    description: 'Create a DRAFT shift at a location you schedule. Nobody is notified until it is published (publish_shifts).',
     inputSchema: {
       locationId: z.string(),
       date: isoDate,
@@ -66,7 +66,7 @@ export function registerShiftTools(server: McpServer, ctx: ToolContext): void {
 
   server.registerTool('update_shift_draft', {
     title: 'Update draft shift',
-    description: 'Change a DRAFT shift (published shifts can only be changed in the app).',
+    description: 'Change a DRAFT shift. A published shift can be cancelled (cancel_shift) but its details are changed in the app.',
     inputSchema: {
       id: z.string(),
       date: isoDate.optional(),

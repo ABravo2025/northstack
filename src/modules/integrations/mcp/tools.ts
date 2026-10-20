@@ -3,6 +3,11 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { PrivateApiClient } from './privateApiClient.js';
 import { apiError, compact, confirmable, data, message, respond } from './toolHelpers.js';
 import { registerShiftTools } from './shiftTools.js';
+import { registerSchedulingTools } from './schedulingTools.js';
+import { registerWorkspaceTools } from './workspaceTools.js';
+import { registerRecordTools } from './recordTools.js';
+import { registerHrTools } from './hrTools.js';
+import { registerProjectTools } from './projectTools.js';
 
 // The MCP tool catalog (spec-mcp-server.md §5). Every tool is a thin wrapper over one or a few
 // Private API calls; none of them decides what the user may do — the Private API applies the
@@ -16,7 +21,7 @@ export interface ToolContext {
   confirmationSecret: string;
 }
 
-const ENTITY_TYPES = ['employee', 'company', 'contact', 'opportunity'] as const;
+export const ENTITY_TYPES = ['employee', 'company', 'contact', 'opportunity', 'project'] as const;
 
 const pageArgs = {
   cursor: z.string().optional().describe('nextCursor from a previous page'),
@@ -44,7 +49,7 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
 
   server.registerTool('whoami', {
     title: 'Who am I',
-    description: "Who you're acting as in Northstack: the user, their role, the workspace and plan, and which areas this connection can read or write (scopes). Call this first if unsure what's allowed.",
+    description: "Who you're acting as in Northstack: the user, their role, the workspace and plan, and which areas this connection can read or write (scopes). user.employeeId is your own employee record (null if not linked). Call this first if unsure what's allowed.",
     annotations: READ,
   }, async () => respond(api.get('/me')));
 
@@ -98,28 +103,37 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
 
   server.registerTool('create_task', {
     title: 'Create task',
-    description: 'Create a task attached to an employee, company, contact or opportunity. Use whoami for your own user id when assigning to yourself.',
+    description: 'Create a task attached to an employee, company, contact, opportunity or project. assigneeId is a USER id: list_users for anyone, whoami for yourself.',
     inputSchema: {
       entityType: z.enum(ENTITY_TYPES),
       entityId: z.string(),
       title: z.string().min(1),
       description: z.string().optional(),
-      assigneeId: z.string().describe('User id of the assignee'),
+      assigneeId: z.string().describe('User id of the assignee (list_users)'),
       dueDate: isoDateTime.optional(),
+      projectPhaseId: z.string().optional().describe("Project tasks only: one of that project's phases (get_project)"),
+      folderId: z.string().optional().describe('Personal task folder (list_task_folders)'),
+      hasVideoCall: z.boolean().optional().describe('Add a Google Meet link once the task has a due time'),
+      meetAttendeeEmail: z.string().email().optional().describe('Who to invite to the call; required for a project task with a call'),
     },
     annotations: WRITE,
   }, async (input) => respond(api.post('/tasks', compact(input)), 'Task created.'));
 
   server.registerTool('update_task', {
     title: 'Update task',
-    description: 'Change a task. To complete it set completed=true; to reopen, completed=false.',
+    description: 'Change a task. To complete it set completed=true (optionally with timeSpentMinutes); to reopen, completed=false. Pass null to clear an optional field.',
     inputSchema: {
       id: z.string(),
       title: z.string().min(1).optional(),
       description: z.string().nullable().optional(),
-      assigneeId: z.string().optional(),
+      assigneeId: z.string().optional().describe('User id (list_users)'),
       dueDate: isoDateTime.nullable().optional(),
       completed: z.boolean().optional(),
+      timeSpentMinutes: z.number().int().min(0).nullable().optional().describe('Time spent on the task, in minutes'),
+      projectPhaseId: z.string().nullable().optional(),
+      folderId: z.string().nullable().optional(),
+      hasVideoCall: z.boolean().optional(),
+      meetAttendeeEmail: z.string().email().nullable().optional(),
     },
     annotations: WRITE,
   }, async ({ id, completed, ...rest }) =>
@@ -145,7 +159,7 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
 
   server.registerTool('create_note', {
     title: 'Create note',
-    description: 'Add a note to an employee, company, contact or opportunity.',
+    description: 'Add a note to an employee, company, contact, opportunity or project. Use it for details that have no field of their own.',
     inputSchema: { entityType: z.enum(ENTITY_TYPES), entityId: z.string(), title: z.string().min(1), description: z.string().min(1).describe('The note body') },
     annotations: WRITE,
   }, async (input) => respond(api.post('/notes', input), 'Note created.'));
@@ -406,14 +420,14 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
 
   server.registerTool('get_employee', {
     title: 'Get employee',
-    description: 'One employee by id.',
+    description: 'One employee by id, with department, job title, status, manager and assigned time-off policies.',
     inputSchema: { id: z.string() },
     annotations: READ,
   }, async ({ id }) => respond(api.get(`/hr/employees/${id}`)));
 
   server.registerTool('create_employee', {
     title: 'Create employee',
-    description: 'Add an employee record.',
+    description: 'Add an employee record. Department, job title and status ids come from list_catalogs; managerId is an employee id. Afterwards: assign_time_off_policy, invite_employee.',
     inputSchema: {
       firstName: z.string().min(1),
       lastName: z.string().min(1),
@@ -424,13 +438,19 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
       startDate: isoDateTime.optional(),
       birthdate: isoDateTime.optional(),
       personalEmail: z.string().optional(),
+      contractType: z.enum(['full_time', 'part_time']).optional().describe('Working-hours type. Other contract details (duration, trial period, place of work) have no field: put them in a note'),
+      contractUrl: z.string().url().optional().describe('Link to the signed contract (Drive, Dropbox…) — Northstack stores only the link'),
+      personType: z.enum(['employee', 'contractor', 'profile']).optional(),
+      nationality: z.string().optional(),
+      endDate: isoDateTime.optional().describe('End of contract, if fixed-term'),
+      statusId: z.string().optional().describe('Employee status id (list_catalogs kind=employee_statuses); default status if omitted'),
     },
     annotations: WRITE,
   }, async (input) => respond(api.post('/hr/employees', compact(input)), 'Employee created.'));
 
   server.registerTool('update_employee', {
     title: 'Update employee',
-    description: 'Change an employee record. Pass null to clear an optional field.',
+    description: 'Change an employee record, including contract type and link, status and end date. Pass null to clear an optional field. Custom fields: set_custom_field. Time-off policies: assign_time_off_policy.',
     inputSchema: {
       id: z.string(),
       firstName: z.string().min(1).optional(),
@@ -442,13 +462,19 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
       startDate: isoDateTime.nullable().optional(),
       birthdate: isoDateTime.nullable().optional(),
       personalEmail: z.string().nullable().optional(),
+      contractType: z.enum(['full_time', 'part_time']).nullable().optional().describe('Working-hours type. Other contract details have no field: put them in a note'),
+      contractUrl: z.string().url().nullable().optional().describe('Link to the signed contract — only the link is stored'),
+      personType: z.enum(['employee', 'contractor', 'profile']).nullable().optional(),
+      nationality: z.string().nullable().optional(),
+      endDate: isoDateTime.nullable().optional(),
+      statusId: z.string().optional().describe('Employee status id (list_catalogs kind=employee_statuses). A terminated status cannot be changed back here'),
     },
     annotations: WRITE,
   }, async ({ id, ...rest }) => respond(api.patch(`/hr/employees/${id}`, compact(rest)), 'Employee updated.'));
 
   server.registerTool('delete_employee', {
     title: 'Delete employee',
-    description: 'Permanently delete an employee record (for someone leaving, a termination in the app is usually what you want instead). Two steps: first call returns a summary and confirmationToken; call again with it after the user confirms.',
+    description: 'Permanently delete an employee record. For someone LEAVING do not delete: terminations (final pay, access) are done in the app, never through an assistant. Two steps: first call returns a summary and confirmationToken; call again with it after the user confirms.',
     inputSchema: { id: z.string(), confirmationToken: confirmationArg },
     annotations: DESTRUCTIVE,
   }, async ({ id, confirmationToken }) => confirmable(ctx, 'delete_employee', id, confirmationToken,
@@ -459,17 +485,28 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
 
   server.registerTool('list_time_off', {
     title: 'List time off',
-    description: 'Time off requests. view="mine" (default; HR admins see everyone\'s), "team_calendar" (approved and pending for the whole team), or "to_approve" (waiting for your decision). Optional date window and status.',
+    description: 'Time off requests. view="mine" (default; HR admins see everyone\'s), "team" (your direct reports), "team_calendar" (approved and pending for the whole team), or "to_approve" (waiting for your decision). Optional date window and status.',
     inputSchema: {
-      view: z.enum(['mine', 'team_calendar', 'to_approve']).optional(),
+      view: z.enum(['mine', 'team', 'team_calendar', 'to_approve']).optional(),
       from: isoDate.optional(),
       to: isoDate.optional(),
       status: z.enum(['pending', 'approved', 'rejected', 'cancelled']).optional(),
       ...pageArgs,
     },
     annotations: READ,
-  }, async ({ view, cursor, limit, ...filters }) =>
-    list('/hr/timeoff', { ...filters, scope: view === 'team_calendar' ? 'calendar' : view === 'to_approve' ? 'pending-approval' : undefined }, cursor, limit));
+  }, async ({ view, cursor, limit, ...filters }) => {
+    if (view === 'team') {
+      // The app's own "My team" view (direct reports) — one unpaginated list, filtered here.
+      const result = await api.get<any[]>('/hr/time-off-requests', { scope: 'team' });
+      if (!result.ok) return apiError(result);
+      const time = (v: unknown) => new Date(String(v)).getTime();
+      return data(result.body.filter((r) =>
+        (!filters.status || r.status === filters.status) &&
+        (!filters.from || time(r.endDate) >= time(filters.from)) &&
+        (!filters.to || time(r.startDate) <= time(filters.to))));
+    }
+    return list('/hr/timeoff', { ...filters, scope: view === 'team_calendar' ? 'calendar' : view === 'to_approve' ? 'pending-approval' : undefined }, cursor, limit);
+  });
 
   server.registerTool('who_is_off', {
     title: 'Who is off',
@@ -484,7 +521,7 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
 
   server.registerTool('request_time_off', {
     title: 'Request time off',
-    description: 'Request time off. For yourself, omit employeeId; only HR admins can request for someone else. timeOffPolicyId must be a policy assigned to that person.',
+    description: 'Request time off. For yourself, omit employeeId; only HR admins can request for someone else. timeOffPolicyId must be a policy assigned to that person (get_employee shows them; list_time_off_policies lists all). preview_time_off shows the days it would use.',
     inputSchema: {
       timeOffPolicyId: z.string(),
       startDate: isoDate,
@@ -532,4 +569,9 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
   }, async ({ id }) => respond(api.get(`/hr/payroll/${id}`)));
 
   registerShiftTools(server, ctx);
+  registerSchedulingTools(server, ctx);
+  registerWorkspaceTools(server, ctx);
+  registerRecordTools(server, ctx);
+  registerHrTools(server, ctx);
+  registerProjectTools(server, ctx);
 }

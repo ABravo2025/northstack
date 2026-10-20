@@ -13,6 +13,9 @@ import {
   canViewShifts,
   canManageShifts,
   canApproveTimesheets,
+  canViewActivityLog,
+  canViewProjects,
+  canManageProjects,
 } from '../auth/permissionService.js';
 import { getEmployeeScope, type RoleContext } from '../auth/roleService.js';
 import { API_SCOPES, type ApiScope } from '../../lib/externalApiAuth.js';
@@ -65,6 +68,14 @@ const SCOPE_RULES: Record<ApiScope, (role: RoleContext) => boolean> = {
   'shifts:write': (role) => canManageShifts(role),
   'timesheets:read': (role) => canApproveTimesheets(role),
   'timesheets:write': (role) => canApproveTimesheets(role),
+  // Names and catalogs only — the same lists every member's pickers already load in the app.
+  'workspace:read': () => true,
+  'activity:read': (role) => canViewActivityLog(role),
+  'projects:read': (role) => canViewProjects(role),
+  'projects:write': (role) => canManageProjects(role),
+  // A company integration over attendance is for whoever runs shifts.
+  'clock:read': (role) => canManageShifts(role),
+  'clock:write': (role) => canManageShifts(role),
 };
 
 export function canGrantApiScope(role: RoleContext, scope: ApiScope): boolean {
@@ -102,6 +113,15 @@ const AI_SCOPE_RULES: Record<ApiScope, (role: RoleContext) => boolean> = {
   'shifts:write': () => true,
   'timesheets:read': () => true,
   'timesheets:write': () => true,
+  // Same reasoning (2026-10-20): the delegated app routes apply the person's own rules — a
+  // member sees the projects they're on, clocks in as themselves, reads only the Activity Log
+  // entries their role may see (and the tenant feed only with view_activity_log).
+  'workspace:read': () => true,
+  'activity:read': () => true,
+  'projects:read': () => true,
+  'projects:write': () => true,
+  'clock:read': () => true,
+  'clock:write': () => true,
 };
 
 export function aiScopesForRole(role: RoleContext): ApiScope[] {

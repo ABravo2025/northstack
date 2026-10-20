@@ -89,6 +89,13 @@ export const API_SCOPES = [
   // routers, so every relationship rule (location manager, direct manager) applies as-is.
   'shifts:read', 'shifts:write',
   'timesheets:read', 'timesheets:write',
+  // 2026-10-20 (Private API ↔ app parity review): all served by delegation too.
+  // workspace:read = the people/catalog lists ids come from (users, departments, job titles,
+  // statuses, custom-field definitions, assignable roles, tags, company profile) — read-only.
+  'workspace:read',
+  'activity:read',
+  'projects:read', 'projects:write',
+  'clock:read', 'clock:write',
 ] as const;
 export type ApiScope = (typeof API_SCOPES)[number];
 

@@ -1,5 +1,4 @@
 import type { EntityType } from '@prisma/client';
-import { authenticateToken } from '../modules/auth/authService.js';
 import { canManageCustomFields } from '../modules/auth/permissionService.js';
 import {
   createCustomFieldDefinition,
@@ -74,16 +73,11 @@ catalogsRouter.patch('/api/hr/custom-fields/:definitionId', async (req, res) => 
 });
 
 catalogsRouter.get('/api/hr/custom-fields', async (req, res) => {
-  const token = req.headers.authorization?.replace('Bearer ', '');
-
-  if (!token) {
-    return res.status(401).json({ error: 'Authentication required' });
-  }
-
-  const user = await authenticateToken(token);
-
-  if (!user || !user.tenantId) {
-    return res.status(401).json({ error: 'Authentication required' });
+  // validateSession (not authenticateToken directly) so the Private API's delegation, which runs
+  // this route as an AI assistant's user (requestContext.actingUser), authenticates the same way.
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
   }
 
   const entityType = (req.query.entityType as EntityType) ?? 'employee';

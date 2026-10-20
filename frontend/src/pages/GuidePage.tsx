@@ -2368,7 +2368,11 @@ export default function GuidePage() {
               <p>
                 Podés conectar tu propio asistente de IA a Northstack para pedirle cosas como "¿qué tareas tengo
                 vencidas?", "creá una oportunidad para Acme", "¿quién está de licencia esta semana?", "armame un
-                borrador de turnos para la semana que viene" o "cargame 1h 30m en el proyecto X". El asistente
+                borrador de turnos para la semana que viene", "creá la política de vacaciones y asignásela a Nicolás",
+                "abrí un proyecto para Acme con la plantilla de onboarding", "fichame la entrada" o "cargame 1h 30m en
+                el proyecto X". Llega a casi todo lo que usás a diario: tareas (con comentarios y @menciones),
+                notas, CRM, empleados (incluido contrato y campos personalizados), licencias y sus políticas y saldos,
+                proyectos, turnos, horas y fichaje. El asistente
                 <strong> actúa como vos</strong>: solo ve y hace lo que tu rol ya permite en la app, y todo lo que
                 cambia aparece en el Registro de actividad como <strong>"IA · nombre de la conexión"</strong>.
               </p>
@@ -2380,10 +2384,14 @@ export default function GuidePage() {
                 desconectar cuando quieras.
               </p>
               <p>
-                Para borrar, desactivar un contacto, aprobar/rechazar una licencia o aprobar/devolver horas, el asistente
-                siempre te muestra un resumen y te pide confirmación antes de hacerlo. La nómina es de solo lectura, y un
-                asistente no puede borrar más de 10 registros por hora. Con los turnos solo arma <strong>borradores</strong>:
-                publicar la semana, cancelar o cambiar un turno publicado (que avisan a otras personas) se hace desde la app.
+                Para borrar, desactivar un contacto, decidir licencias u horas, ajustar un saldo, y para todo lo que
+                avisa a otras personas — publicar o cancelar turnos, invitar a alguien a Northstack, mandarle un reporte de
+                horas a un cliente — el asistente siempre te muestra un resumen y te pide confirmación antes de hacerlo.
+                Revisá bien el email antes de confirmar una invitación: quien lo reciba entra con ese rol. El fichaje es
+                siempre el tuyo, nunca el de otra persona. Un asistente no puede borrar más de 10 registros por hora.
+                <strong> Se quedan en la app:</strong> la nómina (el asistente solo la lee), las bajas de empleados, la
+                configuración (roles, pipelines, departamentos, campos personalizados, feriados) y cambiar los datos de un
+                turno ya publicado.
               </p>
               <div className="help-callout help-callout-note">
                 <InfoIcon />
@@ -2487,8 +2495,11 @@ export default function GuidePage() {
               </div>
               <p>
                 You can connect your own AI assistant to Northstack and ask it things like "which of my tasks are
-                overdue?", "create an opportunity for Acme", "who's off this week?", "draft next week's shifts" or
-                "log 1h 30m on project X". The assistant
+                overdue?", "create an opportunity for Acme", "who's off this week?", "draft next week's shifts",
+                "create the vacation policy and assign it to Nicolás", "start a project for Acme from the onboarding
+                template", "clock me in" or "log 1h 30m on project X". It reaches almost everything you use day to day:
+                tasks (with comments and @mentions), notes, CRM, employees (including contract and custom fields), time
+                off with its policies and balances, projects, shifts, hours and clock in/out. The assistant
                 <strong> acts as you</strong>: it only sees and does what your role already allows in the app, and
                 everything it changes shows in the Activity Log as <strong>"AI · connection name"</strong>.
               </p>
@@ -2500,10 +2511,13 @@ export default function GuidePage() {
                 disconnect them anytime.
               </p>
               <p>
-                To delete something, deactivate a contact, approve/reject time off or approve/return hours, the
-                assistant always shows you a summary and asks you to confirm first. Payroll is read-only, and an
-                assistant can't delete more than 10 records an hour. With shifts it only prepares <strong>drafts</strong>:
-                publishing the week, cancelling or changing a published shift (which notify people) happen in the app.
+                To delete something, deactivate a contact, decide time off or hours, adjust a balance, and for anything
+                that notifies other people — publishing or cancelling shifts, inviting someone to Northstack, e-mailing an
+                hours report to a client — the assistant always shows you a summary and asks you to confirm first. Check
+                the e-mail before confirming an invitation: whoever gets it signs in with that role. Clocking in or out is
+                always your own, never someone else's. An assistant can't delete more than 10 records an hour.
+                <strong> Staying in the app:</strong> payroll (the assistant only reads it), terminations, settings (roles,
+                pipelines, departments, custom fields, holidays) and changing the details of a published shift.
               </p>
               <div className="help-callout help-callout-note">
                 <InfoIcon />

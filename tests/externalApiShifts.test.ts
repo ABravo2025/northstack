@@ -81,10 +81,18 @@ describe('Shifts & Timesheets through the Private API', () => {
     expect(body).toMatchObject({ ranAs: 'u_ana', path: '/api/shifts/timesheet/approvals' });
   });
 
-  it('refuses anything off the allowlist (settings, publishing a week)', async () => {
+  it('refuses anything off the allowlist (shift settings)', async () => {
     caller = aiCaller(['shifts:read', 'shifts:write']);
-    expect((await call('PATCH', '/shifts/settings', { x: 1 })).status).toBe(404);
-    expect((await call('POST', '/shifts/publish', { shiftIds: ['s_draft'] })).status).toBe(404);
+    const settings = await call('PATCH', '/shifts/settings', { x: 1 });
+    expect(settings.status).toBe(404);
+    expect(settings.body.code).toBe('not_found');
+  });
+
+  it('lets publishing a week through since 2026-10-20 (the MCP confirms it first)', async () => {
+    caller = aiCaller(['shifts:write']);
+    const { status, body } = await call('POST', '/shifts/publish', { shiftIds: ['s_draft'] });
+    expect(status).toBe(200);
+    expect(body).toMatchObject({ ranAs: 'u_ana', path: '/api/shifts/publish' });
   });
 
   it('needs the matching scope', async () => {

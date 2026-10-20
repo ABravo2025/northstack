@@ -88,8 +88,10 @@ describe('connecting', () => {
     expect(Object.keys(byName)).toEqual(expect.arrayContaining(['whoami', 'my_day', 'search_tasks', 'delete_task', 'decide_time_off', 'get_payroll_run']));
     expect(byName.search_tasks.annotations?.readOnlyHint).toBe(true);
     expect(byName.delete_task.annotations?.destructiveHint).toBe(true);
-    // Payroll is read-only by design — no tool can write it.
-    expect(Object.keys(byName).some((name) => /payroll/.test(name) && !name.startsWith('list_') && !name.startsWith('get_'))).toBe(false);
+    // Payroll is read-only by design — every payroll/pay tool is a read.
+    const payTools = tools.filter((t) => /payroll|_pay$/.test(t.name));
+    expect(payTools.length).toBeGreaterThan(0);
+    expect(payTools.every((t) => t.annotations?.readOnlyHint === true)).toBe(true);
     await client.close();
   });
 });
@@ -136,8 +138,10 @@ describe('shifts & timesheets tools', () => {
     const { tools } = await client.listTools();
     const names = tools.map((t) => t.name);
     expect(names).toEqual(expect.arrayContaining(['list_shifts', 'my_shifts', 'create_shift_draft', 'shift_candidates', 'log_time', 'my_timesheet', 'decide_timesheet', 'hours_summary']));
-    // Publishing or cancelling never goes through an assistant.
-    expect(names.some((n) => /publish|cancel_shift/.test(n))).toBe(false);
+    // Publishing and cancelling notify people: allowed since 2026-10-20, always behind confirmation.
+    const byName = Object.fromEntries(tools.map((t) => [t.name, t]));
+    expect(byName.publish_shifts.annotations?.destructiveHint).toBe(true);
+    expect(byName.cancel_shift.annotations?.destructiveHint).toBe(true);
 
     await client.callTool({ name: 'create_shift_draft', arguments: { locationId: 'loc1', date: '2026-10-22', start: '09:30', end: '17:00' } });
     const call = calls.find((c) => c.method === 'POST' && c.path === '/shifts');

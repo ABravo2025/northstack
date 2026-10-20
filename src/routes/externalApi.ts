@@ -8,14 +8,13 @@ import { isRateLimited } from '../lib/rateLimit.js';
 import prismaExternal from '../lib/prismaExternal.js';
 import { authenticateApiKey, hasScope, type AuthenticatedApiKey } from '../lib/externalApiAuth.js';
 import { isApiAccessAllowed } from '../modules/tenant/planLimits.js';
-import { getRequestContext, runWithRequestContext } from '../lib/requestContext.js';
-import { shiftsRouter } from './shifts.js';
-import { shiftRequestsRouter } from './shiftRequests.js';
-import { timesheetsRouter } from './timesheets.js';
-import { findShiftById } from '../modules/shifts/shiftService.js';
+import { runWithRequestContext } from '../lib/requestContext.js';
+import { delegateToAppRoutes } from './externalApiDelegation.js';
 import { findEntityTenantId, isSupportedCrossModuleEntityType } from '../modules/crossModule/entityLookup.js';
 import type { EntityType } from '@prisma/client';
 import { findUserById } from '../modules/tenant/tenantService.js';
+import { findTaskFolderById } from '../modules/tasks/taskFolderService.js';
+import { isPhaseOfProject, parseMeetEmail } from './tasks.js';
 import {
   listAllTasksForTenant,
   findTaskById,
@@ -348,139 +347,12 @@ function toTime(value: unknown): number | null {
   return Number.isNaN(time) ? null : time;
 }
 
-// ---- Shifts & Timesheets (2026-10-16, spec-mcp-server.md §10) ----
+// ---- Delegated to the app's own routes (externalApiDelegation.ts) ----
 //
-// Not reimplemented here: an allowlisted request is handed to the app's own Shifts/Timesheet
-// routers, running as the acting user (requestContext.actingUser, read by authenticateUser). Those
-// routers already encode every relationship rule — a location's manager schedules it, a direct
-// manager approves timesheets, everyone sees their own shifts — plus plan and suspension checks, so
-// the API, the MCP and the app can't drift apart. Anything not on the list (publishing a week,
-// cancelling a shift, settings, locations, skills, templates, swaps) stays in the app.
-
-const RESERVED_SHIFT_SEGMENTS =
-  'settings|locations|skills|templates|availability|publish|copy-week|suggestions|requests|available|mine|cost|timesheet|assignments';
-const SHIFT_ID = `(?!(?:${RESERVED_SHIFT_SEGMENTS})(?:/|$))[^/]+`;
-
-interface DelegatedRoute {
-  method: string;
-  pattern: RegExp;
-  scope: string;
-  // AI assistants may only touch DRAFT shifts here: changing a published one notifies other people.
-  draftOnlyForAi?: boolean;
-}
-
-const DELEGATED_ROUTES: DelegatedRoute[] = [
-  { method: 'GET', pattern: /^\/api\/shifts$/, scope: 'shifts:read' },
-  { method: 'GET', pattern: /^\/api\/shifts\/mine$/, scope: 'shifts:read' },
-  { method: 'GET', pattern: /^\/api\/shifts\/locations$/, scope: 'shifts:read' },
-  { method: 'GET', pattern: /^\/api\/shifts\/availability$/, scope: 'shifts:read' },
-  { method: 'GET', pattern: /^\/api\/shifts\/requests$/, scope: 'shifts:read' },
-  { method: 'GET', pattern: new RegExp(`^/api/shifts/${SHIFT_ID}/candidates$`), scope: 'shifts:read' },
-  { method: 'POST', pattern: /^\/api\/shifts$/, scope: 'shifts:write' },
-  { method: 'PATCH', pattern: new RegExp(`^/api/shifts/${SHIFT_ID}$`), scope: 'shifts:write', draftOnlyForAi: true },
-  { method: 'DELETE', pattern: new RegExp(`^/api/shifts/${SHIFT_ID}$`), scope: 'shifts:write', draftOnlyForAi: true },
-  { method: 'POST', pattern: new RegExp(`^/api/shifts/${SHIFT_ID}/assignments$`), scope: 'shifts:write', draftOnlyForAi: true },
-  { method: 'DELETE', pattern: new RegExp(`^/api/shifts/${SHIFT_ID}/assignments/[^/]+$`), scope: 'shifts:write', draftOnlyForAi: true },
-  { method: 'POST', pattern: /^\/api\/shifts\/assignments\/[^/]+\/respond$/, scope: 'shifts:write' },
-  { method: 'POST', pattern: /^\/api\/shifts\/availability$/, scope: 'shifts:write' },
-  { method: 'DELETE', pattern: /^\/api\/shifts\/availability\/[^/]+$/, scope: 'shifts:write' },
-  { method: 'GET', pattern: /^\/api\/shifts\/timesheet$/, scope: 'timesheets:read' },
-  { method: 'GET', pattern: /^\/api\/shifts\/timesheet\/approvals$/, scope: 'timesheets:read' },
-  { method: 'GET', pattern: /^\/api\/shifts\/timesheet\/reports$/, scope: 'timesheets:read' },
-  { method: 'POST', pattern: /^\/api\/shifts\/timesheet\/entries$/, scope: 'timesheets:write' },
-  { method: 'PATCH', pattern: /^\/api\/shifts\/timesheet\/entries\/[^/]+$/, scope: 'timesheets:write' },
-  { method: 'DELETE', pattern: /^\/api\/shifts\/timesheet\/entries\/[^/]+$/, scope: 'timesheets:write' },
-  { method: 'POST', pattern: /^\/api\/shifts\/timesheet\/submit$/, scope: 'timesheets:write' },
-  { method: 'POST', pattern: /^\/api\/shifts\/timesheet\/[^/]+\/decision$/, scope: 'timesheets:write' },
-];
-
-// /api/external/v1/shifts/... → /api/shifts/...; /api/external/v1/timesheets/... → /api/shifts/timesheet/...
-function internalShiftsPath(externalPath: string): string | null {
-  if (externalPath === '/api/external/v1/shifts' || externalPath.startsWith('/api/external/v1/shifts/')) {
-    return externalPath.replace('/api/external/v1/shifts', '/api/shifts');
-  }
-  if (externalPath === '/api/external/v1/timesheets' || externalPath.startsWith('/api/external/v1/timesheets/')) {
-    return externalPath.replace('/api/external/v1/timesheets', '/api/shifts/timesheet');
-  }
-  return null;
-}
-
-function runRouter(router: express.Router, req: express.Request, res: express.Response): Promise<boolean> {
-  return new Promise((resolve, reject) => {
-    router(req, res, (err?: unknown) => (err ? reject(err) : resolve(false)));
-    res.once('finish', () => resolve(true));
-  });
-}
-
-async function delegateToShifts(req: express.Request, res: express.Response, apiKey: AuthenticatedApiKey): Promise<void> {
-  const externalPath = req.path.startsWith('/api/external/v1') ? req.path : `/api/external/v1${req.path}`;
-  const internalPath = internalShiftsPath(externalPath);
-  const route = internalPath ? DELEGATED_ROUTES.find((r) => r.method === req.method && r.pattern.test(internalPath)) : undefined;
-  if (!internalPath || !route) {
-    return respond(req, res, apiKey, 404, { error: 'Not available through the API — use the app for this.', code: 'not_found' });
-  }
-  if (!(await requireScopeLogged(req, res, apiKey, route.scope))) return;
-
-  if (route.draftOnlyForAi && apiKey.kind === 'ai') {
-    const shiftId = internalPath.split('/')[3];
-    const shift = await findShiftById(shiftId);
-    if (!shift || shift.tenantId !== apiKey.tenantId) return notFound(req, res, apiKey);
-    if (shift.status !== 'draft') {
-      return respond(req, res, apiKey, 409, {
-        error: 'An AI assistant can only change draft shifts. Published shifts notify people, so change them in the app.',
-        code: 'published_shift',
-      });
-    }
-  }
-
-  // The request log is written before the response leaves, same rule as respond(): hold the real
-  // end() until the row is saved, since Vercel may freeze the function right after.
-  const originalEnd = res.end.bind(res) as (...args: unknown[]) => express.Response;
-  (res as unknown as { end: (...args: unknown[]) => express.Response }).end = (...args: unknown[]) => {
-    void bestEffort(
-      prismaExternal.apiRequestLog.create({
-        data: {
-          tenantId: apiKey.tenantId,
-          apiKeyId: apiKey.kind === 'api_key' ? apiKey.id : null,
-          aiConnectionId: apiKey.kind === 'ai' ? apiKey.id : null,
-          method: req.method,
-          path: req.path,
-          statusCode: res.statusCode,
-          ipAddress: getClientIp(req),
-        },
-      }),
-      `Failed to write ApiRequestLog for ${req.method} ${req.path}`,
-    ).finally(() => originalEnd(...args));
-    return res;
-  };
-
-  const originalUrl = req.url;
-  const query = originalUrl.includes('?') ? originalUrl.slice(originalUrl.indexOf('?')) : '';
-  req.url = `${internalPath}${query}`;
-  const context = getRequestContext();
-  await runWithRequestContext(
-    { source: context?.source ?? 'api', sourceClientName: context?.sourceClientName ?? apiKey.name, actingUser: apiKey.actor },
-    async () => {
-      for (const router of [shiftsRouter, shiftRequestsRouter, timesheetsRouter]) {
-        if (await runRouter(router as unknown as express.Router, req, res)) return;
-      }
-      if (!res.headersSent) res.status(404).json({ error: 'Not found', code: 'not_found' });
-    },
-  );
-  req.url = originalUrl;
-}
-
-// Registered per method and path (not .all/arrays) so createAsyncRouter wraps each handler.
-for (const base of ['/api/external/v1/shifts', '/api/external/v1/timesheets']) {
-  for (const path of [base, `${base}/*`]) {
-    for (const method of ['get', 'post', 'patch', 'delete'] as const) {
-      externalApiRouter[method](path, async (req, res) => {
-        const { apiKey } = req as unknown as ExternalApiRequest;
-        return delegateToShifts(req, res, apiKey);
-      });
-    }
-  }
-}
+// Shifts, timesheets, projects, time-off policies, catalogs and the rest of the allowlist run the
+// app's routers as the acting user. Registered before every handler below so the allowlist settles
+// shared prefixes (e.g. /tasks/mentionable-users vs. /tasks/:id); anything not on it falls through.
+externalApiRouter.use(delegateToAppRoutes);
 
 // ---- Identity ----
 
@@ -490,9 +362,11 @@ externalApiRouter.get('/api/external/v1/me', async (req, res) => {
   const { apiKey } = req as unknown as ExternalApiRequest;
   const { actor } = apiKey;
   const role = serializeRoleContext(actor.roleContext);
+  // The person's own Employee record, if linked — what "me" means for balances, ledgers, projects.
+  const ownEmployee = await findEmployeeByUserId(actor.id);
   return respond(req, res, apiKey, 200, {
     credential: { kind: apiKey.kind, name: apiKey.name },
-    user: { id: actor.id, firstName: actor.firstName, lastName: actor.lastName, email: actor.email, locale: actor.locale },
+    user: { id: actor.id, firstName: actor.firstName, lastName: actor.lastName, email: actor.email, locale: actor.locale, employeeId: ownEmployee?.id ?? null },
     role: { name: role.name, isOwner: role.isOwner },
     tenant: { id: apiKey.tenantId, plan: apiKey.tenantPlan, status: apiKey.tenantStatus },
     scopes: apiKey.scopes,
@@ -509,6 +383,10 @@ const taskCreateSchema = z.object({
   assigneeId: z.string().min(1),
   dueDate: isoDateTime.nullable().optional(),
   hasVideoCall: z.boolean().optional(),
+  // 2026-10-20 — same fields the app's task form has (folders, project phases, Meet invitee).
+  folderId: z.string().min(1).nullable().optional(),
+  projectPhaseId: z.string().min(1).nullable().optional(),
+  meetAttendeeEmail: z.string().nullable().optional(),
 });
 
 const taskUpdateSchema = z.object({
@@ -518,7 +396,46 @@ const taskUpdateSchema = z.object({
   dueDate: isoDateTime.nullable().optional(),
   completedAt: isoDateTime.nullable().optional(),
   hasVideoCall: z.boolean().optional(),
+  folderId: z.string().min(1).nullable().optional(),
+  projectPhaseId: z.string().min(1).nullable().optional(),
+  meetAttendeeEmail: z.string().nullable().optional(),
+  timeSpentMinutes: z.number().int().min(0).nullable().optional(),
 });
+
+// Folder, phase and Meet-invitee checks shared by POST and PATCH /tasks — the app's own rules
+// (routes/tasks.ts): a folder of this tenant, a phase of the task's own project, a valid e-mail,
+// and a project task's call needs someone to invite. Returns the parsed e-mail, or null after a 400.
+async function validateTaskExtras(
+  req: express.Request,
+  res: express.Response,
+  apiKey: AuthenticatedApiKey,
+  body: { folderId?: string | null; projectPhaseId?: string | null; meetAttendeeEmail?: string | null; hasVideoCall?: boolean },
+  task: { entityType: string; entityId: string; hasVideoCall?: boolean; meetAttendeeEmail?: string | null },
+): Promise<{ meetAttendeeEmail: string | null | undefined } | null> {
+  if (body.folderId) {
+    const folder = await findTaskFolderById(body.folderId);
+    if (!folder || folder.tenantId !== apiKey.tenantId) {
+      await badRequest(req, res, apiKey, 'folderId not found in this tenant');
+      return null;
+    }
+  }
+  if (body.projectPhaseId && !(await isPhaseOfProject(body.projectPhaseId, task.entityType, task.entityId))) {
+    await badRequest(req, res, apiKey, 'projectPhaseId is not a phase of this project');
+    return null;
+  }
+  const meetAttendeeEmail = parseMeetEmail(body.meetAttendeeEmail);
+  if (meetAttendeeEmail === 'invalid') {
+    await badRequest(req, res, apiKey, 'meetAttendeeEmail must be a valid e-mail');
+    return null;
+  }
+  const willHaveCall = body.hasVideoCall ?? task.hasVideoCall ?? false;
+  const willHaveEmail = meetAttendeeEmail === undefined ? task.meetAttendeeEmail : meetAttendeeEmail;
+  if (task.entityType === 'project' && willHaveCall && !willHaveEmail) {
+    await badRequest(req, res, apiKey, 'A project task with a video call needs meetAttendeeEmail');
+    return null;
+  }
+  return { meetAttendeeEmail };
+}
 
 externalApiRouter.get('/api/external/v1/tasks', async (req, res) => {
   const { apiKey } = req as unknown as ExternalApiRequest;
@@ -557,6 +474,9 @@ externalApiRouter.post('/api/external/v1/tasks', async (req, res) => {
   const assignee = await findUserById(body.assigneeId, prismaExternal);
   if (!assignee || assignee.tenantId !== apiKey.tenantId) return badRequest(req, res, apiKey, 'assigneeId not found in this tenant');
 
+  const extras = await validateTaskExtras(req, res, apiKey, body, { entityType: body.entityType, entityId: body.entityId });
+  if (!extras) return;
+
   const task = await createTask(
     {
       tenantId: apiKey.tenantId,
@@ -570,6 +490,9 @@ externalApiRouter.post('/api/external/v1/tasks', async (req, res) => {
       dueDate: body.dueDate ?? null,
       hasVideoCall: body.hasVideoCall ?? false,
       createdById: apiKey.createdByUserId,
+      folderId: body.folderId ?? null,
+      projectPhaseId: body.projectPhaseId || null,
+      meetAttendeeEmail: extras.meetAttendeeEmail ?? null,
     },
     prismaExternal,
   );
@@ -590,7 +513,19 @@ externalApiRouter.patch('/api/external/v1/tasks/:id', async (req, res) => {
     if (!assignee || assignee.tenantId !== apiKey.tenantId) return badRequest(req, res, apiKey, 'assigneeId not found in this tenant');
   }
 
-  const updated = await updateTask(req.params.id, body, apiKey.createdByUserId, prismaExternal);
+  const extras = await validateTaskExtras(req, res, apiKey, body, existing);
+  if (!extras) return;
+
+  const updated = await updateTask(
+    req.params.id,
+    {
+      ...body,
+      projectPhaseId: body.projectPhaseId === undefined ? undefined : body.projectPhaseId || null,
+      meetAttendeeEmail: extras.meetAttendeeEmail,
+    },
+    apiKey.createdByUserId,
+    prismaExternal,
+  );
   return respond(req, res, apiKey, 200, updated);
 });
 
@@ -1067,7 +1002,10 @@ externalApiRouter.get('/api/external/v1/hr/employees/:id', async (req, res) => {
   if (!(await requireScopeLogged(req, res, apiKey, 'hr.employees:read'))) return;
   const employee = await findEmployeeById(req.params.id, prismaExternal);
   if (!employee || employee.tenantId !== apiKey.tenantId || !(await isEmployeeVisible(apiKey, employee.id))) return notFound(req, res, apiKey);
-  return respond(req, res, apiKey, 200, redact(apiKey, 'employee', employee));
+  // Same shape as the list (department, job title, status, manager, assigned time-off policies,
+  // contract status) — the bare row left an assistant blind to e.g. which policies someone has.
+  const [detailed] = await listEmployees(apiKey.tenantId, new Set([employee.id]), prismaExternal);
+  return respond(req, res, apiKey, 200, redact(apiKey, 'employee', (detailed ?? employee) as Record<string, unknown>));
 });
 
 const employeeCreateSchema = z.object({
@@ -1302,4 +1240,15 @@ externalApiRouter.get('/api/external/v1/hr/payroll/:id', async (req, res) => {
   const result = await getRunDetail(apiKey.tenantId, req.params.id);
   if (!result.success || !result.detail) return notFound(req, res, apiKey);
   return respond(req, res, apiKey, 200, result.detail);
+});
+
+// Anything under /api/external/v1 that no handler above (nor the delegation allowlist) served.
+// Not mounted on a path, so req.path stays the full path for the request log.
+externalApiRouter.use(async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const { apiKey } = req as unknown as Partial<ExternalApiRequest>;
+  if (!apiKey || !req.path.startsWith('/api/external/v1/')) {
+    next();
+    return;
+  }
+  await respond(req, res, apiKey, 404, { error: 'Not available through the API — use the app for this.', code: 'not_found' });
 });

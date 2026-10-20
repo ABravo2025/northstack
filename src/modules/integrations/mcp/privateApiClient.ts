@@ -14,6 +14,7 @@ export interface PrivateApiClient {
   get<T = unknown>(path: string, query?: Record<string, string | number | undefined>): Promise<PrivateApiResult<T>>;
   post<T = unknown>(path: string, body: unknown): Promise<PrivateApiResult<T>>;
   patch<T = unknown>(path: string, body: unknown): Promise<PrivateApiResult<T>>;
+  put<T = unknown>(path: string, body: unknown): Promise<PrivateApiResult<T>>;
   delete<T = unknown>(path: string, body?: unknown): Promise<PrivateApiResult<T>>;
   // Every page of a list endpoint, up to `max` items — for summaries that need the whole set.
   getAll<T = unknown>(path: string, query?: Record<string, string | number | undefined>, max?: number): Promise<PrivateApiResult<T[]>>;
@@ -56,6 +57,7 @@ export function createPrivateApiClient(baseUrl: string, token: string): PrivateA
     get: (path, query) => request('GET', path, query),
     post: (path, body) => request('POST', path, undefined, body),
     patch: (path, body) => request('PATCH', path, undefined, body),
+    put: (path, body) => request('PUT', path, undefined, body),
     delete: (path, body) => request('DELETE', path, undefined, body),
     async getAll<T>(path: string, query: Record<string, string | number | undefined> = {}, max = DEFAULT_MAX_ITEMS) {
       const items: T[] = [];

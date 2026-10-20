@@ -464,3 +464,64 @@ Deployment Protection), o agregar `staging.joinnorthstack.com` como excepción. 
    de ese componente es sumar filas recién cuando la feature está en producción.
 5. **QA real** con claude.ai, ChatGPT, Claude Code y Cursor contra prod con un tenant de prueba; anuncio "What's new";
    `handoff.md` en la rama `marketing`.
+
+---
+
+## 12. Revisión de paridad API ↔ app (Alejandro, 2026-10-20)
+
+**Por qué.** Un asistente conectado por MCP no pudo cargar el contrato de un empleado ni crear y asignar una política de
+licencias: la Private API (y el MCP encima) se había quedado atrás de la app. Desde el spec original se sumaron Proyectos,
+políticas y saldos de licencias, campos personalizados, carpetas y comentarios de tareas, fichaje, pedidos de cambio de
+turno, etc., y nada de eso llegaba a la IA. Alejandro pidió sumar **todo lo que faltara**.
+
+**Hallazgos.**
+1. `update_employee`/`create_employee` no exponían campos que la API ya aceptaba (`contractType`, `contractUrl`,
+   `personType`, `nationality`, `endDate`, `statusId`).
+2. Ninguna tool para políticas de licencias (listar, crear, asignar), saldos, historial ni vista previa.
+3. La IA no podía asignar tareas a otra persona: no había forma de listar usuarios.
+4. Sin catálogos (departamentos, puestos, estados, campos personalizados): la IA no tenía de dónde sacar los ids.
+5. `get_employee` devolvía la fila cruda (sin departamento, puesto, manager ni políticas), distinto de la lista.
+6. Módulo Proyectos completo, comentarios/@menciones, timer y carpetas de tareas, tags, contactos de oportunidades,
+   Activity Log, notificaciones, fichaje y el mercado de turnos: sin ninguna tool.
+7. `GET /api/hr/custom-fields` autenticaba con `authenticateToken` directo (no `validateSession`): no funcionaba vía
+   delegación. Corregido.
+8. `openapi.json` documentaba solo los 18 endpoints originales (ni Turnos estaba).
+
+**Diseño.** Se generalizó el mecanismo que ya usaban Turnos/Timesheet: `src/routes/externalApiDelegation.ts` tiene una
+**lista blanca** de rutas de la app (`/api/external/v1/<x>` → `/api/<x>`) que corren **como el usuario conectado**, cada una
+detrás de un scope. Así la app es la única fuente de verdad de permisos, reglas de relación (miembros de proyecto, manager
+de una sede, manager directo) y límites de plan: cuando un módulo cambia, la API y el MCP cambian con él. Lo que no está en
+la lista nunca llega a una ruta de la app. Los endpoints nativos (tareas, notas, CRM, empleados, licencias, payroll) se
+mantienen; tareas suma `folderId`, `projectPhaseId`, `meetAttendeeEmail`, `timeSpentMinutes` y el tipo `project` con las
+mismas validaciones de la app. `/me` devuelve `user.employeeId`.
+
+**Scopes nuevos** (también en el formulario de API keys, EN/ES): `workspace:read` (usuarios, catálogos, tags, roles
+asignables, perfil de empresa), `activity:read`, `projects:read/write`, `clock:read/write`. Para tokens de IA están
+abiertos (las rutas aplican el rol); para API keys siguen la regla de "el creador lo puede hacer en la app".
+
+**Alcance decidido por Alejandro.** Entra todo lo operativo + **avisos a terceros** (publicar/cancelar/copiar turnos,
+invitar empleados, reenviar contrato, reportes de horas a clientes) + **fichaje y ajustes de saldo**. Queda **afuera**:
+configuración (roles, pipelines/etapas, catálogos, campos personalizados, feriados, ajustes de turnos, formularios
+públicos) y **dinero** (escribir payroll, bajas de empleados, Stripe/facturas). Siempre afuera: suscripción, API keys/
+webhooks, 2FA, Google Calendar, referidos, CSV, Clients legacy.
+
+**Seguridad.**
+- Todo lo que avisa a otras personas o no se deshace pide **confirmación en dos pasos** (publicar/cancelar turnos,
+  invitar, reenviar contrato, mail a cliente, ajuste de saldo, desasignar política, cancelar licencia, borrar fase,
+  comentario o carpeta). El token de confirmación queda atado a los parámetros sensibles (p. ej. el rol de la invitación).
+- **Riesgo aceptado, a vigilar:** una IA con prompt injection podría cambiar el email de un empleado y luego invitarlo con
+  un rol alto. Mitigación: el resumen de confirmación muestra email y rol y advierte que "quien lo reciba entra con ese
+  rol". Si se quiere más, el siguiente paso es impedir que la IA invite con roles que tengan permisos de administración.
+- Fichaje: siempre el propio; sedes que exigen ubicación lo rechazan (la IA no manda geolocalización).
+- Payroll sigue de solo lectura; los endpoints de pago expuestos no devuelven datos de cuentas (van cifrados y no salen).
+
+**Tools.** 58 → **122**. Se agruparon las variantes naturales (`list_catalogs`, `set_custom_field`,
+`manage_project_phase`, `shift_request_action`, `clock_action`…). Es mucho más que el objetivo de ≤35: algunos clientes
+(p. ej. Cursor) limitan la cantidad de tools por servidor. Si en la prueba real el modelo elige mal o un cliente corta, el
+siguiente paso es ofrecer **perfiles** (p. ej. un conector "CRM", otro "RR.HH.", otro "Turnos") en vez de uno solo.
+
+**Docs.** `frontend/public/openapi.json` regenera los endpoints delegados con `npx tsx scripts/generate-openapi-delegated.ts`
+(correrlo cada vez que cambia la lista blanca; el archivo quedó reformateado como JSON estándar). Help Center (guía + FAQ,
+EN/ES) actualizado.
+
+**Estado.** En `staging` para la prueba de Alejandro. Producción: solo código (no hay cambios de base de datos).

@@ -241,6 +241,7 @@ const API_SCOPE_GROUPS: { groupKey: string; resources: { key: string; labelKey: 
     resources: [
       { key: 'tasks', labelKey: 'tasks', write: true },
       { key: 'notes', labelKey: 'notes', write: true },
+      { key: 'projects', labelKey: 'projects', write: true },
     ],
   },
   {
@@ -265,6 +266,14 @@ const API_SCOPE_GROUPS: { groupKey: string; resources: { key: string; labelKey: 
     resources: [
       { key: 'shifts', labelKey: 'shifts', write: true },
       { key: 'timesheets', labelKey: 'timesheets', write: true },
+      { key: 'clock', labelKey: 'clock', write: true },
+    ],
+  },
+  {
+    groupKey: 'workspace',
+    resources: [
+      { key: 'workspace', labelKey: 'workspace', write: false },
+      { key: 'activity', labelKey: 'activity', write: false },
     ],
   },
 ];

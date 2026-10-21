@@ -29,6 +29,17 @@ _Última actualización: 2026-10-03_
 - El diagnóstico de fondo: el sitio tiene solo 2 páginas que pueden posicionar (portada EN/ES), un
   dominio nuevo sin enlaces entrantes y H1 sin palabras clave. La parte técnica no es el cuello de botella.
 
+## Auditoría 2026-10-20
+
+- Velocidad OK: páginas de ~15 KB comprimidas (brotli), respuesta ~0,5 s, sin imágenes pesadas. PageSpeed no se pudo correr (cupo de la API pública agotado) → correr a mano en pagespeed.web.dev.
+- About EN/ES **sin meta description**; legales con descripciones de 3 palabras.
+- Sitemap **no incluye** `/es/terms.html`, `/es/privacy.html`, `/es/refund.html` (creadas después) y sus `lastmod` están viejos (legales cambiaron 2026-10-16).
+- Organization JSON-LD sin `sameAs` (LinkedIn, G2).
+- **Gran hueco de contenido:** la portada no menciona Turnos / control horario / timesheet, Proyectos ni 2FA (todos en producción). "Control horario / registro de jornada / software de turnos" es el tema con más búsquedas del producto.
+- Solo 4 páginas que pueden posicionar (portada EN/ES + Vacaciones EN/ES). Sin guías/blog.
+- Sin analítica (se evalúa GA4).
+- Ojo: otra sesión tiene cambios del landing sin pushear (revisión de planes, `ae79fd0`): coordinar antes de tocar la portada.
+
 ## Plan
 
 1. **Search Console** — ✅ hecho. Revisar sitemap y "Páginas" cada semana.
@@ -82,6 +93,7 @@ Artifact. Fue escrito para el pase 1 (los retoques de portada fallan a propósit
 aplicados); para los próximos módulos, copiar una plantilla y reutilizar `buildModule()`.
 
 ## Changelog SEO (más nuevo arriba)
+- **2026-10-20** — Auditoría del landing (ver sección "Auditoría 2026-10-20"). G2: perfil visible; reseñas descartadas por ahora (deben venir de clientes con su propia cuenta).
 - **2026-10-03** — Perfil de Northstack en **G2 aprobado** (primer directorio / primer backlink externo).
 - **2026-10-03** — Indexación pedida para `/es/software-vacaciones` y `/time-off-software`. Kit para directorios armado (`2026-10/semana-01/directorios/`).
 - **2026-10-03** — `www.joinnorthstack.com` ahora redirige 308 a `joinnorthstack.com` (configurado en el dominio en Vercel).

@@ -39,6 +39,7 @@ import {
   type TimesheetEmployee,
 } from '../modules/shifts/timesheetService.js';
 import prisma from '../lib/prisma.js';
+import { listMyPayrollHours } from '../modules/hr/payrollHoursService.js';
 
 // Shifts module, Unidad 9 (spec-shifts.md) — the weekly timesheet. Everyone logs their own hours;
 // their direct manager or anyone with approve_timesheets approves them. Off entirely when the
@@ -68,6 +69,14 @@ async function context(req: Request, res: Response): Promise<Ctx | null> {
 }
 
 const needOwn = (res: Response) => res.status(400).json({ error: 'Your user has no employee profile, so there is no timesheet to fill', code: 'no_employee' });
+
+// Timesheet → Payroll: the hours that went to payroll for the signed-in person (hours, never money).
+timesheetsRouter.get('/api/shifts/timesheet/payroll-hours', async (req, res) => {
+  const ctx = await context(req, res);
+  if (!ctx) return;
+  if (!ctx.own) return res.json([]);
+  return res.json(await listMyPayrollHours(ctx.user.tenantId!, ctx.own.id));
+});
 const deciderName = (u: AuthenticatedUser) => `${u.firstName} ${u.lastName}`.trim();
 
 function sendResult(res: Response, result: { success: false; error: string; field?: string; code?: string }) {

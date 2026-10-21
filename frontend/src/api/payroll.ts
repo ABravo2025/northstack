@@ -1,5 +1,5 @@
 import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
-import type {
+import type { ImportHoursResult,
   BulkCompensationEntryResult,
   CompensationStatusEntry,
   DueDateOffset,
@@ -235,6 +235,17 @@ export const payrollApi = {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) await throwApiError(res);
+  },
+
+  // Timesheet → Payroll: approved timesheet hours of the period into a draft run.
+  importPayrollHours: async (token: string, runId: string, from: string, to: string): Promise<ImportHoursResult> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/runs/${runId}/import-hours`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ from, to }),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
   },
 
   updatePayrollEntryHours: async (token: string, entryId: string, hoursQty: number): Promise<PayrollRunEntry> => {

@@ -1361,7 +1361,7 @@ export default function GuidePage() {
               <ol className="help-steps">
                 <li>Configurá tus <strong>Pay frequencies</strong> (Frecuencias de pago) (semanal, quincenal, mensual — con día de pago y desfase de vencimiento) y <strong>Payment methods</strong> (Métodos de pago) una sola vez, en la pestaña Payment Policies (Políticas de pago) de Nómina.</li>
                 <li>Hacé clic en <strong>New Run</strong> (Nueva corrida), elegí una frecuencia y una etiqueta de período — todos los que están en esa frecuencia se cargan automáticamente como Draft (Borrador).</li>
-                <li>Cargá las horas de quienes cobran por hora (la corrida no se puede confirmar hasta que lo hagas), y agregá las líneas de <strong>Bonus, Commission, Reimbursement,</strong> o <strong>Deduction</strong> (Bono, Comisión, Reembolso, o Deducción) que correspondan por persona.</li>
+                <li>Cargá las horas de quienes cobran por hora (la corrida no se puede confirmar hasta que lo hagas): con <strong>Traer horas aprobadas</strong> se completan solas con sus semanas aprobadas del timesheet en el período que elijas, y te avisa quién tiene semanas sin aprobar. Después agregá las líneas de <strong>Bonus, Commission, Reimbursement,</strong> o <strong>Deduction</strong> (Bono, Comisión, Reembolso, o Deducción) que correspondan por persona.</li>
                 <li>Hacé clic en <strong>Confirm Run</strong> (Confirmar corrida) para bloquearla.</li>
               </ol>
               <div className="help-callout help-callout-danger">
@@ -1447,7 +1447,7 @@ export default function GuidePage() {
               <ol className="help-steps">
                 <li>Set up your <strong>Pay frequencies</strong> (weekly, semi-monthly, monthly — with pay day and due-date offset) and <strong>Payment methods</strong> once, under Payroll's Payment Policies tab.</li>
                 <li>Click <strong>New Run</strong>, pick a frequency and a period label — everyone on that frequency loads in automatically as a Draft.</li>
-                <li>Enter hours for anyone paid hourly (the run can't be confirmed until you do), and add any <strong>Bonus, Commission, Reimbursement,</strong> or <strong>Deduction</strong> lines per person.</li>
+                <li>Enter hours for anyone paid hourly (the run can't be confirmed until you do): <strong>Bring approved hours</strong> fills them in from their approved timesheet weeks in the period you pick and tells you who still has weeks waiting for approval. Then add any <strong>Bonus, Commission, Reimbursement,</strong> or <strong>Deduction</strong> lines per person.</li>
                 <li>Click <strong>Confirm Run</strong> to lock it in.</li>
               </ol>
               <div className="help-callout help-callout-danger">
@@ -1881,7 +1881,9 @@ export default function GuidePage() {
                 Una semana aprobada queda cerrada. Si hay que corregirla, usá <strong>Pedir un ajuste</strong> (sumar o
                 restar tiempo, con motivo): queda en tu semana actual y se aprueba con ella. Quien aprueba también puede
                 reabrirla con un motivo. Al completar una tarea, Northstack te pregunta <strong>¿Cuánto te llevó?</strong>,
-                y el detalle de cada tarea tiene un <strong>timer</strong>: ese tiempo se usa en la sugerencia.
+                y el detalle de cada tarea tiene un <strong>timer</strong>: ese tiempo se usa en la sugerencia. Si cobrás
+                por hora, abajo de todo ves <strong>Horas enviadas a nómina</strong>: cuántas horas pasaron a cada
+                liquidación y si ya está confirmada (solo horas, nunca montos).
               </p>
             </div>
 
@@ -2085,7 +2087,9 @@ export default function GuidePage() {
                 An approved week is closed. To correct it, use <strong>Request adjustment</strong> (add or remove time,
                 with a reason): it goes into your current week and is approved with it. Approvers can also reopen it
                 with a reason. When you complete a task, Northstack asks <strong>How long did it take?</strong>, and
-                each task's detail has a <strong>timer</strong>: that time is used in the suggestion.
+                each task's detail has a <strong>timer</strong>: that time is used in the suggestion. If you're paid by
+                the hour, <strong>Hours sent to payroll</strong> at the bottom shows how many hours went into each pay run
+                and whether it's confirmed (hours only, never amounts).
               </p>
             </div>
 

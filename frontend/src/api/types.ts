@@ -1202,6 +1202,29 @@ export interface PayrollRunEntry {
   hoursQty: number | null;
   label: string | null;
   paymentDate: string;
+  // Timesheet → Payroll: where the hours came from, while they're still the timesheet's.
+  hoursFrom?: string | null;
+  hoursTo?: string | null;
+  hoursFromTimesheet?: boolean;
+}
+
+export interface ImportHoursResult {
+  from: string;
+  to: string;
+  updated: { employeeId: string; name: string; minutes: number; hours: number }[];
+  pending: { employeeId: string; name: string; weeks: { weekStart: string; status: string }[] }[];
+}
+
+// Timesheet → "Hours sent to payroll" (the person's own; hours only).
+export interface MyPayrollHours {
+  id: string;
+  periodLabel: string;
+  status: 'draft' | 'confirmed';
+  confirmedAt: string | null;
+  hours: number;
+  from: string | null;
+  to: string | null;
+  fromTimesheet: boolean;
 }
 
 export interface RunDetailEmployeeRow {
@@ -1220,7 +1243,7 @@ export interface RunDetailEmployeeRow {
 }
 
 export interface RunDetail {
-  run: PayrollRun & { payFrequency: { id: string; name: string } | null };
+  run: PayrollRun & { payFrequency: { id: string; name: string; cadence?: 'weekly' | 'semimonthly' | 'monthly' } | null };
   employeeRows: RunDetailEmployeeRow[];
   excludedCount: number;
   hasUnloadedHours: boolean;

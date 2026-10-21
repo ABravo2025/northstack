@@ -622,6 +622,31 @@
         "peopleLoadFailed": "Error al cargar las personas: {{error}}",
         "personAdded": "Persona agregada a esta corrida.",
         "personAddFailed": "Error al agregar a la persona: {{error}}"
+      },
+      "importHours": {
+        "button": "Traer horas aprobadas",
+        "title": "Traer horas de los timesheets",
+        "body": "Completa las horas de cada persona que cobra por hora con sus semanas de timesheet aprobadas en este período. Después las podés seguir editando.",
+        "from": "Desde",
+        "to": "Hasta",
+        "hint": "Solo cuentan las semanas aprobadas. Las semanas abiertas o esperando aprobación quedan afuera, y vas a ver de quién son.",
+        "bring": "Traer horas",
+        "bringing": "Trayendo…",
+        "cancel": "Cancelar",
+        "close": "Listo",
+        "done_one": "Horas traídas para {{count}} persona",
+        "done_other": "Horas traídas para {{count}} personas",
+        "summary": "Horas aprobadas del {{from}} al {{to}}:",
+        "hours": "{{hours}} h",
+        "pendingTitle": "Semanas todavía sin aprobar (no se incluyeron):",
+        "week": "semana del {{date}} ({{status}})",
+        "pendingHint": "Aprobalas en Turnos → Aprobaciones y volvé a traer las horas.",
+        "fromTimesheet": "Del timesheet · {{from}} – {{to}}",
+        "status": {
+          "open": "abierta",
+          "submitted": "esperando aprobación",
+          "returned": "devuelta"
+        }
       }
     }
   }

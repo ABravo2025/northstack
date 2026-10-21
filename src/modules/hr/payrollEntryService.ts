@@ -148,7 +148,8 @@ export async function updateEntryHours(tenantId: string, entryId: string, hoursQ
   const amountCents = Math.round(hoursQty * compensation.rateCents);
   const updated = await prisma.payrollEntry.update({
     where: { id: entryId },
-    data: { hoursQty, amountCents },
+    // Typed by hand: no longer the timesheet's number.
+    data: { hoursQty, amountCents, hoursFromTimesheet: false },
   });
 
   return { success: true, entry: updated };

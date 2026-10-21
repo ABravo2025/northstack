@@ -87,6 +87,10 @@ export interface RunDetailEntry {
   hoursQty: number | null;
   label: string | null;
   paymentDate: string;
+  // Timesheet → Payroll: the period the hours came from, while they're still the timesheet's.
+  hoursFrom: string | null;
+  hoursTo: string | null;
+  hoursFromTimesheet: boolean;
 }
 
 export interface RunDetailEmployeeRow {
@@ -105,7 +109,7 @@ export interface RunDetailEmployeeRow {
 }
 
 export interface RunDetail {
-  run: PayrollRun & { payFrequency: { id: string; name: string } | null };
+  run: PayrollRun & { payFrequency: { id: string; name: string; cadence: string } | null };
   employeeRows: RunDetailEmployeeRow[];
   excludedCount: number;
   hasUnloadedHours: boolean;
@@ -162,6 +166,9 @@ export async function getRunDetail(tenantId: string, runId: string): Promise<Get
         hoursQty: e.hoursQty,
         label: e.label,
         paymentDate: e.paymentDate.toISOString(),
+        hoursFrom: e.hoursFrom ? e.hoursFrom.toISOString().slice(0, 10) : null,
+        hoursTo: e.hoursTo ? e.hoursTo.toISOString().slice(0, 10) : null,
+        hoursFromTimesheet: e.hoursFromTimesheet,
       })),
       baseAmountCents,
       adjustmentsTotalCents,

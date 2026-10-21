@@ -440,7 +440,21 @@
         "remove": "Restar"
       }
     },
-    "clockedVsPlanned": "fichado {{clocked}} · planificado {{planned}}"
+    "clockedVsPlanned": "fichado {{clocked}} · planificado {{planned}}",
+    "payroll": {
+      "title": "Horas enviadas a nómina",
+      "lead": "Las horas de cada liquidación en la que estás. Salen de tus semanas aprobadas (o las cargó quien liquida la nómina).",
+      "run": "Liquidación",
+      "period": "Período",
+      "hours": "Horas",
+      "status": "Estado",
+      "manual": "Cargadas por nómina",
+      "hoursValue": "{{hours}} h",
+      "state": {
+        "draft": "En preparación",
+        "confirmed": "Confirmada"
+      }
+    }
   },
   "approvals": {
     "title": "Aprobaciones",

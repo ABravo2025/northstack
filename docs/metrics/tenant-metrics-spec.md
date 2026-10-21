@@ -1,6 +1,6 @@
 # Métricas para tenants (sobre sus propios datos) — catálogo técnico
 
-- Última actualización: 2026-08-29
+- Última actualización: 2026-10-21 (§2.9 Turnos/Timesheet/Proyectos, pendientes)
 - **Estado**: todo lo marcado ✅ Hoy en este documento está construido —
   `src/modules/metrics/{hr,timeOff,payroll,sales,tasks,adoption}MetricsService.ts`, expuesto en un
   solo endpoint combinado `GET /api/tenant-metrics/overview` (`validateSession`, escopeado al
@@ -146,6 +146,25 @@ tener cargado).
 | Módulos realmente usados (HR/Sales/Payroll/Time Off) | ✅ Hoy | mismo patrón que la adopción cross-tenant de `metrics-report.ts`, pero para uso interno del propio tenant (útil para un owner que quiere ver cómo su equipo adopta la herramienta) |
 | Frecuencia de login de los propios usuarios | ✅ Hoy (proxy débil) | `Session.createdAt` — mejora real si se agrega `Session.lastSeenAt` (mismo gap ya identificado en `basic-metrics-spec.md` §2.3, aplica igual acá) |
 
+### 2.9 Turnos, Timesheet y Proyectos (pendientes — pedido de Alejandro 2026-10-21)
+
+Van dentro de **Turnos → Reportes** (no en `/overview`). Hoy Reportes ya muestra, por persona / empresa /
+proyecto y por mes: horas planificadas (pasadas, próximas, sin confirmar), cargadas, aprobadas,
+facturables, presupuesto por proyecto, fichado / tarde / ausente y costo a tarifa por hora (Growth).
+Lo que falta:
+
+| Métrica | Estado | Fuente / fórmula |
+|---|---|---|
+| Rentabilidad por proyecto (horas × costo vs. facturado) | 🔧 Pendiente | costo = `SUM(TimeEntry.minutes)/60 × tarifa por hora` (`EmployeeCompensation`, como el costo actual de Reportes) vs. facturado = facturas de Payments de la empresa del proyecto en el período (o horas facturables × tarifa de venta si no hay factura); margen y % |
+| Rentabilidad por cliente (empresa) | 🔧 Pendiente | lo mismo agrupado por `Company` |
+| Utilización por persona (% de horas facturables) | 🔧 Pendiente | `billable minutes / logged minutes` por persona y mes; objetivo opcional por persona |
+| Capacidad vs. carga | 🔧 Pendiente | horas planificadas (turnos) o disponibles (disponibilidad) vs. cargadas, por persona y semana — quién está sobrecargado |
+| Planificado vs. trabajado | 🔧 Pendiente | horas de turnos aceptados vs. fichadas / cargadas, por persona y por sede (desvío en % y en horas) |
+| Horas extra | 🔧 Pendiente | turnos `isOvertime` + horas sobre el umbral que defina la empresa (depende de las reglas de horas extra configurables, todavía sin construir) |
+| Ausentismo y llegadas tarde (tendencia) | 🔧 Pendiente | hoy hay totales del mes en Reportes; falta la evolución mes a mes por persona / sede |
+| Costo del cronograma por sede | 🔧 Pendiente | hoy el costo se ve por persona; agrupar por `Location` |
+| Desvío de presupuesto por proyecto | 🔧 Pendiente | horas cargadas vs. `Project.budgetMinutes` en el tiempo (hoy solo el estado actual y los avisos 80/100 %) |
+
 ## 3. Resumen — qué desbloquea qué
 
 | Bloqueante | Métricas que desbloquea | Qué hace falta |
@@ -156,6 +175,7 @@ tener cargado).
 | `Session.lastSeenAt` (campo nuevo) | Frecuencia de login real (no solo proxy de `createdAt`) | 1 campo nullable + 1 write en `authenticateToken()` |
 | `Contact.source`/similar (campo nuevo, decisión de diseño) | Volumen y conversión real de Public Forms | Requiere definir el campo — no es solo "agregar una columna", hay que decidir qué valores tiene y desde dónde se setea |
 | Entidad `Contract` (no existe, sin diseñar) | Company churn confiable | Bloqueado de fondo, no es una tarea chica — es la misma decisión ya pospuesta en el rediseño de Sales |
+| Reglas de horas extra por empresa (sin construir) | Horas extra en Reportes, costo de horas extra | Definir y construir las reglas (umbral diario/semanal, recargos, nocturnidad) — ver la spec de horas extra |
 | Cruce Payroll × Payments v1 (decisión de producto) | Costo de nómina como % de ingresos | No construir sin que el usuario lo pida explícitamente — mezcla dos módulos pensados por separado |
 
 ## 4. Lo que este documento no decide (a propósito)

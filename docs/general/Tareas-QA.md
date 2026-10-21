@@ -5234,6 +5234,15 @@ Resuelve el pendiente de agosto ("un área en el perfil de las notificaciones qu
 
 **Verificado** (servicios contra `staging`, 6/6): turno fichado 10 min tarde con 15 min de pausa → sugerencia 220 min (planificado 240); turno sin fichaje → 120 planificados; reporte: fichado 220, 1 tardanza, 1 ausencia; sin fichaje en el plan no hay columnas; resumen al Owner y no dos veces el mismo día. 790/790 tests.
 
+## QA-122 — Timesheet → Nómina: traer horas aprobadas + horas visibles para cada persona (2026-10-21, en `staging`)
+
+Pedido de Alejandro: "agregá el botón de traer horas" y que los empleados "puedan ver cuántas horas quedaron registradas, cosa de que sea transparente".
+- Nómina → corrida en borrador → **Traer horas aprobadas**: período (por defecto según la frecuencia: mes anterior, quincena anterior o semana anterior), completa las horas de cada persona por hora con sus semanas **aprobadas** del timesheet (los ajustes cuentan por su fecha). Muestra el resultado por persona y las semanas todavía sin aprobar (no se incluyen). En la fila: "Del timesheet · 1 oct – 31 oct"; editar a mano lo saca. Queda en el registro de actividad de la corrida.
+- Timesheet → **Horas enviadas a nómina** (solo la propia, solo horas, nunca montos): liquidación, período, horas, "En preparación" / "Confirmada".
+- Schema: `PayrollEntry.hoursFrom`, `hoursTo`, `hoursFromTimesheet` (aplicado en `staging`).
+
+**Verificado** contra `staging`: API 13/13 (período inválido, 27,25 h solo de entradas aprobadas de octubre — la semana que cruza el mes cuenta solo sus días de octubre —, semana enviada listada como pendiente, 27,25 × USD 20 = 545, marcada "del timesheet", la persona ve 27,25 h sin montos, edición manual la desmarca, al aprobar la semana pendiente y volver a traer 37,25 h, corrida confirmada rechaza, la persona la ve confirmada, registro de actividad); navegador EN y ES oscuro 5/5. Arreglo de paso: el resultado del modal se perdía al recargar la corrida.
+
 ## QA-121 — Verificación en dos pasos (app autenticadora) (2026-10-19, en `staging`)
 
 Spec: `docs/general/spec-2fa.md` (decisiones §0.1). **Necesita `MFA_ENCRYPTION_KEY` en Vercel** (Preview para staging, Production para prod; claves distintas). Sin la clave no se exige a nadie y "Activar" avisa que no está disponible.

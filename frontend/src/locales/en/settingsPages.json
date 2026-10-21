@@ -348,7 +348,8 @@
         "projects": "Projects",
         "clock": "Clock in/out",
         "workspace": "People & lists (users, departments, job titles, statuses, tags)",
-        "activity": "Activity Log"
+        "activity": "Activity Log",
+        "users": "User accounts"
       },
       "read": "Read",
       "write": "Write",

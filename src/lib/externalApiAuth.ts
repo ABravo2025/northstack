@@ -94,6 +94,9 @@ export const API_SCOPES = [
   // statuses, custom-field definitions, assignable roles, tags, company profile) — read-only.
   'workspace:read',
   'activity:read',
+  // People with a Northstack login: list them, and activate/deactivate an account (2026-10-21). Never
+  // their role — that stays in the app (externalApiDelegation.ts limits the body to `status`).
+  'users:read', 'users:write',
   'projects:read', 'projects:write',
   'clock:read', 'clock:write',
 ] as const;

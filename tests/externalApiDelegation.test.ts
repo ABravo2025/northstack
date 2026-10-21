@@ -60,6 +60,11 @@ vi.mock('../src/routes/tasks.js', async (importOriginal) => {
   return { ...actual, tasksRouter: await echoRouter([['get', '/api/tasks/mentionable-users']]) };
 });
 
+vi.mock('../src/routes/tenants.js', async (importOriginal) => {
+  const actual: any = await importOriginal();
+  return { ...actual, tenantsRouter: await echoRouter([['get', '/api/tenants/users'], ['patch', '/api/tenants/users/:id']]) };
+});
+
 import { externalApiRouter } from '../src/routes/externalApi.js';
 import { internalPathFor, findDelegatedRoute } from '../src/routes/externalApiDelegation.js';
 
@@ -172,6 +177,28 @@ describe('delegated routes through the Private API', () => {
     expect((await call('POST', '/hr/employees/e1/invite', { roleId: 'role_sales' })).status).toBe(200);
     caller = credential('api_key', ['hr.employees:write']);
     expect((await call('POST', '/hr/employees/e1/invite', { roleId: 'role_admin' })).status).toBe(200);
+  });
+
+  it('user accounts: status can change through the API, a role never', async () => {
+    caller = credential('ai', ['users:read', 'users:write']);
+    expect((await call('GET', '/tenants/users')).body.path).toBe('/api/tenants/users');
+    const deactivate = await call('PATCH', '/tenants/users/u_bob', { status: 'inactive' });
+    expect(deactivate.status).toBe(200);
+    expect(deactivate.body).toMatchObject({ ranAs: 'u_ana', path: '/api/tenants/users/u_bob', body: { status: 'inactive' } });
+
+    for (const body of [{ roleId: 'role_owner' }, { status: 'active', role: 'admin' }]) {
+      const refused = await call('PATCH', '/tenants/users/u_bob', body);
+      expect(refused.status).toBe(400);
+      expect(refused.body.code).toBe('field_not_allowed');
+    }
+    // Same rule for a company API key.
+    caller = credential('api_key', ['users:write']);
+    expect((await call('PATCH', '/tenants/users/u_bob', { roleId: 'role_owner' })).status).toBe(400);
+  });
+
+  it('user accounts need the users scope', async () => {
+    caller = credential('ai', ['workspace:read']);
+    expect((await call('PATCH', '/tenants/users/u_bob', { status: 'inactive' })).status).toBe(403);
   });
 
   it('answers anything else under the API with a JSON 404', async () => {

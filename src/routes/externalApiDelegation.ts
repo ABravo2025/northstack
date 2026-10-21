@@ -56,6 +56,9 @@ interface DelegatedRoute {
   draftOnlyForAi?: boolean;
   // Per-person inboxes (notifications): meaningless for a company API key.
   aiOnly?: boolean;
+  // Body fields the route may receive through the API (everyone, keys and AI alike); anything else
+  // is refused with 400 before the app sees it. For routes that do more in the app than we expose.
+  allowedBodyKeys?: string[];
   // Extra rule for AI assistants only: a reason to refuse (403), or null to go ahead.
   aiGuard?: (req: express.Request, apiKey: AuthenticatedApiKey) => Promise<string | null>;
 }
@@ -110,6 +113,12 @@ export const DELEGATED_ROUTES: DelegatedRoute[] = [
   r('GET', '/api/status-definitions', catalogsRouter, 'workspace:read'),
   r('GET', '/api/hr/custom-fields', catalogsRouter, 'workspace:read'),
   r('GET', '/api/tenants/current', tenantsRouter, 'workspace:read'),
+
+  // ---- User accounts (logins): list, and activate/deactivate — never change a role through here.
+  // The app route requires manage_users and already refuses your own account, and the owner unless
+  // you are the owner; reactivating respects the seat cap. ----
+  r('GET', '/api/tenants/users', tenantsRouter, 'users:read'),
+  r('PATCH', '/api/tenants/users/:id', tenantsRouter, 'users:write', { allowedBodyKeys: ['status'] }),
   r('GET', '/api/roles/assignable', rolesRouter, 'workspace:read'),
   r('GET', '/api/tags', tagsRouter, 'workspace:read'),
 
@@ -347,6 +356,16 @@ export async function delegateToAppRoutes(req: express.Request, res: express.Res
         return sendLogged(req, res, apiKey, 409, {
           error: 'An AI assistant can only edit draft shifts. To change a published shift, cancel it (cancel_shift) or change it in the app.',
           code: 'published_shift',
+        });
+      }
+    }
+
+    if (route.allowedBodyKeys) {
+      const extra = Object.keys(req.body ?? {}).filter((key) => !route.allowedBodyKeys!.includes(key));
+      if (extra.length > 0) {
+        return sendLogged(req, res, apiKey, 400, {
+          error: `Only ${route.allowedBodyKeys.join(', ')} can be changed through the API here (got: ${extra.join(', ')}). Use the app for the rest.`,
+          code: 'field_not_allowed',
         });
       }
     }

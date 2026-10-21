@@ -1849,6 +1849,74 @@
         }
       }
     },
+    "/tenants/users": {
+      "get": {
+        "x-delegated": true,
+        "tags": [
+          "Workspace"
+        ],
+        "summary": "GET /api/tenants/users",
+        "description": "Requires `users:read`. Served by the app's own route, running as the acting user: same request body, response and rules as in the app. Errors are `{ error }` (plus `code` where the app sets one).",
+        "responses": {
+          "200": {
+            "description": "OK (201 on create, 204 on delete)"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/tenants/users/{id}": {
+      "patch": {
+        "x-delegated": true,
+        "tags": [
+          "Workspace"
+        ],
+        "summary": "PATCH /api/tenants/users/:id",
+        "description": "Requires `users:write`. Served by the app's own route, running as the acting user: same request body, response and rules as in the app. Errors are `{ error }` (plus `code` where the app sets one).",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK (201 on create, 204 on delete)"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
     "/roles/assignable": {
       "get": {
         "x-delegated": true,

@@ -397,7 +397,7 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
                                     <tr key={adj.id}>
                                       <td>{t(`payroll.runDetail.adjustmentForm.typeOptions.${adj.type}`, { defaultValue: adj.type })}</td>
                                       <td>{formatMoney(adj.amountCents, adj.currency)}</td>
-                                      <td>{adj.label || '—'}</td>
+                                      <td>{adj.type === 'overtime' && adj.hoursQty != null ? `${adj.label ?? ''} · ${adj.hoursQty.toLocaleString(i18n.language.startsWith('es') ? 'es-AR' : 'en-US')} h` : adj.label || '—'}</td>
                                       {isDraft && (
                                         <td>
                                           <button

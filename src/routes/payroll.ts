@@ -31,6 +31,8 @@ import { createAdjustment, deleteEntry, updateEntryHours } from '../modules/hr/p
 import { createOffPayments, listOffPayments } from '../modules/hr/payrollOffPaymentService.js';
 import { buildPayslipForEntry, buildPayslipForRunEmployee } from '../modules/hr/payslipService.js';
 import { importApprovedHours } from '../modules/hr/payrollHoursService.js';
+import { getOvertimePolicy, listOvertimePeople, saveOvertimePolicy, setOvertimeExempt } from '../modules/hr/overtimePolicyService.js';
+import { TEMPLATES } from '../modules/hr/overtimeRules.js';
 import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 
@@ -517,11 +519,55 @@ payrollRouter.post('/api/hr/payroll/runs/:runId/import-hours', async (req, res) 
   if (!requirePayrollAccess(user, res)) {
     return;
   }
-  const result = await importApprovedHours(user.tenantId!, String(req.params.runId), { from: req.body?.from, to: req.body?.to }, user.id);
+  const result = await importApprovedHours(user.tenantId!, String(req.params.runId), { from: req.body?.from, to: req.body?.to }, user.id, user.locale);
   if (!result.success) {
     return res.status(400).json({ error: result.error, field: result.field });
   }
   return res.json(result.value);
+});
+
+// Overtime and surcharges (spec-overtime.md, Growth — Payroll is Growth): the company's rules and
+// who doesn't get overtime, in Payroll → Payment policies.
+payrollRouter.get('/api/hr/payroll/overtime-policy', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (!requirePayrollAccess(user, res)) {
+    return;
+  }
+  const [policy, people] = await Promise.all([getOvertimePolicy(user.tenantId!), listOvertimePeople(user.tenantId!)]);
+  return res.json({ policy, people, templates: TEMPLATES });
+});
+
+payrollRouter.put('/api/hr/payroll/overtime-policy', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (!requirePayrollAccess(user, res)) {
+    return;
+  }
+  const result = await saveOvertimePolicy(user.tenantId!, req.body ?? {});
+  if (!result.success) {
+    return res.status(400).json({ error: result.error, field: result.field });
+  }
+  return res.json(result.value);
+});
+
+payrollRouter.patch('/api/hr/payroll/overtime-policy/exempt', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (!requirePayrollAccess(user, res)) {
+    return;
+  }
+  const result = await setOvertimeExempt(user.tenantId!, req.body?.employeeId, req.body?.exempt);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+  return res.json({ ok: true });
 });
 
 // --- Off-cycle payments (Unidad 18) ----------------------------------------

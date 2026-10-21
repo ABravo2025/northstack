@@ -298,7 +298,8 @@
         "bonus": "Bono",
         "commission": "Comisión",
         "reimbursement": "Reembolso",
-        "deduction": "Deducción"
+        "deduction": "Deducción",
+        "overtime": "Horas extra"
       },
       "compensationTypeLabels": {
         "hourly": "Por hora",
@@ -433,7 +434,8 @@
         "bonus": "Bono",
         "commission": "Comisión",
         "reimbursement": "Reembolso",
-        "deduction": "Deducción"
+        "deduction": "Deducción",
+        "overtime": "Horas extra"
       },
       "toasts": {
         "loadFailed": "Error al cargar la configuración de nómina: {{error}}",
@@ -480,7 +482,8 @@
           "bonus": "Bono",
           "commission": "Comisión",
           "reimbursement": "Reembolso",
-          "deduction": "Deducción"
+          "deduction": "Deducción",
+          "overtime": "Horas extra"
         },
         "columns": {
           "name": "Nombre"
@@ -602,7 +605,8 @@
           "bonus": "Bono",
           "commission": "Comisión",
           "reimbursement": "Reembolso",
-          "deduction": "Deducción"
+          "deduction": "Deducción",
+          "overtime": "Horas extra"
         }
       },
       "addPersonModal": {
@@ -647,8 +651,47 @@
           "open": "abierta",
           "submitted": "esperando aprobación",
           "returned": "devuelta"
-        }
+        },
+        "breakdown": "{{regular}} h normales · {{weekday}} h extra · {{rest}} h en descanso · {{night}} h nocturnas"
       }
+    },
+    "overtime": {
+      "title": "Horas extra y recargos",
+      "lead": "Las reglas de tu empresa: cuándo una hora es extra y cuánto se paga de más. Se aplican al traer las horas aprobadas a una liquidación, como líneas aparte en el recibo. Solo para quienes cobran por hora.",
+      "enabled": "Pagar horas extra y recargos",
+      "startFrom": "Empezar en base a",
+      "templates": {
+        "ar": "Argentina",
+        "us": "EE. UU.",
+        "custom": "Personalizada"
+      },
+      "templateHint": {
+        "ar": "Ley de Contrato de Trabajo: más de 8 h por día o 48 por semana; 50 % en día hábil, 100 % desde el sábado 13:00, domingos y feriados; nocturnas 21:00–06:00 (definí su recargo). Ajustá lo que haga falta según tu convenio.",
+        "us": "FLSA federal: tiempo y medio después de 40 horas por semana. Algunos estados (como California) suman reglas diarias: agregalas acá.",
+        "custom": "Definí cada regla vos."
+      },
+      "whenTitle": "Cuándo una hora es extra",
+      "daily": "Más de",
+      "weekly": "Más de",
+      "hoursPerDay": "horas por día",
+      "hoursPerWeek": "horas por semana",
+      "whenHint": "Dejalo vacío para no usar ese límite.",
+      "surchargesTitle": "Recargos",
+      "weekdayPct": "Horas extra en día hábil",
+      "restPct": "Horas extra en descanso y feriados",
+      "restTitle": "Días de descanso (todas sus horas son extra)",
+      "holidays": "Feriados de la empresa",
+      "saturdayFrom": "Sábados desde las",
+      "nightTitle": "Horas nocturnas",
+      "nightFrom": "Desde",
+      "nightTo": "Hasta",
+      "nightPct": "Recargo nocturno",
+      "timeHint": "Las reglas que dependen de la hora (sábado a la tarde, nocturnas) usan el fichaje o, si no hay, el horario del turno en su locación. Las horas cargadas sin ninguno de los dos solo usan los límites de horas.",
+      "exemptTitle": "Quién no cobra horas extra",
+      "exemptHint": "A las personas marcadas se les paga cada hora a su tarifa normal (por ejemplo, personal jerárquico).",
+      "save": "Guardar",
+      "saving": "Guardando…",
+      "saved": "Reglas de horas extra guardadas"
     }
   }
 }

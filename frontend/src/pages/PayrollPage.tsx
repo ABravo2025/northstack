@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import OvertimeSettingsCard from '../components/payroll/OvertimeSettingsCard';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import i18n from '../lib/i18n';
@@ -1065,6 +1066,9 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                   </div>
                 ))}
               </div>
+
+              {/* Overtime and surcharges (spec-overtime.md) */}
+              {canManagePayroll && <OvertimeSettingsCard token={token} />}
             </>
           )}
           </>

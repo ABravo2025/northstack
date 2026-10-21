@@ -336,6 +336,8 @@ enum PayrollEntryType {
   commission
   reimbursement
   deduction
+  // Overtime and surcharges (spec-overtime.md): lines generated when approved hours are brought in.
+  overtime
 }
 
 model Tenant {
@@ -455,6 +457,7 @@ model Tenant {
   timeSuggestionDismissals  TimeSuggestionDismissal[]
   referredBy                Referral?
   taskComments              TaskComment[]
+  overtimePolicy            OvertimePolicy?
 }
 
 // Billing Integration (spec-billing-integration.md). plan/lockedPriceCents are deliberately NOT
@@ -785,6 +788,8 @@ model Employee {
   timeSuggestionDismissals TimeSuggestionDismissal[]
 
   @@unique([tenantId, email])
+  // spec-overtime.md: paid all hours at the base rate (e.g. management, outside the agreement).
+  overtimeExempt           Boolean                    @default(false)
 }
 
 // Audit trail of every termination (past, executed, or still scheduled) — a business event with
@@ -1589,6 +1594,8 @@ model PayrollEntry {
   hoursFrom          DateTime? @db.Date
   hoursTo            DateTime? @db.Date
   hoursFromTimesheet Boolean   @default(false)
+  // spec-overtime.md: 'weekday' | 'rest' | 'night' on a generated overtime line (replaced on every import).
+  overtimeKind       String?
   label       String?
   paymentDate DateTime
   createdAt   DateTime         @default(now())
@@ -3163,4 +3170,26 @@ model MfaChallenge {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+// Overtime and surcharges (spec-overtime.md, Growth): each company's own rules, set in Payroll →
+// Payment policies → Overtime. Applied when approved timesheet hours are brought into a pay run.
+model OvertimePolicy {
+  id                     String   @id @default(uuid())
+  tenantId               String   @unique
+  tenant                 Tenant   @relation(fields: [tenantId], references: [id])
+  enabled                Boolean  @default(false)
+  // 'ar' | 'us' | 'custom' — what it started from; every value below can be edited.
+  template               String   @default("custom")
+  dailyThresholdMinutes  Int?
+  weeklyThresholdMinutes Int?
+  weekdayPct             Int      @default(50)
+  restPct                Int      @default(100)
+  restWeekdays           Int[]    @default([])
+  saturdayFromMinute     Int?
+  holidaysAreRest        Boolean  @default(false)
+  nightPct               Int      @default(0)
+  nightStartMinute       Int?
+  nightEndMinute         Int?
+  updatedAt              DateTime @updatedAt
 }

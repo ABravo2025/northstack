@@ -103,9 +103,19 @@ export default function ImportHoursModal({ token, runId, cadence, onClose, onImp
           <p className="m-0 text-sm">{t('payroll.runDetail.importHours.summary', { from: day(result.from), to: day(result.to) })}</p>
           <ul className="m-0 flex list-none flex-col gap-1 p-0 text-sm">
             {result.updated.map((u) => (
-              <li key={u.employeeId} className="flex justify-between gap-3">
+              <li key={u.employeeId} className="flex flex-wrap justify-between gap-x-3">
                 <span>{u.name}</span>
                 <span className="font-semibold tabular-nums">{t('payroll.runDetail.importHours.hours', { hours: u.hours.toLocaleString(i18n.language.startsWith('es') ? 'es-AR' : 'en-US') })}</span>
+                {u.overtime && (u.overtime.weekdayHours > 0 || u.overtime.restHours > 0 || u.overtime.nightHours > 0) && (
+                  <span className="w-full text-xs text-ink-muted dark:text-dark-ink-muted">
+                    {t('payroll.runDetail.importHours.breakdown', {
+                      regular: u.overtime.regularHours.toLocaleString(i18n.language.startsWith('es') ? 'es-AR' : 'en-US'),
+                      weekday: u.overtime.weekdayHours.toLocaleString(i18n.language.startsWith('es') ? 'es-AR' : 'en-US'),
+                      rest: u.overtime.restHours.toLocaleString(i18n.language.startsWith('es') ? 'es-AR' : 'en-US'),
+                      night: u.overtime.nightHours.toLocaleString(i18n.language.startsWith('es') ? 'es-AR' : 'en-US'),
+                    })}
+                  </span>
+                )}
               </li>
             ))}
           </ul>

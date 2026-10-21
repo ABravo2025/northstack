@@ -40,7 +40,9 @@ export default function PayrollHoursCard({ token }: { token: string }) {
               <tr key={r.id}>
                 <td className="font-medium">{r.periodLabel}</td>
                 <td>{r.from && r.to ? `${day(r.from)} – ${day(r.to)}` : t('timesheet.payroll.manual')}</td>
-                <td className="tabular-nums">{t('timesheet.payroll.hoursValue', { hours: r.hours.toLocaleString(i18n.language.startsWith('es') ? 'es-AR' : 'en-US') })}</td>
+                <td className="tabular-nums">{r.overtimeHours
+                    ? t('timesheet.payroll.hoursWithExtra', { hours: (r.hours + r.overtimeHours).toLocaleString(i18n.language.startsWith('es') ? 'es-AR' : 'en-US'), extra: r.overtimeHours.toLocaleString(i18n.language.startsWith('es') ? 'es-AR' : 'en-US') })
+                    : t('timesheet.payroll.hoursValue', { hours: r.hours.toLocaleString(i18n.language.startsWith('es') ? 'es-AR' : 'en-US') })}</td>
                 <td>
                   <span className={`to-chip ${r.status === 'confirmed' ? 'to-chip-approved' : 'to-chip-pending'}`}>{t(`timesheet.payroll.state.${r.status}`)}</span>
                 </td>

@@ -1584,6 +1584,11 @@ model PayrollEntry {
   amountCents Int // can be negative (deductions)
   currency    String
   hoursQty    Float? // only when compensationType: hourly
+  // Timesheet → Payroll (2026-10-21): the period the hours were brought from (approved weeks only).
+  // Cleared to false when someone edits the hours by hand.
+  hoursFrom          DateTime? @db.Date
+  hoursTo            DateTime? @db.Date
+  hoursFromTimesheet Boolean   @default(false)
   label       String?
   paymentDate DateTime
   createdAt   DateTime         @default(now())

@@ -623,6 +623,31 @@
         "peopleLoadFailed": "Failed to load people: {{error}}",
         "personAdded": "Person added to this run.",
         "personAddFailed": "Failed to add person: {{error}}"
+      },
+      "importHours": {
+        "button": "Bring approved hours",
+        "title": "Bring hours from timesheets",
+        "body": "Fills in the hours of everyone paid by the hour with their approved timesheet weeks in this period. You can still edit them afterwards.",
+        "from": "From",
+        "to": "To",
+        "hint": "Only approved weeks count. Weeks still open or waiting for approval are left out, and you'll see who has them.",
+        "bring": "Bring hours",
+        "bringing": "Bringing…",
+        "cancel": "Cancel",
+        "close": "Done",
+        "done_one": "Hours brought for {{count}} person",
+        "done_other": "Hours brought for {{count}} people",
+        "summary": "Approved hours from {{from}} to {{to}}:",
+        "hours": "{{hours}} h",
+        "pendingTitle": "Weeks not approved yet (not included):",
+        "week": "week of {{date}} ({{status}})",
+        "pendingHint": "Approve them in Shifts → Approvals and bring the hours again.",
+        "fromTimesheet": "From timesheets · {{from}} – {{to}}",
+        "status": {
+          "open": "open",
+          "submitted": "waiting for approval",
+          "returned": "sent back"
+        }
       }
     }
   }

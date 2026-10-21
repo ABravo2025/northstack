@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import PayrollHoursCard from '../../components/shifts/PayrollHoursCard';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { api, type TimeEntry, type TimesheetWeek, type TimeSuggestion } from '../../api';
@@ -408,6 +409,9 @@ export default function TimesheetPage({ token }: TimesheetPageProps) {
           )}
         </div>
       </section>
+
+      {/* Timesheet → Payroll: the hours that went to payroll (own timesheet only). */}
+      {week.isOwn && <PayrollHoursCard token={token} />}
 
       {/* Add / edit an entry */}
       <Modal

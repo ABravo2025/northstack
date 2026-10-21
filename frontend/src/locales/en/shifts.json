@@ -440,7 +440,21 @@
         "remove": "Remove"
       }
     },
-    "clockedVsPlanned": "clocked {{clocked}} · planned {{planned}}"
+    "clockedVsPlanned": "clocked {{clocked}} · planned {{planned}}",
+    "payroll": {
+      "title": "Hours sent to payroll",
+      "lead": "The hours of each pay run you're in. They come from your approved weeks (or were entered by whoever runs payroll).",
+      "run": "Pay run",
+      "period": "Period",
+      "hours": "Hours",
+      "status": "Status",
+      "manual": "Entered by payroll",
+      "hoursValue": "{{hours}} h",
+      "state": {
+        "draft": "Being prepared",
+        "confirmed": "Confirmed"
+      }
+    }
   },
   "approvals": {
     "title": "Approvals",

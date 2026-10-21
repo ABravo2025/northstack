@@ -30,6 +30,7 @@ import {
 import { createAdjustment, deleteEntry, updateEntryHours } from '../modules/hr/payrollEntryService.js';
 import { createOffPayments, listOffPayments } from '../modules/hr/payrollOffPaymentService.js';
 import { buildPayslipForEntry, buildPayslipForRunEmployee } from '../modules/hr/payslipService.js';
+import { importApprovedHours } from '../modules/hr/payrollHoursService.js';
 import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 
@@ -505,6 +506,22 @@ payrollRouter.patch('/api/hr/payroll/entries/:id/hours', async (req, res) => {
     return res.status(400).json({ error: result.error });
   }
   return res.json(result.entry);
+});
+
+// Timesheet → Payroll (2026-10-21): { from, to } → approved timesheet hours into a draft run.
+payrollRouter.post('/api/hr/payroll/runs/:runId/import-hours', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (!requirePayrollAccess(user, res)) {
+    return;
+  }
+  const result = await importApprovedHours(user.tenantId!, String(req.params.runId), { from: req.body?.from, to: req.body?.to }, user.id);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error, field: result.field });
+  }
+  return res.json(result.value);
 });
 
 // --- Off-cycle payments (Unidad 18) ----------------------------------------

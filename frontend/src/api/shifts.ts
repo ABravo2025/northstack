@@ -1,5 +1,6 @@
 import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
 import type {
+  MyPayrollHours,
   ClockBoardLocation,
   ClockCodeView,
   ClockEntry,
@@ -236,6 +237,8 @@ export const shiftsApi = {
     call<ScheduleCost | null>(token, `/api/shifts/cost?from=${from}&to=${to}${locationId ? `&locationId=${locationId}` : ''}`),
   getHoursReport: (token: string, params: { from: string; to: string; groupBy: HoursReport['groupBy'] }) =>
     call<HoursReport>(token, `/api/shifts/timesheet/reports?from=${params.from}&to=${params.to}&groupBy=${params.groupBy}`),
+  // Timesheet → Payroll: the hours that went to payroll (own; hours only).
+  getMyPayrollHours: (token: string) => call<MyPayrollHours[]>(token, '/api/shifts/timesheet/payroll-hours'),
   reopenTimesheet: (token: string, timesheetId: string, reason: string) =>
     call<{ status: TimesheetStatus }>(token, `/api/shifts/timesheet/${timesheetId}/reopen`, { method: 'POST', body: JSON.stringify({ reason }) }),
 

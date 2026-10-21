@@ -8,9 +8,10 @@ import Modal from '../components/common/Modal';
 import TableSkeleton from '../components/common/TableSkeleton';
 import StatusChip from '../components/common/StatusChip';
 import PayslipPreviewModal from '../components/payroll/PayslipPreviewModal';
+import ImportHoursModal from '../components/payroll/ImportHoursModal';
 import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar';
 import { formatMoney } from '../lib/currencies';
-import { ChevronDownIcon, ChevronLeftIcon, EyeIcon, PlusIcon, TrashIcon } from '../components/common/Icons';
+import { ChevronDownIcon, ChevronLeftIcon, ClockIcon, EyeIcon, PlusIcon, TrashIcon } from '../components/common/Icons';
 import { usePermissions } from '../contexts/PermissionsContext';
 
 interface PayrollRunDetailPageProps {
@@ -18,7 +19,7 @@ interface PayrollRunDetailPageProps {
 }
 
 export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProps) {
-  const { t } = useTranslation('hr');
+  const { t, i18n } = useTranslation('hr');
   // Custom Roles Fase J — migrated off `user?.role === 'owner'` to the real backend gate,
   // canManagePayroll, same as PayrollPage.tsx.
   const permissions = usePermissions();
@@ -41,18 +42,20 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
   const [addPersonCandidates, setAddPersonCandidates] = useState<CompensationStatusEntry[]>([]);
   const [addingEmployeeId, setAddingEmployeeId] = useState<string | null>(null);
   const [payslipEmployeeId, setPayslipEmployeeId] = useState<string | null>(null);
+  const [importingHours, setImportingHours] = useState(false);
 
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runId]);
 
-  const load = async () => {
+  // silent: refresh in place (no skeleton), so an open dialog — e.g. the hours import result — stays.
+  const load = async (silent = false) => {
     if (!runId || !canManagePayroll) {
       setLoading(false);
       return;
     }
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const data = await api.getPayrollRunDetail(token, runId);
       setDetail(data);
@@ -202,6 +205,7 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
   }
 
   const isDraft = detail.run.status === 'draft';
+  const shortDay = (d: string) => new Date(`${d}T00:00:00Z`).toLocaleDateString(i18n.language.startsWith('es') ? 'es-AR' : 'en-US', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 
   return (
     <div className="container">
@@ -222,6 +226,12 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
               <PlusIcon className="h-3.5 w-3.5" />
               {t('payroll.runDetail.addPersonToRun')}
             </button>
+            {detail.employeeRows.some((r) => r.compensationType === 'hourly') && (
+              <button type="button" className="btn-secondary gap-1.5" onClick={() => setImportingHours(true)}>
+                <ClockIcon className="h-3.5 w-3.5" />
+                {t('payroll.runDetail.importHours.button')}
+              </button>
+            )}
             <span title={detail.hasUnloadedHours ? t('payroll.runDetail.confirmDisabledTooltip') : undefined}>
               <button
                 type="button"
@@ -313,6 +323,11 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
                                 base: formatMoney(row.baseAmountCents, row.currency),
                               })}
                             </span>
+                            {baseEntry?.hoursFromTimesheet && baseEntry.hoursFrom && baseEntry.hoursTo && (
+                              <span className="text-xs whitespace-normal text-emerald-700 dark:text-emerald-300">
+                                {t('payroll.runDetail.importHours.fromTimesheet', { from: shortDay(baseEntry.hoursFrom), to: shortDay(baseEntry.hoursTo) })}
+                              </span>
+                            )}
                           </div>
                         ) : (
                           <div className="flex flex-col gap-0.5 text-xs text-ink-muted dark:text-dark-ink-muted">
@@ -489,6 +504,16 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
           </div>
         )}
       </Modal>
+
+      {importingHours && runId && (
+        <ImportHoursModal
+          token={token}
+          runId={runId}
+          cadence={detail.run.payFrequency?.cadence}
+          onClose={() => setImportingHours(false)}
+          onImported={() => load(true)}
+        />
+      )}
 
       {payslipEmployeeId && runId && (
         <PayslipPreviewModal

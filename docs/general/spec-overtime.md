@@ -1,6 +1,6 @@
 # Spec: Horas extra y recargos configurables por empresa
 
-**Estado:** borrador para aprobar (2026-10-21). Pedido de Alejandro: "que lo decida la empresa, porque cada
+**Estado:** en definición (2026-10-21). Decisiones de Alejandro en §0.1; faltan las preguntas 2 y 3 de §4. Pedido de Alejandro: "que lo decida la empresa, porque cada
 país tiene su política de pago y cada empresa también".
 
 ## 0. Idea
@@ -17,7 +17,13 @@ registra (timesheet aprobado, fichajes, turnos). El resultado aparece en tres lu
 
 Apagado por defecto. Una empresa sin reglas sigue como hoy.
 
-## 1. Qué se configura (Configuración → Turnos → Horas extra)
+## 0.1 Decisiones de Alejandro (2026-10-21)
+
+1. La configuración va en **Nómina**, como parte de la configuración de nómina (no en Turnos).
+4. **Solo Growth.**
+5. **Sin aprobación aparte:** alcanza con que la semana del timesheet esté aprobada.
+
+## 1. Qué se configura (Nómina → Configuración → Horas extra)
 
 1. **Cuándo una hora es extra** (uno o los dos):
    - más de **N horas por día** (ej. 8);

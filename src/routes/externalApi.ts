@@ -10,6 +10,8 @@ import { authenticateApiKey, hasScope, type AuthenticatedApiKey } from '../lib/e
 import { isApiAccessAllowed } from '../modules/tenant/planLimits.js';
 import { runWithRequestContext } from '../lib/requestContext.js';
 import { delegateToAppRoutes } from './externalApiDelegation.js';
+import { aiInviteBlockReason } from '../modules/integrations/aiInviteGuard.js';
+import { listAssignableRoles } from '../modules/auth/roleManagementService.js';
 import { findEntityTenantId, isSupportedCrossModuleEntityType } from '../modules/crossModule/entityLookup.js';
 import type { EntityType } from '@prisma/client';
 import { findUserById } from '../modules/tenant/tenantService.js';
@@ -75,7 +77,7 @@ import {
 } from '../modules/hr/timeOffRequestService.js';
 import { findEmployeeByUserId, resolveVisibleEmployeeIds } from '../modules/hr/employeeService.js';
 import { redactEntityFields, redactEntityListFields } from '../modules/auth/fieldVisibilityService.js';
-import { canManageCustomFields } from '../modules/auth/permissionService.js';
+import { canInviteUsers, canManageCustomFields, canManageUsers } from '../modules/auth/permissionService.js';
 import { serializeRoleContext } from '../modules/auth/roleService.js';
 
 // Private API (spec-private-api-webhooks.md, Units 2-3) — endpoints under /api/external/v1/*.
@@ -371,6 +373,19 @@ externalApiRouter.get('/api/external/v1/me', async (req, res) => {
     tenant: { id: apiKey.tenantId, plan: apiKey.tenantPlan, status: apiKey.tenantStatus },
     scopes: apiKey.scopes,
   });
+});
+
+// The roles an invitation may give, each with aiCanInvite: false for the sensitive ones an AI
+// assistant may not grant (aiInviteGuard.ts) — so the MCP can say so before asking to confirm.
+externalApiRouter.get('/api/external/v1/roles/invitable', async (req, res) => {
+  const { apiKey } = req as unknown as ExternalApiRequest;
+  if (!(await requireScopeLogged(req, res, apiKey, 'workspace:read'))) return;
+  if (!canInviteUsers(apiKey.actor.roleContext) && !canManageUsers(apiKey.actor.roleContext)) {
+    return respond(req, res, apiKey, 403, { error: "Your role in this workspace can't invite people.", code: 'missing_permission' });
+  }
+  const roles = await listAssignableRoles(apiKey.tenantId);
+  const withFlag = await Promise.all(roles.map(async (role) => ({ ...role, aiCanInvite: (await aiInviteBlockReason(apiKey.tenantId, role.id)) === null })));
+  return respond(req, res, apiKey, 200, withFlag);
 });
 
 // ---- Tasks ----

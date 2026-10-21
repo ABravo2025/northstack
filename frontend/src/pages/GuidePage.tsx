@@ -2387,7 +2387,8 @@ export default function GuidePage() {
                 Para borrar, desactivar un contacto, decidir licencias u horas, ajustar un saldo, y para todo lo que
                 avisa a otras personas — publicar o cancelar turnos, invitar a alguien a Northstack, mandarle un reporte de
                 horas a un cliente — el asistente siempre te muestra un resumen y te pide confirmación antes de hacerlo.
-                Revisá bien el email antes de confirmar una invitación: quien lo reciba entra con ese rol. El fichaje es
+                Revisá bien el email antes de confirmar una invitación: quien lo reciba entra con ese rol. El asistente
+                no puede invitar como Admin ni con roles que vean salarios o pagos: esos se dan desde la app. El fichaje es
                 siempre el tuyo, nunca el de otra persona. Un asistente no puede borrar más de 10 registros por hora.
                 <strong> Se quedan en la app:</strong> la nómina (el asistente solo la lee), las bajas de empleados, la
                 configuración (roles, pipelines, departamentos, campos personalizados, feriados) y cambiar los datos de un
@@ -2514,7 +2515,8 @@ export default function GuidePage() {
                 To delete something, deactivate a contact, decide time off or hours, adjust a balance, and for anything
                 that notifies other people — publishing or cancelling shifts, inviting someone to Northstack, e-mailing an
                 hours report to a client — the assistant always shows you a summary and asks you to confirm first. Check
-                the e-mail before confirming an invitation: whoever gets it signs in with that role. Clocking in or out is
+                the e-mail before confirming an invitation: whoever gets it signs in with that role. The assistant can't
+                invite as Admin or with roles that see salaries or payments: those are given from the app. Clocking in or out is
                 always your own, never someone else's. An assistant can't delete more than 10 records an hour.
                 <strong> Staying in the app:</strong> payroll (the assistant only reads it), terminations, settings (roles,
                 pipelines, departments, custom fields, holidays) and changing the details of a published shift.

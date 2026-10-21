@@ -208,17 +208,22 @@ export function registerHrTools(server: McpServer, ctx: ToolContext): void {
   server.registerTool('invite_employee', {
     title: 'Invite employee to Northstack',
     description:
-      "Send an employee an e-mail invitation to create their Northstack login, with a role (list_catalogs kind=assignable_roles; default Member). Goes to the employee's work e-mail on file. Two steps: first call returns a summary and confirmationToken; call again with it after the user confirms.",
+      "Send an employee an e-mail invitation to create their Northstack login, with a role (list_catalogs kind=assignable_roles; default Member). An assistant can only give roles with aiCanInvite=true: Admin and roles with salary or payment access are given from the app. Goes to the employee's work e-mail on file. Two steps: first call returns a summary and confirmationToken; call again with it after the user confirms.",
     inputSchema: { employeeId: z.string(), roleId: z.string().optional(), confirmationToken: confirmationArg },
     annotations: DESTRUCTIVE,
   }, async ({ employeeId, roleId, confirmationToken }) => confirmable(ctx, `invite_employee:${roleId ?? 'default'}`, employeeId, confirmationToken,
     async () => {
       const employee = await api.get<any>(`/hr/employees/${employeeId}`);
-      if (!employee.ok || !roleId) return employee;
-      const roles = await api.get<any[]>('/roles/assignable');
+      if (!employee.ok) return employee;
+      // Checked before asking the user to confirm: sensitive roles are refused by the API anyway.
+      const roles = await api.get<any[]>('/roles/invitable');
       if (!roles.ok) return roles;
-      const role = (roles.body ?? []).find((r) => r.id === roleId);
-      return role ? found({ ...employee.body, roleName: role.name }) : notFound('That role cannot be assigned');
+      const role = roleId ? (roles.body ?? []).find((r) => r.id === roleId) : (roles.body ?? []).find((r) => String(r.name).toLowerCase() === 'member');
+      if (roleId && !role) return notFound('That role cannot be assigned');
+      if (role && !role.aiCanInvite) {
+        return { ok: false, status: 403, body: { error: `An AI assistant can't invite with the role "${role.name}" (admin, salaries or payments). Invite from the app instead.`, code: 'ai_not_allowed' } };
+      }
+      return found({ ...employee.body, roleName: role?.name ?? 'Member' });
     },
     (e) => `You are about to e-mail an invitation to ${e.email} (${e.firstName} ${e.lastName}) to join this Northstack workspace with the role "${e.roleName ?? 'Member'}". Check the e-mail address is right: whoever owns it gets that access.`,
     () => api.post(`/hr/employees/${employeeId}/invite`, compact({ roleId })), 'Invitation sent.'));

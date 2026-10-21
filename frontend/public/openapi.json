@@ -1661,6 +1661,26 @@
         }
       }
     },
+    "/roles/invitable": {
+      "get": {
+        "tags": [
+          "Workspace"
+        ],
+        "summary": "Roles an invitation may give, with aiCanInvite",
+        "description": "Requires `workspace:read` and a role that can invite people. Each role comes with `aiCanInvite`: false for Admin and for roles with admin-level, salary or payment permissions — an AI assistant token gets `403 ai_not_allowed` if it tries to invite with one (API keys are not restricted by this).",
+        "responses": {
+          "200": {
+            "description": "Array of { id, name, aiCanInvite }"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
     "/tasks/mentionable-users": {
       "get": {
         "x-delegated": true,

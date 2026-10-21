@@ -258,6 +258,10 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   const [createdEmployeeId, setCreatedEmployeeId] = useState<string | null>(null);
   const sentEmployeeCustomFieldIds = useRef<Set<string>>(new Set());
   const assignedTimeOffPolicyIds = useRef<Set<string>>(new Set());
+  // Whether the initial contract was already created for the auto-created record — so a Profile
+  // that auto-created first and was then switched to Contractor/Employee still gets its contract
+  // (and with it the contract-confirmation invitation) on "Create" (2026-10-20).
+  const initialCompensationCreated = useRef(false);
 
   useEffect(() => {
     loadEmployees();
@@ -433,6 +437,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     setCreatedEmployeeId(null);
     sentEmployeeCustomFieldIds.current = new Set();
     assignedTimeOffPolicyIds.current = new Set();
+    initialCompensationCreated.current = false;
   };
 
   const handleOpenAdd = () => {
@@ -442,6 +447,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     setCreatedEmployeeId(null);
     sentEmployeeCustomFieldIds.current = new Set();
     assignedTimeOffPolicyIds.current = new Set();
+    initialCompensationCreated.current = false;
     setSlideOverMode('add');
   };
 
@@ -532,6 +538,24 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   // Add form or navigate; handleCreateEmployee (the real "Create" button)
   // does that once the user is actually finished (backlog QA, 2026-08-27 —
   // see useAutoCreateGuard.ts).
+  // The first-ever contract — the backend sends the contract-confirmation invitation with it
+  // (employeeCompensationService.createCompensation), so this is what invites a Contractor/Employee.
+  const createInitialCompensation = async (employeeId: string) => {
+    await api.createCompensation(token, {
+      employeeId,
+      compensationType: employeeForm.compensationType as 'hourly' | 'fixed',
+      rateCents: Math.round(Number.parseFloat(employeeForm.rateAmount) * 100),
+      currency: employeeForm.currency.trim().toUpperCase(),
+      payFrequencyId: employeeForm.payFrequencyId,
+      jobTitle: employeeForm.contractJobTitle.trim(),
+      description: employeeForm.contractDescription.trim(),
+      effectiveFrom: employeeForm.effectiveFrom,
+      note: employeeForm.contractNote || undefined,
+      inviteRoleId: employeeForm.inviteRoleId || defaultInviteRoleId || undefined,
+    });
+    initialCompensationCreated.current = true;
+  };
+
   const createEmployeeRecord = async (cfValues: Record<string, string> = customFieldValues) => {
     const employee = await api.createEmployee(token, {
       firstName: employeeForm.firstName.trim(),
@@ -550,18 +574,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     });
 
     if (needsInitialCompensation) {
-      await api.createCompensation(token, {
-        employeeId: employee.id,
-        compensationType: employeeForm.compensationType as 'hourly' | 'fixed',
-        rateCents: Math.round(Number.parseFloat(employeeForm.rateAmount) * 100),
-        currency: employeeForm.currency.trim().toUpperCase(),
-        payFrequencyId: employeeForm.payFrequencyId,
-        jobTitle: employeeForm.contractJobTitle.trim(),
-        description: employeeForm.contractDescription.trim(),
-        effectiveFrom: employeeForm.effectiveFrom,
-        note: employeeForm.contractNote || undefined,
-        inviteRoleId: employeeForm.inviteRoleId || defaultInviteRoleId || undefined,
-      });
+      await createInitialCompensation(employee.id);
     }
 
     const valueEntries = Object.entries(cfValues).filter(([, value]) => value.trim() !== '');
@@ -588,7 +601,9 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   // time. Compensation (rate/currency/pay frequency) isn't re-synced here —
   // those fields are already required for auto-create readiness, so they're
   // set once at creation; changing them afterward isn't handled by this
-  // form (same accepted-gap pattern as Opportunity/Company/Contact).
+  // form (same accepted-gap pattern as Opportunity/Company/Contact). The one
+  // exception: a record auto-created as Profile and then switched to
+  // Contractor/Employee gets its first contract (and invitation) here.
   const updateEmployeeRecord = async (employeeId: string, cfValues: Record<string, string>) => {
     await api.updateEmployee(token, employeeId, {
       firstName: employeeForm.firstName.trim(),
@@ -602,8 +617,15 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       endDate: employeeForm.endDate || undefined,
       contractUrl: employeeForm.contractUrl || undefined,
       contractType: (employeeForm.contractType || null) as 'part_time' | 'full_time' | null,
+      personType: (employeeForm.personType || null) as 'profile' | 'contractor' | 'employee' | null,
       nationality: employeeForm.nationality || undefined,
     } as any);
+
+    // Auto-create may have fired while the Type was still Profile; switching to Contractor/Employee
+    // afterward must still create the contract, or the person never gets their invitation.
+    if (needsInitialCompensation && !initialCompensationCreated.current) {
+      await createInitialCompensation(employeeId);
+    }
 
     const newCfEntries = Object.entries(cfValues).filter(
       ([id, value]) => value.trim() !== '' && !sentEmployeeCustomFieldIds.current.has(id),

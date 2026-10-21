@@ -50,7 +50,9 @@ _Última actualización: 2026-10-03_
    | Módulo | ES | EN | Búsquedas objetivo | Estado |
    |---|---|---|---|---|
    | Ausencias | `/es/software-vacaciones` | `/time-off-software` | software de vacaciones para empleados, control de vacaciones y licencias, calendario de feriados / PTO tracker, leave management | ✅ En producción 2026-10-03 |
-   | CRM | `/es/crm-para-pymes` | `/crm-for-small-business` | CRM para pymes, CRM simple, pipeline de ventas / simple CRM, sales pipeline software | ⬜ |
+   | Turnos y control horario | `/es/control-horario` | `/employee-scheduling-software` | software de turnos, control horario, registro de jornada, fichaje / employee scheduling, timesheet software | 🟡 Pase 2, sin publicar |
+   | CRM | `/es/crm-para-pymes` | `/crm-for-small-business` | CRM para pymes, CRM simple, pipeline de ventas / simple CRM, sales pipeline software | 🟡 Pase 2, sin publicar |
+   | Proyectos | `/es/gestion-de-proyectos` | `/project-management-software` | gestión de proyectos para pymes / project management software for small teams | 🟡 Pase 2, sin publicar |
    | RR.HH. | `/es/legajo-digital` | `/hr-software` | legajo digital de empleados, software de RR.HH. para pymes / HR software for small business | ⬜ |
    | Nómina | `/es/recibos-de-sueldo` | `/payroll-tracking` | recibos de sueldo digitales, historial de liquidaciones / payroll records, payslip software | ⬜ |
 
@@ -84,15 +86,28 @@ Qué incluye:
 
 Indexación de las 2 páginas nuevas pedida en Search Console el 2026-10-03.
 
+## Pase 2 — Turnos, CRM y Proyectos + arreglos (2026-10-20)
+
+**Estado:** commit local en la rama `seo-pass-2` (worktree `C:/tmp/ns-landing-seo`), basado en `origin/landing` d2ad0d8. **Sin push: esperando aprobación.** Vista previa: https://claude.ai/artifact/KMdMhxBJs1H5NV1Dgke6Br
+
+- 6 páginas nuevas (Turnos y control horario, CRM, Proyectos × EN/ES), mismo diseño y precios dinámicos que Vacaciones. Funciones Growth marcadas con etiqueta "Growth". Todo verificado contra la guía de la app y `planLimits.ts`.
+- Pie de página "Producto" con links a las 4 páginas de módulo en portada y en todas las páginas de módulo (enlazado interno).
+- Páginas en español enlazan a los legales en español (`/es/terms.html` …) y el modal de legales los abre.
+- About EN/ES con meta description.
+- Sitemap completo: 18 URLs con pares EN/ES y `lastmod` real de los legales.
+- **No toca** la sección "Qué incluye" de la portada: la rama `landing-plans` (ae79fd0, otra sesión) ya agrega Turnos y Proyectos ahí. Cuando se publique, sumar links de las tarjetas a las páginas de módulo.
+- Pendiente para un pase 3: Legajo digital y Recibos de sueldo; `sameAs` (LinkedIn + G2) en el JSON-LD cuando estén los links.
+
 ## Herramientas
 
-`tools/seo/` — `build-seo.cjs` + plantillas `vacaciones.es.html` / `vacaciones.en.html`. El script
+`tools/seo/` — pase 2: `pages.cjs` (contenido de cada página), `build2.cjs` (genera páginas + pie + sitemap + rewrites, `LANDING=<carpeta> node build2.cjs --write`), `preview2.cjs` (vista previa para Artifact). Pase 1: `build-seo.cjs` + plantillas `vacaciones.es.html` / `vacaciones.en.html`. El script
 copia el CSS compartido de `landing/es/index.html`, arma las páginas de módulo (FAQ en HTML + JSON-LD,
 pie), aplica los retoques de portada, sitemap y `vercel.json`, y genera la vista previa para el
 Artifact. Fue escrito para el pase 1 (los retoques de portada fallan a propósito si ya están
 aplicados); para los próximos módulos, copiar una plantilla y reutilizar `buildModule()`.
 
 ## Changelog SEO (más nuevo arriba)
+- **2026-10-20** — Pase 2 armado (Turnos/CRM/Proyectos EN/ES + arreglos de sitemap, About, legales ES). Vista previa publicada, sin push.
 - **2026-10-20** — Auditoría del landing (ver sección "Auditoría 2026-10-20"). G2: perfil visible; reseñas descartadas por ahora (deben venir de clientes con su propia cuenta).
 - **2026-10-03** — Perfil de Northstack en **G2 aprobado** (primer directorio / primer backlink externo).
 - **2026-10-03** — Indexación pedida para `/es/software-vacaciones` y `/time-off-software`. Kit para directorios armado (`2026-10/semana-01/directorios/`).

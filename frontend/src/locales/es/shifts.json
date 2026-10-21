@@ -453,7 +453,8 @@
       "state": {
         "draft": "En preparación",
         "confirmed": "Confirmada"
-      }
+      },
+      "hoursWithExtra": "{{hours}} h ({{extra}} h extra)"
     }
   },
   "approvals": {

@@ -1,5 +1,5 @@
 import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
-import type { ImportHoursResult,
+import type { ImportHoursResult, OvertimePolicy, OvertimeSetup,
   BulkCompensationEntryResult,
   CompensationStatusEntry,
   DueDateOffset,
@@ -233,6 +233,30 @@ export const payrollApi = {
     const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/entries/${entryId}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+  },
+
+  // Overtime and surcharges (spec-overtime.md).
+  getOvertimeSetup: async (token: string): Promise<OvertimeSetup> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/overtime-policy`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+  saveOvertimePolicy: async (token: string, policy: OvertimePolicy): Promise<OvertimePolicy> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/overtime-policy`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(policy),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+  setOvertimeExempt: async (token: string, employeeId: string, exempt: boolean): Promise<void> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/overtime-policy/exempt`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ employeeId, exempt }),
     });
     if (!res.ok) await throwApiError(res);
   },

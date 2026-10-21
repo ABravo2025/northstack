@@ -9,7 +9,8 @@ import SearchableSelect from '../common/SearchableSelect';
 import { TrashIcon } from '../common/Icons';
 import { CURRENCY_CODES } from '../../lib/currencies';
 
-type AdjustmentType = Exclude<PayrollEntryType, 'base'>;
+// Overtime lines are only generated from approved hours (spec-overtime.md), never typed in.
+type AdjustmentType = Exclude<PayrollEntryType, 'base' | 'overtime'>;
 
 interface AdditionalLine {
   type: AdjustmentType;

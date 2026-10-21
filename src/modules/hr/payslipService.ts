@@ -9,6 +9,7 @@ const ENTRY_TYPE_LABELS: Record<string, string> = {
   commission: 'Commission',
   reimbursement: 'Reimbursement',
   deduction: 'Deduction',
+  overtime: 'Overtime',
 };
 
 function formatMoney(amountCents: number, currency: string): string {
@@ -98,7 +99,8 @@ export async function buildPayslipForRunEmployee(
     periodLabel: run.periodLabel,
     currency: entries[0].currency,
     lines: entries.map((e) => ({
-      label: ENTRY_TYPE_LABELS[e.type] || e.type,
+      // Overtime lines (spec-overtime.md) carry their own label ("Overtime +50%") and hours.
+      label: e.type === 'overtime' && e.label ? `${e.label} (${e.hoursQty ?? 0} h)` : ENTRY_TYPE_LABELS[e.type] || e.type,
       amountCents: e.amountCents,
     })),
     totalCents,

@@ -1180,7 +1180,7 @@ export interface BulkCompensationEntryResult {
   error?: string;
 }
 
-export type PayrollEntryType = 'base' | 'bonus' | 'commission' | 'reimbursement' | 'deduction';
+export type PayrollEntryType = 'base' | 'bonus' | 'commission' | 'reimbursement' | 'deduction' | 'overtime';
 export type PayrollRunStatus = 'draft' | 'confirmed';
 
 export interface PayrollRun {
@@ -1211,7 +1211,13 @@ export interface PayrollRunEntry {
 export interface ImportHoursResult {
   from: string;
   to: string;
-  updated: { employeeId: string; name: string; minutes: number; hours: number }[];
+  updated: {
+    employeeId: string;
+    name: string;
+    minutes: number;
+    hours: number;
+    overtime?: { regularHours: number; weekdayHours: number; restHours: number; nightHours: number };
+  }[];
   pending: { employeeId: string; name: string; weeks: { weekStart: string; status: string }[] }[];
 }
 
@@ -1225,6 +1231,35 @@ export interface MyPayrollHours {
   from: string | null;
   to: string | null;
   fromTimesheet: boolean;
+  // Of which overtime (spec-overtime.md).
+  overtimeHours?: number;
+}
+
+// Overtime and surcharges (spec-overtime.md): the company's rules, in minutes and percents.
+export interface OvertimeRules {
+  dailyThresholdMinutes: number | null;
+  weeklyThresholdMinutes: number | null;
+  weekdayPct: number;
+  restPct: number;
+  restWeekdays: number[];
+  saturdayFromMinute: number | null;
+  holidaysAreRest: boolean;
+  nightPct: number;
+  nightStartMinute: number | null;
+  nightEndMinute: number | null;
+}
+
+export type OvertimeTemplate = 'ar' | 'us' | 'custom';
+
+export interface OvertimePolicy extends OvertimeRules {
+  enabled: boolean;
+  template: OvertimeTemplate;
+}
+
+export interface OvertimeSetup {
+  policy: OvertimePolicy;
+  people: { id: string; name: string; exempt: boolean }[];
+  templates: Record<OvertimeTemplate, OvertimeRules>;
 }
 
 export interface RunDetailEmployeeRow {

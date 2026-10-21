@@ -5234,6 +5234,17 @@ Resuelve el pendiente de agosto ("un área en el perfil de las notificaciones qu
 
 **Verificado** (servicios contra `staging`, 6/6): turno fichado 10 min tarde con 15 min de pausa → sugerencia 220 min (planificado 240); turno sin fichaje → 120 planificados; reporte: fichado 220, 1 tardanza, 1 ausencia; sin fichaje en el plan no hay columnas; resumen al Owner y no dos veces el mismo día. 790/790 tests.
 
+## QA-123 — Horas extra y recargos configurables por empresa (2026-10-21, en `staging`, Growth)
+
+Spec: `docs/general/spec-overtime.md`.
+- Nómina → Políticas de pago → **Horas extra y recargos** (apagado por defecto): "Empezar en base a" **Argentina** (8 h/día, 48 h/semana, 50 % hábil, 100 % sábado desde 13:00, domingos y feriados, nocturnas 21–06 con recargo a definir) / **EE. UU.** (40 h/semana al 50 %) / **Personalizada**; todo editable. Lista de quienes cobran por hora para marcar "no cobra horas extra".
+- Al **traer horas aprobadas**: la Base queda con las horas normales y se agregan líneas "Horas extra +50 %", "Horas extra en descanso / feriado +100 %", "Recargo nocturno" (horas × tarifa × factor). Volver a traer las reemplaza. El modal muestra el desglose; el recibo muestra cada línea con sus horas.
+- La hora del día sale del fichaje o, si no hay, del turno de la locación (en su zona horaria); sin ninguno, solo umbrales. La semana que empezó en la liquidación anterior cuenta para el límite semanal.
+- Timesheet → Horas enviadas a nómina: "21 h (9 h extra)".
+- Schema: `OvertimePolicy`, `Employee.overtimeExempt`, `PayrollEntry.overtimeKind`, valor `overtime` en `PayrollEntryType` (aplicado en `staging`).
+
+**Verificado** contra `staging`: 9 tests del cálculo (Argentina diario/semanal/sábado/domingo/feriado, EE. UU. semanal, semana partida, nocturnas proporcionales); API 12/12 (apagado por defecto, plantillas, valor inválido, guardar Argentina, lunes 10 h + sábado 9–17 + domingo 3 h → 12 h normales / 2 h al 50 % / 7 h al 100 %, montos 240 + 60 + 280, etiquetas en el idioma, sin duplicados al volver a traer, la persona ve 9 h extra, recibo, exento → todo a Base, reglas apagadas → horas simples); navegador EN y ES oscuro (tarjeta, plantillas, desglose, líneas en la corrida, tarjeta del Timesheet).
+
 ## QA-122 — Timesheet → Nómina: traer horas aprobadas + horas visibles para cada persona (2026-10-21, en `staging`)
 
 Pedido de Alejandro: "agregá el botón de traer horas" y que los empleados "puedan ver cuántas horas quedaron registradas, cosa de que sea transparente".

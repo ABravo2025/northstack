@@ -297,7 +297,8 @@
         "bonus": "Bonus",
         "commission": "Commission",
         "reimbursement": "Reimbursement",
-        "deduction": "Deduction"
+        "deduction": "Deduction",
+        "overtime": "Overtime"
       },
       "compensationTypeLabels": {
         "hourly": "Hourly",
@@ -432,7 +433,8 @@
         "bonus": "Bonus",
         "commission": "Commission",
         "reimbursement": "Reimbursement",
-        "deduction": "Deduction"
+        "deduction": "Deduction",
+        "overtime": "Overtime"
       },
       "toasts": {
         "loadFailed": "Failed to load payroll settings: {{error}}",
@@ -479,7 +481,8 @@
           "bonus": "Bonus",
           "commission": "Commission",
           "reimbursement": "Reimbursement",
-          "deduction": "Deduction"
+          "deduction": "Deduction",
+          "overtime": "Overtime"
         },
         "columns": {
           "name": "Name"
@@ -601,7 +604,8 @@
           "bonus": "Bonus",
           "commission": "Commission",
           "reimbursement": "Reimbursement",
-          "deduction": "Deduction"
+          "deduction": "Deduction",
+          "overtime": "Overtime"
         }
       },
       "addPersonModal": {
@@ -646,8 +650,47 @@
           "open": "open",
           "submitted": "waiting for approval",
           "returned": "sent back"
-        }
+        },
+        "breakdown": "{{regular}} h normal · {{weekday}} h overtime · {{rest}} h rest day · {{night}} h night"
       }
+    },
+    "overtime": {
+      "title": "Overtime and surcharges",
+      "lead": "Your company's rules: when an hour is overtime and how much extra it pays. Applied when approved timesheet hours are brought into a pay run, as separate lines on the payslip. Only for people paid by the hour.",
+      "enabled": "Pay overtime and surcharges",
+      "startFrom": "Start from",
+      "templates": {
+        "ar": "Argentina",
+        "us": "United States",
+        "custom": "Custom"
+      },
+      "templateHint": {
+        "ar": "Labor Contract Law: over 8 h a day or 48 a week; 50 % on working days, 100 % from Saturday 13:00, Sundays and holidays; night 21:00–06:00 (set its surcharge). Edit anything to fit your agreement.",
+        "us": "Federal FLSA: time and a half over 40 hours a week. Some states (e.g. California) add daily rules: add them here.",
+        "custom": "Set every rule yourself."
+      },
+      "whenTitle": "When an hour is overtime",
+      "daily": "Over",
+      "weekly": "Over",
+      "hoursPerDay": "hours a day",
+      "hoursPerWeek": "hours a week",
+      "whenHint": "Leave empty to not use that limit.",
+      "surchargesTitle": "Surcharges",
+      "weekdayPct": "Overtime on working days",
+      "restPct": "Overtime on rest days and holidays",
+      "restTitle": "Rest days (all their hours are overtime)",
+      "holidays": "Company holidays",
+      "saturdayFrom": "Saturdays from",
+      "nightTitle": "Night hours",
+      "nightFrom": "From",
+      "nightTo": "To",
+      "nightPct": "Night surcharge",
+      "timeHint": "Rules that depend on the time of day (Saturday afternoon, night) use the clock-in, or else the shift's time at its location. Hours logged without either only use the hour limits.",
+      "exemptTitle": "Who doesn't get overtime",
+      "exemptHint": "Ticked people are paid every hour at their normal rate (e.g. management).",
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "Overtime rules saved"
     }
   }
 }

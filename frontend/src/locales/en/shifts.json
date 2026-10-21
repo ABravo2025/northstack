@@ -453,7 +453,8 @@
       "state": {
         "draft": "Being prepared",
         "confirmed": "Confirmed"
-      }
+      },
+      "hoursWithExtra": "{{hours}} h ({{extra}} h overtime)"
     }
   },
   "approvals": {

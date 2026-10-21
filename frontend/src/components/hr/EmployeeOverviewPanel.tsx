@@ -91,6 +91,7 @@ export default function EmployeeOverviewPanel({
     commission: t('payroll.common.entryTypeLabels.commission'),
     reimbursement: t('payroll.common.entryTypeLabels.reimbursement'),
     deduction: t('payroll.common.entryTypeLabels.deduction'),
+    overtime: t('payroll.common.entryTypeLabels.overtime'),
   };
   const [contractPreviewOpen, setContractPreviewOpen] = useState(false);
   const [paymentPayslipEntryId, setPaymentPayslipEntryId] = useState<string | null>(null);

@@ -1,6 +1,6 @@
 # Spec: Horas extra y recargos configurables por empresa
 
-**Estado:** en definición (2026-10-21). Decisiones de Alejandro en §0.1; faltan las preguntas 2 y 3 de §4. Pedido de Alejandro: "que lo decida la empresa, porque cada
+**Estado:** aprobada por Alejandro el 2026-10-21 (§0.1). **Construida en `staging`** el 2026-10-21 (QA-123). Pendiente en Reportes: horas extra y su costo (métricas de `tenant-metrics-spec.md` §2.9). Pedido de Alejandro: "que lo decida la empresa, porque cada
 país tiene su política de pago y cada empresa también".
 
 ## 0. Idea
@@ -22,6 +22,10 @@ Apagado por defecto. Una empresa sin reglas sigue como hoy.
 1. La configuración va en **Nómina**, como parte de la configuración de nómina (no en Turnos).
 4. **Solo Growth.**
 5. **Sin aprobación aparte:** alcanza con que la semana del timesheet esté aprobada.
+2. El horario no lo define Northstack: las franjas (nocturnas, sábado desde X hora) las configura cada
+   empresa en sus reglas, y la hora de cada hora trabajada sale de lo que ya está configurado (fichaje →
+   turno de la locación, en la zona horaria de esa locación → si no hay ninguno, solo umbrales).
+3. Plantillas: **"Empezar en base a: Argentina / EE. UU. / Personalizada"**.
 
 ## 1. Qué se configura (Nómina → Configuración → Horas extra)
 
@@ -34,8 +38,13 @@ Apagado por defecto. Una empresa sin reglas sigue como hoy.
      desde una hora (ej. 13:00);
    - **Nocturnas** (ej. franja 21:00–06:00, recargo X %), opcional.
 3. **Quién no cobra horas extra:** una marca por persona (ej. personal jerárquico / fuera de convenio).
-4. **Plantillas para empezar** (se pueden editar): "Argentina (LCT)": 8 h/día, 48 h/semana, 50 % hábil,
-   100 % sábados desde 13 h, domingos y feriados, nocturnas 21–06; y "Personalizada" vacía.
+4. **Empezar en base a** (después se edita todo):
+   - **Argentina (LCT):** más de 8 h/día o 48 h/semana; 50 % en día hábil; 100 % sábados desde las 13:00,
+     domingos y feriados; nocturnas 21:00–06:00 (recargo a definir por la empresa, viene en 0 %).
+   - **EE. UU. (FLSA federal):** más de 40 h/semana al 50 % (tiempo y medio); sin umbral diario, sin
+     recargo por descanso ni nocturno (algunos estados, como California, tienen reglas diarias: se cargan
+     a mano).
+   - **Personalizada:** vacía.
 
 ## 2. De dónde sale el horario
 
@@ -53,11 +62,13 @@ que pasa del semanal (sin contarlo dos veces). Cada hora extra toma el recargo d
 descanso/feriado). Las nocturnas suman su recargo aparte. Puro y testeado, con ejemplos de la plantilla
 argentina.
 
-## 4. Preguntas para Alejandro
+## 4. Preguntas
 
-1. ¿La configuración va en **Configuración → Turnos → Horas extra** (o preferís en Nómina)?
-2. ¿Está bien el orden fichaje → turno → solo umbrales para saber el horario?
-3. ¿Incluimos plantillas de otros países además de Argentina (Uruguay, Chile, México, España)?
-4. ¿Plan **Growth** (como Nómina y el costo del cronograma)?
-5. ¿Las horas extra necesitan una aprobación aparte, o alcanza con que la semana del timesheet esté
-   aprobada? (Recomiendo que alcance con la semana aprobada.)
+Respondidas el 2026-10-21 (§0.1).
+
+## 5. Cómo se paga
+
+La línea **Base** queda con las horas normales a la tarifa por hora. Se agregan líneas aparte, generadas al
+traer horas (se regeneran cada vez): **Horas extra (hábil)** = horas × tarifa × (1 + %), **Horas extra
+(descanso/feriado)** = horas × tarifa × (1 + %), **Recargo nocturno** = horas nocturnas × tarifa × %. Una
+persona marcada "no cobra horas extra" cobra todas sus horas en la Base.

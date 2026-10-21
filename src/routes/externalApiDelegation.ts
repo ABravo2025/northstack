@@ -5,6 +5,7 @@ import prismaExternal from '../lib/prismaExternal.js';
 import { hasScope, type AuthenticatedApiKey } from '../lib/externalApiAuth.js';
 import { getRequestContext, runWithRequestContext } from '../lib/requestContext.js';
 import { findShiftById } from '../modules/shifts/shiftService.js';
+import { aiInviteBlockReason } from '../modules/integrations/aiInviteGuard.js';
 import { shiftsRouter } from './shifts.js';
 import { shiftRequestsRouter } from './shiftRequests.js';
 import { timesheetsRouter } from './timesheets.js';
@@ -55,6 +56,8 @@ interface DelegatedRoute {
   draftOnlyForAi?: boolean;
   // Per-person inboxes (notifications): meaningless for a company API key.
   aiOnly?: boolean;
+  // Extra rule for AI assistants only: a reason to refuse (403), or null to go ahead.
+  aiGuard?: (req: express.Request, apiKey: AuthenticatedApiKey) => Promise<string | null>;
 }
 
 const RESERVED_SHIFT_SEGMENTS =
@@ -139,7 +142,9 @@ export const DELEGATED_ROUTES: DelegatedRoute[] = [
   r('POST', '/api/hr/employees/:id/custom-fields', employeesRouter, 'hr.employees:write'),
   r('PATCH', '/api/hr/employees/:id/custom-fields/:valueId', employeesRouter, 'hr.employees:write'),
   r('DELETE', '/api/hr/employees/:id/custom-fields/:valueId', employeesRouter, 'hr.employees:write'),
-  r('POST', '/api/hr/employees/:id/invite', employeesRouter, 'hr.employees:write'),
+  r('POST', '/api/hr/employees/:id/invite', employeesRouter, 'hr.employees:write', {
+    aiGuard: (req, apiKey) => aiInviteBlockReason(apiKey.tenantId, typeof req.body?.roleId === 'string' ? req.body.roleId : undefined),
+  }),
   r('POST', '/api/hr/employees/:id/resend-contract', employeesRouter, 'hr.employees:write'),
 
   // ---- Time off: policies, assignments, balances, ledger, adjustments, holidays ----
@@ -344,6 +349,11 @@ export async function delegateToAppRoutes(req: express.Request, res: express.Res
           code: 'published_shift',
         });
       }
+    }
+
+    if (route.aiGuard && apiKey.kind === 'ai') {
+      const blocked = await route.aiGuard(req, apiKey);
+      if (blocked) return sendLogged(req, res, apiKey, 403, { error: blocked, code: 'ai_not_allowed' });
     }
 
     // The request log is written before the response leaves, same rule as externalApi.ts's

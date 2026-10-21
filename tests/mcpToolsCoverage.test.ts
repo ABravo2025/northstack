@@ -29,7 +29,11 @@ fakeApi.use('/api/external/v1', (req, res) => {
     '/hr/employees/e1/time-off-policies': [{ timeOffPolicyId: 'pol1', timeOffPolicy: { id: 'pol1', name: 'Vacaciones Anuales AR' } }],
     '/hr/employees/e1/custom-fields': [{ id: 'v1', customFieldDefinitionId: 'def_existing', value: 'old' }],
     '/time-off-policies': [{ id: 'pol1', name: 'Vacaciones Anuales AR' }],
-    '/roles/assignable': [{ id: 'role_admin', name: 'Admin' }],
+    '/roles/invitable': [
+      { id: 'role_member', name: 'Member', aiCanInvite: true },
+      { id: 'role_sales', name: 'Sales', aiCanInvite: true },
+      { id: 'role_admin', name: 'Admin', aiCanInvite: false },
+    ],
   };
   if (req.method === 'DELETE') {
     res.status(204).end();
@@ -135,7 +139,7 @@ describe('set_custom_field', () => {
 
 describe('confirmation before notifying people or changing balances', () => {
   const cases: [string, Record<string, unknown>, string, string][] = [
-    ['invite_employee', { employeeId: 'e1', roleId: 'role_admin' }, 'POST', '/hr/employees/e1/invite'],
+    ['invite_employee', { employeeId: 'e1', roleId: 'role_sales' }, 'POST', '/hr/employees/e1/invite'],
     ['publish_shifts', { shiftIds: ['s2', 's1'] }, 'POST', '/shifts/publish'],
     ['adjust_time_off_balance', { employeeId: 'e1', timeOffPolicyId: 'pol1', days: -1.5, reason: 'Correction' }, 'POST', '/hr/employees/e1/time-off-adjustments'],
     ['unassign_time_off_policy', { employeeId: 'e1', timeOffPolicyId: 'pol1' }, 'DELETE', '/hr/employees/e1/time-off-policies/pol1'],
@@ -158,17 +162,27 @@ describe('confirmation before notifying people or changing balances', () => {
 
   it("the invitation summary names the e-mail and the role it grants", async () => {
     await withClient(async (client) => {
-      const first = await client.callTool({ name: 'invite_employee', arguments: { employeeId: 'e1', roleId: 'role_admin' } });
+      const first = await client.callTool({ name: 'invite_employee', arguments: { employeeId: 'e1', roleId: 'role_sales' } });
       expect(text(first)).toContain('nico@acme.test');
-      expect(text(first)).toContain('"Admin"');
+      expect(text(first)).toContain('"Sales"');
     });
   });
 
   it('a confirmation for one role cannot be reused for another', async () => {
     await withClient(async (client) => {
       const first = await client.callTool({ name: 'invite_employee', arguments: { employeeId: 'e1' } });
-      const other: any = await client.callTool({ name: 'invite_employee', arguments: { employeeId: 'e1', roleId: 'role_admin', confirmationToken: tokenOf(first) } });
+      const other: any = await client.callTool({ name: 'invite_employee', arguments: { employeeId: 'e1', roleId: 'role_sales', confirmationToken: tokenOf(first) } });
       expect(other.isError).toBe(true);
+      expect(writes()).toEqual([]);
+    });
+  });
+
+  it('refuses a sensitive role (Admin, salaries, payments) before asking to confirm', async () => {
+    await withClient(async (client) => {
+      const result: any = await client.callTool({ name: 'invite_employee', arguments: { employeeId: 'e1', roleId: 'role_admin' } });
+      expect(result.isError).toBe(true);
+      expect(text(result)).not.toContain('CONFIRMATION REQUIRED');
+      expect(text(result)).toContain('Invite from the app');
       expect(writes()).toEqual([]);
     });
   });

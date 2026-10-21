@@ -509,9 +509,13 @@ webhooks, 2FA, Google Calendar, referidos, CSV, Clients legacy.
 - Todo lo que avisa a otras personas o no se deshace pide **confirmación en dos pasos** (publicar/cancelar turnos,
   invitar, reenviar contrato, mail a cliente, ajuste de saldo, desasignar política, cancelar licencia, borrar fase,
   comentario o carpeta). El token de confirmación queda atado a los parámetros sensibles (p. ej. el rol de la invitación).
-- **Riesgo aceptado, a vigilar:** una IA con prompt injection podría cambiar el email de un empleado y luego invitarlo con
-  un rol alto. Mitigación: el resumen de confirmación muestra email y rol y advierte que "quien lo reciba entra con ese
-  rol". Si se quiere más, el siguiente paso es impedir que la IA invite con roles que tengan permisos de administración.
+- **Invitaciones (decisión de Alejandro, 2026-10-20): la IA no puede invitar con roles sensibles.** Riesgo: una IA con
+  prompt injection podría cambiar el email de un empleado y luego invitarlo con un rol alto. Regla, aplicada en la Private
+  API (`src/modules/integrations/aiInviteGuard.ts`, solo para tokens de IA): queda bloqueado el rol llamado "Admin" y todo
+  rol con `manage_users`, `manage_tenant_settings`, `manage_api_access` (nivel admin) o `manage_payroll`,
+  `manage_payments`, `manage_billing` (salarios y pagos). Se decide por **permisos**, así que renombrar el rol no lo
+  saltea; también se chequea el rol por defecto (Member) por si el tenant lo amplió. `GET /roles/invitable` devuelve los
+  roles con `aiCanInvite`, y la tool lo consulta antes de pedir confirmación. Además, el resumen muestra email y rol.
 - Fichaje: siempre el propio; sedes que exigen ubicación lo rechazan (la IA no manda geolocalización).
 - Payroll sigue de solo lectura; los endpoints de pago expuestos no devuelven datos de cuentas (van cifrados y no salen).
 

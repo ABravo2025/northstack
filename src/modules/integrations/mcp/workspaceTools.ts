@@ -45,7 +45,7 @@ export function registerWorkspaceTools(server: McpServer, ctx: ToolContext): voi
   server.registerTool('list_catalogs', {
     title: 'List catalogs',
     description:
-      'The ids behind pick-lists: departments, job_titles, employee_statuses (for create/update_employee), lead_sources / win_reasons / loss_reasons / company_sizes (CRM), custom_fields (definitions; pass entityType), tags, assignable_roles (for invite_employee). Read-only: catalogs are edited in Settings.',
+      'The ids behind pick-lists: departments, job_titles, employee_statuses (for create/update_employee), lead_sources / win_reasons / loss_reasons / company_sizes (CRM), custom_fields (definitions; pass entityType), tags, assignable_roles (for invite_employee; aiCanInvite=false roles can only be given from the app). Read-only: catalogs are edited in Settings.',
     inputSchema: {
       kind: z.enum(CATALOG_KINDS),
       entityType: z.enum(['employee', 'company', 'contact', 'opportunity', 'project']).optional().describe('custom_fields only; default employee'),
@@ -57,7 +57,7 @@ export function registerWorkspaceTools(server: McpServer, ctx: ToolContext): voi
     if (kind === 'employee_statuses') return respond(api.get('/status-definitions', { entityType: 'employee' }));
     if (kind === 'custom_fields') return respond(api.get('/hr/custom-fields', { entityType: entityType ?? 'employee' }));
     if (kind === 'tags') return respond(api.get('/tags'));
-    return respond(api.get('/roles/assignable'));
+    return respond(api.get('/roles/invitable'));
   });
 
   server.registerTool('company_profile', {

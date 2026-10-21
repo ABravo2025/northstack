@@ -36,6 +36,13 @@ async function echoRouter(routes: [string, string][]) {
   return router;
 }
 
+vi.mock('../src/modules/integrations/aiInviteGuard.js', () => ({
+  aiInviteBlockReason: vi.fn(async (_tenantId: string, roleId?: string) => (roleId === 'role_admin' ? 'no admin' : null)),
+}));
+vi.mock('../src/routes/employees.js', async (importOriginal) => {
+  const actual: any = await importOriginal();
+  return { ...actual, employeesRouter: await echoRouter([['post', '/api/hr/employees/:id/invite']]) };
+});
 vi.mock('../src/routes/projects.js', async () => ({
   projectsRouter: await echoRouter([['get', '/api/projects'], ['post', '/api/projects'], ['get', '/api/projects/:id']]),
 }));
@@ -155,6 +162,16 @@ describe('delegated routes through the Private API', () => {
     caller = credential('ai', ['hr.timeoff:read', 'hr.timeoff:write']);
     expect((await call('GET', '/time-off-policies')).body.path).toBe('/api/time-off-policies');
     expect((await call('POST', '/time-off-policies', { name: 'Vacaciones', daysPerYear: 14 })).body.body).toMatchObject({ daysPerYear: 14 });
+  });
+
+  it('refuses an AI invitation into a sensitive role, but not an API key or an ordinary role', async () => {
+    caller = credential('ai', ['hr.employees:write']);
+    const blocked = await call('POST', '/hr/employees/e1/invite', { roleId: 'role_admin' });
+    expect(blocked.status).toBe(403);
+    expect(blocked.body.code).toBe('ai_not_allowed');
+    expect((await call('POST', '/hr/employees/e1/invite', { roleId: 'role_sales' })).status).toBe(200);
+    caller = credential('api_key', ['hr.employees:write']);
+    expect((await call('POST', '/hr/employees/e1/invite', { roleId: 'role_admin' })).status).toBe(200);
   });
 
   it('answers anything else under the API with a JSON 404', async () => {

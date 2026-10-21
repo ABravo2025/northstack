@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { ToolContext } from './tools.js';
-import { apiError, compact, data, respond } from './toolHelpers.js';
+import { apiError, compact, confirmable, data, respond } from './toolHelpers.js';
+import type { PrivateApiClient, PrivateApiResult } from './privateApiClient.js';
 
 // Workspace tools (2026-10-20): the people and catalog lists every other tool's ids come from
 // (users for assignees, departments/job titles/statuses for employees, custom-field definitions,
@@ -10,6 +11,16 @@ import { apiError, compact, data, respond } from './toolHelpers.js';
 
 const READ = { readOnlyHint: true, openWorldHint: false } as const;
 const WRITE = { readOnlyHint: false, destructiveHint: false, openWorldHint: false } as const;
+const DESTRUCTIVE = { readOnlyHint: false, destructiveHint: true, openWorldHint: false } as const;
+const confirmationArg = z.string().optional().describe('Only on the second call, after the user explicitly confirmed');
+
+// Looks a login up for the confirmation summary (the list route is the only read of user accounts).
+async function findAccount(api: PrivateApiClient, userId: string): Promise<PrivateApiResult> {
+  const users = await api.get<any[]>('/tenants/users');
+  if (!users.ok) return users;
+  const user = (users.body ?? []).find((u) => u.id === userId);
+  return user ? { ok: true, status: 200, body: user } : { ok: false, status: 404, body: { error: 'User not found', code: 'not_found' } };
+}
 
 const CATALOG_KINDS = [
   'departments',
@@ -41,6 +52,34 @@ export function registerWorkspaceTools(server: McpServer, ctx: ToolContext): voi
     description: "Active people with a Northstack login (user ids). Use these ids for a task's assigneeId and for @mentions. For employee records use search_employees.",
     annotations: READ,
   }, async () => respond(api.get('/tasks/mentionable-users')));
+
+  server.registerTool('list_user_accounts', {
+    title: 'List user accounts',
+    description: 'Every Northstack login in the workspace, active or not, with role and status (needs permission to manage users). Use it to find a user id before deactivating or reactivating an account.',
+    annotations: READ,
+  }, async () => respond(api.get('/tenants/users')));
+
+  server.registerTool('deactivate_user', {
+    title: 'Deactivate a user account',
+    description:
+      "Remove someone's access to Northstack (their profile and history stay; they can be reactivated). Needs permission to manage users; you can't deactivate yourself, and only the owner can touch the owner. Two steps: the first call returns a summary and confirmationToken; call again with it after the user explicitly confirms.",
+    inputSchema: { userId: z.string(), confirmationToken: confirmationArg },
+    annotations: DESTRUCTIVE,
+  }, async ({ userId, confirmationToken }) => confirmable(ctx, 'deactivate_user', userId, confirmationToken,
+    () => findAccount(api, userId),
+    (u) => `You are about to DEACTIVATE ${u.firstName} ${u.lastName} (${u.email}). They will lose access to Northstack immediately, including any AI assistant they connected.`,
+    () => api.patch(`/tenants/users/${userId}`, { status: 'inactive' }), 'User deactivated.'));
+
+  server.registerTool('reactivate_user', {
+    title: 'Reactivate a user account',
+    description:
+      'Give a deactivated user their access back (uses a seat; refused if the plan has no seat left). Needs permission to manage users. Two steps: the first call returns a summary and confirmationToken; call again with it after the user explicitly confirms.',
+    inputSchema: { userId: z.string(), confirmationToken: confirmationArg },
+    annotations: DESTRUCTIVE,
+  }, async ({ userId, confirmationToken }) => confirmable(ctx, 'reactivate_user', userId, confirmationToken,
+    () => findAccount(api, userId),
+    (u) => `You are about to REACTIVATE ${u.firstName} ${u.lastName} (${u.email}); they will be able to sign in again with their current role.`,
+    () => api.patch(`/tenants/users/${userId}`, { status: 'active' }), 'User reactivated.'));
 
   server.registerTool('list_catalogs', {
     title: 'List catalogs',

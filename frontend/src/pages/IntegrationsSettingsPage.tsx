@@ -274,6 +274,7 @@ const API_SCOPE_GROUPS: { groupKey: string; resources: { key: string; labelKey: 
     resources: [
       { key: 'workspace', labelKey: 'workspace', write: false },
       { key: 'activity', labelKey: 'activity', write: false },
+      { key: 'users', labelKey: 'users', write: true },
     ],
   },
 ];

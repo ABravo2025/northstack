@@ -29,6 +29,7 @@ fakeApi.use('/api/external/v1', (req, res) => {
     '/hr/employees/e1/time-off-policies': [{ timeOffPolicyId: 'pol1', timeOffPolicy: { id: 'pol1', name: 'Vacaciones Anuales AR' } }],
     '/hr/employees/e1/custom-fields': [{ id: 'v1', customFieldDefinitionId: 'def_existing', value: 'old' }],
     '/time-off-policies': [{ id: 'pol1', name: 'Vacaciones Anuales AR' }],
+    '/tenants/users': [{ id: 'u_bob', firstName: 'Bob', lastName: 'Ruiz', email: 'bob@acme.test', status: 'active' }],
     '/roles/invitable': [
       { id: 'role_member', name: 'Member', aiCanInvite: true },
       { id: 'role_sales', name: 'Sales', aiCanInvite: true },
@@ -118,6 +119,29 @@ describe('ids the model needs', () => {
     await withClient(async (client) => {
       await client.callTool({ name: 'time_off_balance', arguments: {} });
       expect(calls[0].path).toBe('/hr/employees/e_me/time-off-balance');
+    });
+  });
+});
+
+describe('user accounts', () => {
+  it('deactivate_user asks first, then only sends status: inactive', async () => {
+    await withClient(async (client) => {
+      const first: any = await client.callTool({ name: 'deactivate_user', arguments: { userId: 'u_bob' } });
+      const text = first.content.map((c: any) => c.text).join('\n');
+      expect(text).toContain('DEACTIVATE Bob Ruiz');
+      expect(writes()).toHaveLength(0);
+
+      const token = /confirmationToken: "([^"]+)"/.exec(text)?.[1];
+      await client.callTool({ name: 'deactivate_user', arguments: { userId: 'u_bob', confirmationToken: token } });
+      expect(writes()).toEqual([expect.objectContaining({ method: 'PATCH', path: '/tenants/users/u_bob', body: { status: 'inactive' } })]);
+    });
+  });
+
+  it('an unknown user is reported, nothing is changed', async () => {
+    await withClient(async (client) => {
+      const res: any = await client.callTool({ name: 'reactivate_user', arguments: { userId: 'nobody' } });
+      expect(res.isError).toBe(true);
+      expect(writes()).toHaveLength(0);
     });
   });
 });

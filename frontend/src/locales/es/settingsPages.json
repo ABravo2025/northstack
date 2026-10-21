@@ -348,7 +348,8 @@
         "projects": "Proyectos",
         "clock": "Fichaje",
         "workspace": "Personas y listas (usuarios, departamentos, puestos, estados, etiquetas)",
-        "activity": "Registro de actividad"
+        "activity": "Registro de actividad",
+        "users": "Cuentas de usuario"
       },
       "read": "Lectura",
       "write": "Escritura",

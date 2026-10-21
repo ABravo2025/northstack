@@ -529,3 +529,14 @@ siguiente paso es ofrecer **perfiles** (p. ej. un conector "CRM", otro "RR.HH.",
 EN/ES) actualizado.
 
 **Estado.** En `staging` para la prueba de Alejandro. Producción: solo código (no hay cambios de base de datos).
+
+### 12.x Cuentas de usuario (Alejandro, 2026-10-21)
+
+"Eliminar un perfil" = **desactivar la cuenta** (en la app no existe el borrado definitivo de un usuario). Scopes nuevos
+`users:read`/`users:write` (API key: solo si el creador tiene `manage_users`; IA: decide la ruta de la app, que exige
+`manage_users`). Delegación de `GET /api/tenants/users` y `PATCH /api/tenants/users/:id` con `allowedBodyKeys: ['status']`:
+**el rol nunca se cambia por API ni por IA** (400 `field_not_allowed`). La ruta de la app ya impide tocarse a uno mismo y al
+owner salvo que seas el owner, y reactivar respeta el límite de asientos. Tools: `list_user_accounts`, `deactivate_user`,
+`reactivate_user` (las dos con confirmación en dos pasos). Un usuario desactivado pierde también sus conexiones de IA
+(`loadActor` lo rechaza).
+

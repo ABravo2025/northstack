@@ -16,6 +16,7 @@ import {
   canViewActivityLog,
   canViewProjects,
   canManageProjects,
+  canManageUsers,
 } from '../auth/permissionService.js';
 import { getEmployeeScope, type RoleContext } from '../auth/roleService.js';
 import { API_SCOPES, type ApiScope } from '../../lib/externalApiAuth.js';
@@ -71,6 +72,8 @@ const SCOPE_RULES: Record<ApiScope, (role: RoleContext) => boolean> = {
   // Names and catalogs only — the same lists every member's pickers already load in the app.
   'workspace:read': () => true,
   'activity:read': (role) => canViewActivityLog(role),
+  'users:read': (role) => canManageUsers(role),
+  'users:write': (role) => canManageUsers(role),
   'projects:read': (role) => canViewProjects(role),
   'projects:write': (role) => canManageProjects(role),
   // A company integration over attendance is for whoever runs shifts.
@@ -118,6 +121,9 @@ const AI_SCOPE_RULES: Record<ApiScope, (role: RoleContext) => boolean> = {
   // entries their role may see (and the tenant feed only with view_activity_log).
   'workspace:read': () => true,
   'activity:read': () => true,
+  // The app's own route requires manage_users; it decides.
+  'users:read': () => true,
+  'users:write': () => true,
   'projects:read': () => true,
   'projects:write': () => true,
   'clock:read': () => true,

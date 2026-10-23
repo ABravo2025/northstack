@@ -76,6 +76,12 @@
       "body": "Se crearon códigos de recuperación nuevos para tu cuenta de Northstack. Los anteriores ya no funcionan."
     }
   },
+  "payslip": {
+    "subject": "Tu recibo {{number}} de {{company}}",
+    "greeting": "Hola {{name}},",
+    "body": "{{company}} confirmó la liquidación {{period}}. Te adjuntamos tu recibo.",
+    "open": "Ver todos tus recibos"
+  },
   "passwordReset": {
     "subject": "Restablecé tu contraseña de Northstack",
     "body": "Recibimos una solicitud para restablecer tu contraseña de Northstack.",

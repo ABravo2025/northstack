@@ -458,6 +458,8 @@ model Tenant {
   timeEntries               TimeEntry[]
   timeSuggestionDismissals  TimeSuggestionDismissal[]
   overtimePolicy            OvertimePolicy?
+  payslips                  Payslip[]
+  payslipSettings           PayslipSettings?
 }
 
 // Billing Integration (spec-billing-integration.md). plan/lockedPriceCents are deliberately NOT
@@ -795,6 +797,9 @@ model Employee {
   @@unique([tenantId, email])
   // spec-overtime.md: paid all hours at the base rate (e.g. management, outside the agreement).
   overtimeExempt           Boolean                    @default(false)
+  // Payroll v2: file number ("legajo"), printed on payslips. Free text, unique per company.
+  fileNumber               String?
+  payslips                 Payslip[]
 }
 
 // Audit trail of every termination (past, executed, or still scheduled) — a business event with
@@ -1517,6 +1522,9 @@ model PaymentMethodDefinition {
   tenantId      String
   tenant        Tenant                 @relation(fields: [tenantId], references: [id])
   name          String
+  // Payroll v2 (spec-payroll-v2.md, unit 4): which known method it is — decides what the contract
+  // asks the person (paymentMethodService.METHOD_KINDS). 'other' = a custom one, by name.
+  kind          String                 @default("other")
   isActive      Boolean                @default(true)
   order         Int                    @default(0)
   createdAt     DateTime               @default(now())
@@ -1580,6 +1588,7 @@ model PayrollRun {
   entries         PayrollEntry[]
 
   @@index([tenantId])
+  payslips        Payslip[]
 }
 
 model PayrollEntry {
@@ -3197,4 +3206,53 @@ model OvertimePolicy {
   nightStartMinute       Int?
   nightEndMinute         Int?
   updatedAt              DateTime @updatedAt
+}
+
+// Payroll v2 (spec-payroll-v2.md, unit 5): an issued payslip. Numbered per company when a pay run is
+// confirmed (or a one-off payment is made), with a snapshot of everything it shows, so it never
+// changes afterwards. verifyCode lets anyone holding the paper check it's genuine (no amounts shown).
+model Payslip {
+  id              String      @id @default(uuid())
+  tenantId        String
+  tenant          Tenant      @relation(fields: [tenantId], references: [id])
+  employeeId      String
+  employee        Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  runId           String?
+  run             PayrollRun? @relation(fields: [runId], references: [id], onDelete: SetNull)
+  // One-off payment entries it covers (plain ids).
+  entryIds        String[]    @default([])
+  number          Int
+  verifyCode      String      @unique
+  // 'ar' | 'us' — from the company's country when issued.
+  layout          String
+  locale          String
+  periodLabel     String
+  periodFrom      DateTime?   @db.Date
+  periodTo        DateTime?   @db.Date
+  paymentDate     DateTime    @db.Date
+  currency        String
+  grossCents      Int
+  deductionsCents Int
+  netCents        Int
+  snapshot        Json
+  emailedAt       DateTime?
+  createdAt       DateTime    @default(now())
+
+  @@unique([tenantId, number])
+  @@index([tenantId, employeeId])
+  @@index([tenantId, runId])
+}
+
+// Payroll v2: Settings → Payroll → Payslip. Numbering "0001-000248" (prefix + next number) and the
+// company's signature image printed on every payslip.
+model PayslipSettings {
+  id            String   @id @default(uuid())
+  tenantId      String   @unique
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  prefix        Int      @default(1)
+  nextNumber    Int      @default(1)
+  signerName    String?
+  signatureData Bytes?
+  signatureMime String?
+  updatedAt     DateTime @updatedAt
 }

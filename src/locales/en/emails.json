@@ -76,6 +76,12 @@
       "body": "New recovery codes were created for your Northstack account. The old ones no longer work."
     }
   },
+  "payslip": {
+    "subject": "Your payslip {{number}} from {{company}}",
+    "greeting": "Hi {{name}},",
+    "body": "{{company}} confirmed the pay run {{period}}. Your payslip is attached.",
+    "open": "See all your payslips"
+  },
   "passwordReset": {
     "subject": "Reset your Northstack password",
     "body": "We received a request to reset your Northstack password.",

@@ -227,7 +227,7 @@ export async function registerTenantWithOwner(input: RegisterTenantWithOwnerInpu
     await seedDefaultStatusDefinitions(tx, tenant.id);
     await seedDefaultPipelines(tx, tenant.id);
     await seedDefaultPayFrequencies(tx, tenant.id);
-    await seedDefaultPaymentMethods(tx, tenant.id);
+    await seedDefaultPaymentMethods(tx, tenant.id, input.country);
     const { owner: ownerRole } = await seedDefaultRolesForTenant(tx, tenant.id);
 
     // Billing Integration (spec-billing-integration.md, Unidad 2) — every tenant gets a

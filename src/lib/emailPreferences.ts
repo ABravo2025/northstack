@@ -15,6 +15,7 @@ export const EMAIL_CATEGORIES = [
   'timesheet', // a week sent back or reopened, yesterday's hours not logged
   'timeOff', // requests to decide, decisions on yours
   'projectBudget', // a project you own is near or over its hours budget
+  'payslips', // Payroll v2: your payslip when a pay run is confirmed
   'opportunityStage', // a deal moved stage
   'opportunityStalled', // a deal hasn't moved in a while
 ] as const;

@@ -91,6 +91,7 @@ export interface RunDetailEntry {
   hoursFrom: string | null;
   hoursTo: string | null;
   hoursFromTimesheet: boolean;
+  overtimeKind: string | null;
 }
 
 export interface RunDetailEmployeeRow {
@@ -102,6 +103,7 @@ export interface RunDetailEmployeeRow {
   currency: string;
   statusName: string;
   isInactive: boolean;
+  jobTitle: string | null;
   entries: RunDetailEntry[];
   baseAmountCents: number;
   adjustmentsTotalCents: number;
@@ -113,6 +115,11 @@ export interface RunDetail {
   employeeRows: RunDetailEmployeeRow[];
   excludedCount: number;
   hasUnloadedHours: boolean;
+  // Payroll v2 (unit 3): totals of the previous confirmed run of the same frequency, per currency,
+  // and the weeks of the hours period still waiting for approval (their hours aren't included).
+  previousTotals: Record<string, number> | null;
+  unapprovedWeeks: { employeeId: string; name: string; weekStart: string; status: string }[];
+  payslipsIssued: number;
 }
 
 export interface GetRunDetailResult {
@@ -129,7 +136,7 @@ export async function getRunDetail(tenantId: string, runId: string): Promise<Get
 
   const entries = await prisma.payrollEntry.findMany({
     where: { tenantId, runId },
-    include: { employee: { include: { statusDefn: true } } },
+    include: { employee: { include: { statusDefn: true, jobTitleDefn: { select: { name: true } } } } },
     orderBy: { createdAt: 'asc' },
   });
 
@@ -157,6 +164,7 @@ export async function getRunDetail(tenantId: string, runId: string): Promise<Get
       rateCents: comp?.rateCents ?? 0,
       currency: comp?.currency ?? baseEntry?.currency ?? 'USD',
       statusName: employee.statusDefn.name,
+      jobTitle: employee.jobTitleDefn?.name ?? null,
       isInactive: defaultStatusId != null && employee.statusId !== defaultStatusId,
       entries: employeeEntries.map((e) => ({
         id: e.id,
@@ -169,6 +177,7 @@ export async function getRunDetail(tenantId: string, runId: string): Promise<Get
         hoursFrom: e.hoursFrom ? e.hoursFrom.toISOString().slice(0, 10) : null,
         hoursTo: e.hoursTo ? e.hoursTo.toISOString().slice(0, 10) : null,
         hoursFromTimesheet: e.hoursFromTimesheet,
+        overtimeKind: e.overtimeKind,
       })),
       baseAmountCents,
       adjustmentsTotalCents,
@@ -193,7 +202,31 @@ export async function getRunDetail(tenantId: string, runId: string): Promise<Get
     (row) => row.compensationType === 'hourly' && row.entries.some((e) => e.type === 'base' && e.hoursQty == null),
   );
 
-  return { success: true, detail: { run, employeeRows, excludedCount, hasUnloadedHours } };
+  const previous = await prisma.payrollRun.findFirst({
+    where: { tenantId, status: 'confirmed', payFrequencyId: run.payFrequencyId, id: { not: run.id }, ...(run.confirmedAt ? { confirmedAt: { lt: run.confirmedAt } } : {}) },
+    orderBy: { confirmedAt: 'desc' },
+    select: { id: true },
+  });
+  let previousTotals: Record<string, number> | null = null;
+  if (previous) {
+    const sums = await prisma.payrollEntry.groupBy({ by: ['currency'], where: { tenantId, runId: previous.id }, _sum: { amountCents: true } });
+    previousTotals = Object.fromEntries(sums.map((x) => [x.currency, x._sum.amountCents ?? 0]));
+  }
+  const hoursBase = entries.find((e) => e.type === 'base' && e.hoursFrom && e.hoursTo);
+  const hourlyIds = employeeRows.filter((r) => r.compensationType === 'hourly').map((r) => r.employeeId);
+  const unapprovedWeeks =
+    run.status === 'draft' && hoursBase && hourlyIds.length
+      ? (
+          await prisma.timesheet.findMany({
+            where: { tenantId, employeeId: { in: hourlyIds }, status: { not: 'approved' }, entries: { some: { date: { gte: hoursBase.hoursFrom!, lte: hoursBase.hoursTo! } } } },
+            select: { employeeId: true, weekStart: true, status: true, employee: { select: { firstName: true, lastName: true } } },
+            orderBy: { weekStart: 'asc' },
+          })
+        ).map((w) => ({ employeeId: w.employeeId, name: `${w.employee.firstName} ${w.employee.lastName}`.trim(), weekStart: w.weekStart.toISOString().slice(0, 10), status: w.status }))
+      : [];
+  const payslipsIssued = await prisma.payslip.count({ where: { tenantId, runId: run.id } });
+
+  return { success: true, detail: { run, employeeRows, excludedCount, hasUnloadedHours, previousTotals, unapprovedWeeks, payslipsIssued } };
 }
 
 export interface AddEmployeeToRunResult {

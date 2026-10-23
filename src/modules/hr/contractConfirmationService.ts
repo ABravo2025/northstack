@@ -1,3 +1,4 @@
+import { asksFor } from './paymentMethodService.js';
 import { randomUUID } from 'crypto';
 import prisma from '../../lib/prisma.js';
 import type { PaymentAccountSubType, Session, User } from '@prisma/client';
@@ -36,7 +37,8 @@ export interface ContractConfirmationDetails {
   effectiveFrom: string;
   nationality: string | null;
   timeOffPolicyNames: string[];
-  paymentMethods: { id: string; name: string }[];
+  // Payroll v2: kind/asks decide which account detail the form asks for.
+  paymentMethods: { id: string; name: string; kind: string; asks: string }[];
 }
 
 export interface GetContractConfirmationResult {
@@ -116,7 +118,7 @@ export async function getContractConfirmationDetails(token: string): Promise<Get
       effectiveFrom: compensation.effectiveFrom.toISOString(),
       nationality: employee.nationality,
       timeOffPolicyNames: employee.timeOffPolicies.map((a) => a.timeOffPolicy.name),
-      paymentMethods: paymentMethods.map((m) => ({ id: m.id, name: m.name })),
+      paymentMethods: paymentMethods.map((m) => ({ id: m.id, name: m.name, kind: m.kind, asks: asksFor(m.kind === 'other' && m.name === 'Wire transfer' ? 'bank_intl' : m.kind) })),
     },
   };
 }

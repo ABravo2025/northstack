@@ -7,7 +7,7 @@ import {
   listPayFrequenciesWithAssignedCount,
   updatePayFrequency,
 } from '../modules/hr/payFrequencyService.js';
-import {
+import { methodsCatalog, setKnownMethod,
   createPaymentMethod,
   findPaymentMethodById,
   listPaymentMethods,
@@ -29,8 +29,10 @@ import {
 } from '../modules/hr/payrollRunService.js';
 import { createAdjustment, deleteEntry, updateEntryHours } from '../modules/hr/payrollEntryService.js';
 import { createOffPayments, listOffPayments } from '../modules/hr/payrollOffPaymentService.js';
-import { buildPayslipForEntry, buildPayslipForRunEmployee } from '../modules/hr/payslipService.js';
+import { issuePayslipsForEntries, issuePayslipsForRun, renderIssuedPayslip, renderRunPreview } from '../modules/hr/payslipV2Service.js';
+import { emailPayslip } from './payslips.js';
 import { importApprovedHours } from '../modules/hr/payrollHoursService.js';
+import { getPayrollOverview } from '../modules/hr/payrollOverviewService.js';
 import { getOvertimePolicy, listOvertimePeople, saveOvertimePolicy, setOvertimeExempt } from '../modules/hr/overtimePolicyService.js';
 import { TEMPLATES } from '../modules/hr/overtimeRules.js';
 import { validateSession } from '../lib/httpAuth.js';
@@ -122,6 +124,33 @@ payrollRouter.patch('/api/hr/pay-frequencies/:id', async (req, res) => {
 });
 
 // --- Payment methods -------------------------------------------------------
+
+// Payroll v2 (unit 4): the payment methods grid — every known method plus the company's own.
+payrollRouter.get('/api/hr/payment-methods/catalog', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (!requirePayrollAccess(user, res)) {
+    return;
+  }
+  return res.json(await methodsCatalog(user.tenantId!));
+});
+
+payrollRouter.put('/api/hr/payment-methods/known/:kind', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (!requirePayrollAccess(user, res)) {
+    return;
+  }
+  const result = await setKnownMethod(user.tenantId!, req.params.kind, req.body?.active === true, user.id);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+  return res.json(await methodsCatalog(user.tenantId!));
+});
 
 payrollRouter.get('/api/hr/payment-methods', async (req, res) => {
   const user = await validateSession(req, res);
@@ -344,6 +373,18 @@ payrollRouter.post('/api/hr/payroll/compensation/bulk', async (req, res) => {
 
 // --- Payroll Runs (Unidad 12/13/16/17) — owner-only, real $ amounts -------
 
+// Payroll v2 (spec-payroll-v2.md, unit 2): the overview — latest pay run, recent runs, what's pending.
+payrollRouter.get('/api/hr/payroll/overview', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (!requirePayrollAccess(user, res)) {
+    return;
+  }
+  return res.json(await getPayrollOverview(user.tenantId!));
+});
+
 payrollRouter.get('/api/hr/payroll/runs', async (req, res) => {
   const user = await validateSession(req, res);
   if (!user) {
@@ -433,7 +474,10 @@ payrollRouter.post('/api/hr/payroll/runs/:id/confirm', async (req, res) => {
   if (!result.success) {
     return res.status(400).json({ error: result.error });
   }
-  return res.json(result.run);
+  // Payroll v2: confirming issues each person's numbered payslip and emails it to them.
+  const issued = await issuePayslipsForRun(user.tenantId!, req.params.id);
+  for (const id of issued) await emailPayslip(id, user.tenantId!);
+  return res.json({ ...result.run, payslipsIssued: issued.length });
 });
 
 // --- Payroll entries: adjustments (Unidad 14) + hours (Unidad 15) --------
@@ -611,7 +655,7 @@ payrollRouter.post('/api/hr/payroll/off-payments', async (req, res) => {
     }
   }
 
-  const results = await createOffPayments({
+  const results: Awaited<ReturnType<typeof createOffPayments>> = await createOffPayments({
     tenantId: user.tenantId!,
     type: req.body.type,
     paymentDate: req.body.paymentDate,
@@ -623,6 +667,10 @@ payrollRouter.post('/api/hr/payroll/off-payments', async (req, res) => {
     })),
   });
 
+  // Payroll v2: a one-off payment is final when made — its payslips are issued (and emailed) now.
+  const label = typeof req.body.label === 'string' && req.body.label.trim() ? req.body.label.trim() : req.body.paymentDate;
+  const issued = await issuePayslipsForEntries(user.tenantId!, results.map((r) => r.entryId), String(label).slice(0, 80));
+  for (const id of issued) await emailPayslip(id, user.tenantId!);
   return res.status(201).json(results);
 });
 
@@ -637,13 +685,26 @@ payrollRouter.get('/api/hr/payroll/runs/:runId/employees/:employeeId/payslip', a
     return;
   }
 
-  const result = await buildPayslipForRunEmployee(user.tenantId!, req.params.runId, req.params.employeeId);
-  if (!result.success) {
-    return res.status(404).json({ error: result.error });
+  // Payroll v2: a confirmed run shows the issued payslip (issued now if it predates v2); a draft,
+  // the preview.
+  const run = await prisma.payrollRun.findFirst({ where: { id: req.params.runId, tenantId: user.tenantId! } });
+  if (!run) {
+    return res.status(404).json({ error: 'Run not found' });
+  }
+  let pdf: Uint8Array | null;
+  if (run.status === 'confirmed') {
+    await issuePayslipsForRun(user.tenantId!, run.id);
+    const p = await prisma.payslip.findFirst({ where: { tenantId: user.tenantId!, runId: run.id, employeeId: req.params.employeeId } });
+    pdf = p ? await renderIssuedPayslip(p.id, user.tenantId!) : null;
+  } else {
+    pdf = await renderRunPreview(user.tenantId!, run.id, req.params.employeeId);
+  }
+  if (!pdf) {
+    return res.status(404).json({ error: 'Payslip not found' });
   }
   res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', 'inline; filename="payslip-preview.pdf"');
-  return res.send(Buffer.from(result.pdfBytes!));
+  res.setHeader('Content-Disposition', 'inline; filename="payslip.pdf"');
+  return res.send(Buffer.from(pdf));
 });
 
 payrollRouter.get('/api/hr/payroll/entries/:id/payslip', async (req, res) => {
@@ -655,11 +716,21 @@ payrollRouter.get('/api/hr/payroll/entries/:id/payslip', async (req, res) => {
     return;
   }
 
-  const result = await buildPayslipForEntry(user.tenantId!, req.params.id);
-  if (!result.success) {
-    return res.status(404).json({ error: result.error });
+  // Payroll v2: the one-off payment's issued payslip (issued now if it predates v2).
+  const entry = await prisma.payrollEntry.findFirst({ where: { id: req.params.id, tenantId: user.tenantId!, runId: null } });
+  if (!entry) {
+    return res.status(404).json({ error: 'Entry not found' });
+  }
+  let p = await prisma.payslip.findFirst({ where: { tenantId: user.tenantId!, entryIds: { has: entry.id } } });
+  if (!p) {
+    const [id] = await issuePayslipsForEntries(user.tenantId!, [entry.id], entry.label ?? entry.paymentDate.toISOString().slice(0, 10));
+    p = id ? await prisma.payslip.findUnique({ where: { id } }) : null;
+  }
+  const pdf = p ? await renderIssuedPayslip(p.id, user.tenantId!) : null;
+  if (!pdf) {
+    return res.status(404).json({ error: 'Payslip not found' });
   }
   res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', 'inline; filename="payslip-preview.pdf"');
-  return res.send(Buffer.from(result.pdfBytes!));
+  res.setHeader('Content-Disposition', 'inline; filename="payslip.pdf"');
+  return res.send(Buffer.from(pdf));
 });

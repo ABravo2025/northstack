@@ -196,6 +196,8 @@ export interface CompensationStatusEntry {
   employeeFirstName: string;
   employeeLastName: string;
   employeeEmail: string;
+  // Payroll v2: file number ("legajo"), editable in Payroll → People.
+  fileNumber: string | null;
   // Whether this person has ever confirmed a first-ever contract (has a
   // linked User) — the right signal for a Draft/Confirmed split, since a
   // reassignment (Unidad 10) never re-triggers confirmation: a raise's new
@@ -233,6 +235,7 @@ export async function getCompensationStatus(tenantId: string): Promise<Compensat
     employeeFirstName: employee.firstName,
     employeeLastName: employee.lastName,
     employeeEmail: employee.email,
+    fileNumber: employee.fileNumber,
     isConfirmed: Boolean(employee.userId),
     personType: employee.personType,
     currentCompensation: employee.compensations[0]

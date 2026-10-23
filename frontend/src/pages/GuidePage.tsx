@@ -99,7 +99,7 @@ const MODULE_MAP: { id: string; label: string; blurb: string; icon: JSX.Element 
   { id: 'g-crm', label: 'Companies & contacts', blurb: 'Your CRM records and how they relate.', icon: <BuildingIcon /> },
   { id: 'g-pipeline', label: 'Pipelines & deals', blurb: 'Stages, forecasting, and auto-assignment.', icon: <KanbanIcon /> },
   { id: 'g-hr', label: 'Employees & time off', blurb: 'Directory, reporting lines, PTO policies.', icon: <PeopleIcon /> },
-  { id: 'g-payroll', label: 'Payroll', blurb: 'Compensation, pay runs, payslips.', icon: <BriefcaseIcon /> },
+  { id: 'g-payroll', label: 'Payroll', blurb: 'Compensation, pay runs, numbered payslips.', icon: <BriefcaseIcon /> },
   { id: 'g-tasks', label: 'Tasks & notes', blurb: 'Follow-ups on any record.', icon: <ListIcon /> },
   { id: 'g-projects', label: 'Projects', blurb: 'Phases, tasks and teams, blank or from a template.', icon: <FolderIcon /> },
   { id: 'g-shifts', label: 'Shifts', blurb: 'Shifts by location, swaps, clock-in, timesheets, approvals and hours reports.', icon: <ClockIcon /> },
@@ -164,7 +164,7 @@ const MODULE_MAP_ES: { id: string; label: string; blurb: string; icon: JSX.Eleme
   { id: 'g-crm', label: 'Empresas y contactos', blurb: 'Los registros de tu CRM y cómo se relacionan.', icon: <BuildingIcon /> },
   { id: 'g-pipeline', label: 'Pipelines y negocios', blurb: 'Etapas, pronóstico, y asignación automática.', icon: <KanbanIcon /> },
   { id: 'g-hr', label: 'Empleados y ausencias', blurb: 'Directorio, líneas de reporte, políticas de ausencias.', icon: <PeopleIcon /> },
-  { id: 'g-payroll', label: 'Nómina', blurb: 'Compensación, corridas de pago, recibos de sueldo.', icon: <BriefcaseIcon /> },
+  { id: 'g-payroll', label: 'Nómina', blurb: 'Compensación, liquidaciones, recibos de pago.', icon: <BriefcaseIcon /> },
   { id: 'g-tasks', label: 'Tareas y notas', blurb: 'Seguimientos sobre cualquier registro.', icon: <ListIcon /> },
   { id: 'g-projects', label: 'Proyectos', blurb: 'Fases, tareas y equipos, en blanco o desde un template.', icon: <FolderIcon /> },
   { id: 'g-shifts', label: 'Turnos', blurb: 'Turnos por locación, cambios, fichaje, timesheet, aprobaciones y reportes de horas.', icon: <ClockIcon /> },
@@ -1138,7 +1138,7 @@ export default function GuidePage() {
                 <p>
                   Asignar "Reports To" (Reporta a) se revisa para evitar loops — no podés poner a alguien como el
                   manager de su propio manager. Y un Contractor o Employee recién creado queda afuera de las
-                  corridas de nómina y de los saldos de ausencias hasta que se confirme su primer contrato de pago
+                  liquidaciones y de los saldos de ausencias hasta que se confirme su primer contrato de pago
                   (se muestra como un chip "Contrato: pendiente", que pasa a "Vencido" después de 3 días).
                 </p>
               </div>
@@ -1335,9 +1335,9 @@ export default function GuidePage() {
             <h2>Nómina</h2>
             <div className="help-tagrow">
               <span className="help-pill help-pill-plan">Plan Growth</span>
-              <span className="help-pill help-pill-role">Owner, o un rol con Gestionar nómina</span>
+              <span className="help-pill help-pill-role">Gestión: Owner, o un rol con Gestionar nómina · Mis recibos: todos</span>
             </div>
-            <p className="help-intro">Un registro de lo que se le paga a cada persona, y una forma de correr ciclos de pago — no un servicio de transferencias bancarias, ni papeleo impositivo.</p>
+            <p className="help-intro">Un registro de lo que se le paga a cada persona, liquidaciones por período y recibos de pago numerados — no un servicio de transferencias bancarias, ni papeleo impositivo.</p>
 
             <div className="help-callout help-callout-note">
               <InfoIcon />
@@ -1345,6 +1345,19 @@ export default function GuidePage() {
                 Nómina no mueve ningún dinero — es una fuente de verdad compartida sobre lo que se le debe a cada
                 uno y lo que ya se pagó, para que quede consistente en todo el equipo.
               </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Dónde está cada cosa</h3>
+              <p>Nómina tiene su propia barra lateral:</p>
+              <ul>
+                <li><strong>Resumen</strong> — cuántas personas hay en nómina, la liquidación en curso, la última confirmada (con la variación contra la anterior de la misma frecuencia) y lo que falta resolver antes del próximo cierre: semanas de horas sin aprobar, contratos sin confirmar y borradores viejos.</li>
+                <li><strong>Liquidaciones</strong> y <strong>Pagos únicos</strong> — los ciclos de pago y los pagos fuera de ciclo, cada uno en su lista.</li>
+                <li><strong>Personas</strong> — quién está en nómina, su política de pago y su <strong>legajo</strong> (número interno que se imprime en el recibo; se edita ahí mismo y no se puede repetir).</li>
+                <li><strong>Recibos</strong> — todos los recibos emitidos, con búsqueda, descarga y reenvío por email.</li>
+                <li><strong>Mis recibos</strong> — los recibos propios de quien está mirando.</li>
+                <li><strong>Configuración</strong> — lleva a <strong>Configuración → Nómina</strong>: frecuencias de pago, métodos de pago, horas extra y recargos, y el recibo de pago.</li>
+              </ul>
             </div>
 
             <div className="help-sub">
@@ -1357,58 +1370,82 @@ export default function GuidePage() {
             </div>
 
             <div className="help-sub">
-              <h3>Corriendo un ciclo de pago</h3>
+              <h3>Métodos de pago</h3>
+              <p>
+                En Configuración → Nómina activás con un interruptor los métodos con los que paga tu empresa. Cada uno
+                ya sabe qué dato pedirle a la persona cuando confirma su contrato: CBU o CVU para transferencia
+                bancaria, CVU o alias para Mercado Pago, IBAN o ACH para transferencia internacional, email para Wise,
+                Payoneer o PayPal, nada para efectivo. Las empresas nuevas de Argentina arrancan con transferencia
+                bancaria y Mercado Pago; las del resto del mundo, con transferencia internacional, Wise y Payoneer.
+                Si un método no está en la lista, usá <strong>+ Otro método</strong>. Antes de apagar uno que alguien
+                usa, te avisa a cuántas personas afecta.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Haciendo una liquidación</h3>
               <ol className="help-steps">
-                <li>Configurá tus <strong>Pay frequencies</strong> (Frecuencias de pago) (semanal, quincenal, mensual — con día de pago y desfase de vencimiento) y <strong>Payment methods</strong> (Métodos de pago) una sola vez, en la pestaña Payment Policies (Políticas de pago) de Nómina.</li>
-                <li>Hacé clic en <strong>New Run</strong> (Nueva corrida), elegí una frecuencia y una etiqueta de período — todos los que están en esa frecuencia se cargan automáticamente como Draft (Borrador).</li>
-                <li>Cargá las horas de quienes cobran por hora (la corrida no se puede confirmar hasta que lo hagas): con <strong>Traer horas aprobadas</strong> se completan solas con sus semanas aprobadas del timesheet en el período que elijas, y te avisa quién tiene semanas sin aprobar. Si la empresa configuró <strong>Horas extra y recargos</strong> (Políticas de pago, Growth: empezar en base a Argentina, EE. UU. o personalizada), las horas extra, en descanso o feriado y nocturnas se agregan como líneas aparte. Después agregá las líneas de <strong>Bonus, Commission, Reimbursement,</strong> o <strong>Deduction</strong> (Bono, Comisión, Reembolso, o Deducción) que correspondan por persona.</li>
-                <li>Hacé clic en <strong>Confirm Run</strong> (Confirmar corrida) para bloquearla.</li>
+                <li>En <strong>Liquidaciones</strong>, hacé clic en <strong>Nueva liquidación</strong>, elegí una frecuencia y una etiqueta de período — todos los que están en esa frecuencia se cargan automáticamente como borrador. Arriba ves en qué paso estás: Personas, Horas, Ajustes, Confirmar y emitir recibos.</li>
+                <li>Cargá las horas de quienes cobran por hora (la liquidación no se puede confirmar hasta que lo hagas): con <strong>Traer horas aprobadas</strong> se completan solas con sus semanas aprobadas del timesheet en el período que elijas, y te avisa quién tiene semanas sin aprobar. Si la empresa configuró <strong>Horas extra y recargos</strong> (Configuración → Nómina, Growth: empezar en base a Argentina, EE. UU. o personalizada), las horas extra, en descanso o feriado y nocturnas se agregan como líneas aparte.</li>
+                <li>Agregá los ajustes que correspondan por persona: <strong>Bono, Comisión, Reintegro</strong> o <strong>Deducción</strong>. Los totales de arriba (por moneda, nunca sumados entre monedas) muestran la variación contra la liquidación anterior.</li>
+                <li>Hacé clic en <strong>Revisar y confirmar</strong>: ves el resumen y, al confirmar, la liquidación se bloquea y se <strong>emite un recibo numerado por persona</strong>, que le llega por email.</li>
               </ol>
               <div className="help-callout help-callout-danger">
                 <AlertCircleIcon />
-                <p>Una corrida confirmada no se puede editar ni reabrir desde la interfaz — revisá bien las horas y los ajustes antes de confirmar.</p>
+                <p>Una liquidación confirmada no se puede editar ni reabrir desde la interfaz — revisá bien las horas y los ajustes antes de confirmar.</p>
               </div>
               <p>
-                ¿Necesitás pagarle a alguien fuera de un ciclo normal? Usá <strong>One-off Payment</strong> (Pago
-                puntual) — los mismos tipos de ajuste, mostrado junto a las corridas normales en una sola línea de
-                tiempo combinada.
+                ¿Necesitás pagarle a alguien fuera de un ciclo normal? Usá <strong>Pagos únicos</strong> — los mismos
+                tipos de ajuste; cada pago único también emite su recibo.
               </p>
             </div>
 
             <div className="help-sub">
-              <h3>Recibos de sueldo</h3>
+              <h3>Recibos de pago</h3>
               <p>
-                Cada pago tiene un ícono de vista previa que abre un PDF descargable, claramente etiquetado{' '}
-                <strong>"Preview only — not sent"</strong> ("Solo vista previa — no enviado") — una referencia para
-                tus registros, no un recibo de sueldo oficial ni con validez legal. El encabezado lleva el logo y los
-                datos de tu empresa (razón social, dirección, teléfono, web) cargados en{' '}
-                <strong>Configuración → Datos de la empresa</strong>.
+                El recibo sigue el modelo del país de la empresa. En <strong>Argentina</strong>: datos de la empresa y de
+                la persona (legajo, puesto, fecha de ingreso), período, fecha de pago, haberes y deducciones, el neto en
+                números y en letras, la firma de la empresa y el espacio "Recibí conforme". En el <strong>resto del
+                mundo</strong>, un pay stub al estilo de EE. UU. (sin firmas). Los dos llevan el logo y los datos cargados
+                en <strong>Configuración → Datos de la empresa</strong>, y no llevan acumulado del año.
+              </p>
+              <p>
+                Cada recibo tiene un número correlativo (por ejemplo <strong>0001-000248</strong>) y un código QR. Quien
+                lo escanea ve que el recibo es auténtico — empresa, número, persona, período y fecha — pero
+                <strong> nunca los montos</strong>. En Configuración → Nómina → Recibo de pago elegís el punto de emisión
+                (los primeros 4 dígitos), el nombre de quien firma y la imagen de la firma.
+              </p>
+              <p>
+                Mientras la liquidación está en borrador, el ícono de vista previa abre un PDF marcado
+                <strong> "Vista previa — sin emitir"</strong>. Los recibos son documentos de seguimiento: no reemplazan
+                al recibo de sueldo que exige la ley laboral de cada país.
               </p>
             </div>
 
             <div className="help-sub">
-              <h3>Quién puede verlo</h3>
+              <h3>Quién puede ver qué</h3>
               <p>
-                Nómina — incluyendo la compensación y el historial de pagos de cualquier persona — es invisible
-                para todos excepto el Owner, a menos que a un rol personalizado se le dé explícitamente el permiso
-                Gestionar nómina. Hoy no existe una vista de autoconsulta para que alguien vea su propio sueldo.
+                El Owner y los roles con <strong>Gestionar nómina</strong> ven toda la nómina: liquidaciones, personas y
+                todos los recibos. Todos los demás — sin importar su rol — ven solo lo propio en <strong>Mis
+                recibos</strong>: sus recibos con montos y las horas que pasaron a nómina. Nadie más puede abrir el
+                recibo de otra persona. Cada uno puede dejar de recibir los recibos por email desde Perfil →
+                Notificaciones por email.
               </p>
             </div>
 
             <div className="help-sub">
               <h3>Terminar un contrato</h3>
               <p>
-                Desde el perfil de una persona, "…" → <strong>Terminate</strong> (Dar de baja). Elegí un último
-                día — hoy o una fecha anterior tiene efecto inmediato, una fecha futura lo programa para correr
-                automáticamente ese día.
+                Desde el perfil de una persona, "…" → <strong>Dar de baja</strong>. Elegí un último día — hoy o una
+                fecha anterior tiene efecto inmediato, una fecha futura lo programa para correr automáticamente ese día.
               </p>
               <p>
-                Una vez que toma efecto: el estado pasa a Terminated (Dado de baja), su compensación se cierra (así
-                que queda afuera de las corridas futuras automáticamente), el acceso a la app se revoca de forma
-                opcional, cualquier ausencia pendiente o futura se cancela, y las personas que le reportan
-                directamente se reasignan a un manager que elijas. Se puede registrar un pago final opcional con
-                las mismas líneas de ajuste que una corrida normal. Todo pago pasado — incluyendo el final — sigue
-                visible en la pestaña <strong>Payment History</strong> (Historial de pagos) del perfil.
+                Una vez que toma efecto: el estado pasa a Dado de baja, su compensación se cierra (así que queda afuera
+                de las liquidaciones futuras automáticamente), el acceso a la app se revoca de forma opcional, cualquier
+                ausencia pendiente o futura se cancela, y las personas que le reportan directamente se reasignan a un
+                manager que elijas. Se puede registrar un pago final opcional con las mismas líneas de ajuste que una
+                liquidación normal. Todo pago pasado — incluyendo el final — sigue visible en la pestaña
+                <strong> Historial de pagos</strong> del perfil.
               </p>
             </div>
           </section>
@@ -1421,9 +1458,9 @@ export default function GuidePage() {
             <h2>Payroll</h2>
             <div className="help-tagrow">
               <span className="help-pill help-pill-plan">Growth plan</span>
-              <span className="help-pill help-pill-role">Owner, or a role with Manage Payroll</span>
+              <span className="help-pill help-pill-role">Managing: Owner, or a role with Manage Payroll · My payslips: everyone</span>
             </div>
-            <p className="help-intro">A record of what people are paid, and a way to run pay cycles — not a bank transfer service, and not tax paperwork.</p>
+            <p className="help-intro">A record of what people are paid, pay runs per period and numbered payslips — not a bank transfer service, and not tax paperwork.</p>
 
             <div className="help-callout help-callout-note">
               <InfoIcon />
@@ -1431,6 +1468,19 @@ export default function GuidePage() {
                 Payroll doesn't move any money — it's a shared source of truth for what everyone is owed and what's
                 already been paid, so it stays consistent across the team.
               </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Where things are</h3>
+              <p>Payroll has its own sidebar:</p>
+              <ul>
+                <li><strong>Overview</strong> — how many people are on payroll, the run in progress, the last confirmed one (with the change against the previous run of the same frequency) and what's left before the next close: unapproved hour weeks, unconfirmed contracts and old drafts.</li>
+                <li><strong>Pay runs</strong> and <strong>One-off payments</strong> — pay cycles and off-cycle payments, each in its own list.</li>
+                <li><strong>People</strong> — who's on payroll, their pay policy and their <strong>file number</strong> (an internal ID printed on the payslip; edited right there, and it can't repeat).</li>
+                <li><strong>Payslips</strong> — every issued payslip, with search, download and email resend.</li>
+                <li><strong>My payslips</strong> — the viewer's own payslips.</li>
+                <li><strong>Settings</strong> — opens <strong>Settings → Payroll</strong>: pay frequencies, payment methods, overtime and surcharges, and the payslip.</li>
+              </ul>
             </div>
 
             <div className="help-sub">
@@ -1443,39 +1493,63 @@ export default function GuidePage() {
             </div>
 
             <div className="help-sub">
-              <h3>Running a pay cycle</h3>
+              <h3>Payment methods</h3>
+              <p>
+                In Settings → Payroll you switch on the methods your company pays with. Each one already knows what to
+                ask the person for when they confirm their contract: CBU or CVU for an Argentine bank transfer, CVU or
+                alias for Mercado Pago, IBAN or ACH for a wire transfer, email for Wise, Payoneer or PayPal, nothing for
+                cash. New companies in Argentina start with bank transfer and Mercado Pago; everywhere else, with wire
+                transfer, Wise and Payoneer. If a method isn't listed, use <strong>+ Other method</strong>. Before you
+                turn off one that people use, it tells you how many it affects.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Running a pay run</h3>
               <ol className="help-steps">
-                <li>Set up your <strong>Pay frequencies</strong> (weekly, semi-monthly, monthly — with pay day and due-date offset) and <strong>Payment methods</strong> once, under Payroll's Payment Policies tab.</li>
-                <li>Click <strong>New Run</strong>, pick a frequency and a period label — everyone on that frequency loads in automatically as a Draft.</li>
-                <li>Enter hours for anyone paid hourly (the run can't be confirmed until you do): <strong>Bring approved hours</strong> fills them in from their approved timesheet weeks in the period you pick and tells you who still has weeks waiting for approval. If the company set up <strong>Overtime and surcharges</strong> (Payment Policies, Growth: start from Argentina, the US or custom), overtime, rest-day/holiday and night hours are added as separate lines. Then add any <strong>Bonus, Commission, Reimbursement,</strong> or <strong>Deduction</strong> lines per person.</li>
-                <li>Click <strong>Confirm Run</strong> to lock it in.</li>
+                <li>In <strong>Pay runs</strong>, click <strong>New Run</strong>, pick a frequency and a period label — everyone on that frequency loads in automatically as a draft. The top shows which step you're on: People, Hours, Adjustments, Confirm and issue payslips.</li>
+                <li>Enter hours for anyone paid hourly (the run can't be confirmed until you do): <strong>Bring approved hours</strong> fills them in from their approved timesheet weeks in the period you pick and tells you who still has weeks waiting for approval. If the company set up <strong>Overtime and surcharges</strong> (Settings → Payroll, Growth: start from Argentina, the US or custom), overtime, rest-day/holiday and night hours are added as separate lines.</li>
+                <li>Add any adjustments per person: <strong>Bonus, Commission, Reimbursement,</strong> or <strong>Deduction</strong>. The totals at the top (per currency, never added across currencies) show the change against the previous run.</li>
+                <li>Click <strong>Review and confirm</strong>: you see the summary and, once you confirm, the run is locked and <strong>one numbered payslip per person</strong> is issued and emailed to them.</li>
               </ol>
               <div className="help-callout help-callout-danger">
                 <AlertCircleIcon />
                 <p>A confirmed run can't be edited or reopened from the UI — double-check hours and adjustments before confirming.</p>
               </div>
               <p>
-                Need to pay someone outside a normal cycle? Use <strong>One-off Payment</strong> — same adjustment
-                types, shown alongside regular runs in one combined timeline.
+                Need to pay someone outside a normal cycle? Use <strong>One-off payments</strong> — same adjustment
+                types; each one-off payment also issues its payslip.
               </p>
             </div>
 
             <div className="help-sub">
               <h3>Payslips</h3>
               <p>
-                Every payment has a preview icon that opens a downloadable PDF, clearly labeled{' '}
-                <strong>"Preview only — not sent"</strong> — a reference for your records, not an official or legal
-                payslip. Its header carries your company logo and details (legal name, address, phone, website) from{' '}
-                <strong>Settings → Company profile</strong>.
+                The payslip follows the company's country. In <strong>Argentina</strong>: company and person details (file
+                number, job title, start date), period, pay date, earnings and deductions, net pay in numbers and in
+                words, the company signature and a "received" line. <strong>Everywhere else</strong>, a US-style pay
+                stub (no signatures). Both carry the logo and details from <strong>Settings → Company profile</strong>,
+                and neither shows year-to-date totals.
+              </p>
+              <p>
+                Each payslip gets a sequential number (for example <strong>0001-000248</strong>) and a QR code. Whoever
+                scans it sees that the payslip is genuine — company, number, person, period and date — but
+                <strong> never the amounts</strong>. In Settings → Payroll → Payslip you pick the issuing point (the first
+                4 digits), the signer's name and the signature image.
+              </p>
+              <p>
+                While the run is a draft, the preview icon opens a PDF marked <strong>"Preview - not issued"</strong>.
+                Payslips are tracking documents: they don't replace any payslip required by employment law.
               </p>
             </div>
 
             <div className="help-sub">
-              <h3>Who can see it</h3>
+              <h3>Who can see what</h3>
               <p>
-                Payroll — including any single person's own compensation and payment history — is invisible to
-                everyone except the Owner, unless a custom role is explicitly given the Manage Payroll permission.
-                There's currently no self-service view for someone to see their own pay.
+                The Owner and roles with <strong>Manage Payroll</strong> see all of payroll: runs, people and every
+                payslip. Everyone else — whatever their role — sees only their own in <strong>My payslips</strong>: their
+                payslips with amounts and the hours that went to payroll. Nobody else can open someone's payslip.
+                Anyone can stop getting payslip emails from Profile → Email notifications.
               </p>
             </div>
 

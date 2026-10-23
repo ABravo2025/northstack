@@ -1,8 +1,10 @@
 # Spec: Nómina v2 (rediseño)
 
 **Estado:** aprobada por Alejandro el 2026-10-23 sobre la propuesta
-(artifact "Rediseño de Nómina", https://claude.ai/artifact/6xsUcHsZXwUjqHF84szouL). En construcción en
-`staging` (rama `feat/payroll-v2`, encima de "Traer horas aprobadas" y "Horas extra", también en staging).
+(artifact "Rediseño de Nómina", https://claude.ai/artifact/6xsUcHsZXwUjqHF84szouL). Unidades 1–7
+**construidas y probadas en `staging`** el 2026-10-23 (rama `feat/payroll-v2`, encima de "Traer horas
+aprobadas" y "Horas extra", también en staging) — QA-124 en `Tareas-QA.md`. Falta la revisión de
+Alejandro antes de producción; el anuncio se redacta al promover.
 
 Nómina sigue siendo **de seguimiento**: no mueve dinero ni reemplaza al recibo de sueldo legal.
 

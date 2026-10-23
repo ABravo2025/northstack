@@ -1061,12 +1061,14 @@
     "title": "Email notifications",
     "lead": "Choose which emails you get. You'll still see everything in the bell.",
     "group": {
+      "payroll": "Payroll",
       "projects": "Projects",
       "shifts": "Shifts and timesheet",
       "timeOff": "Time off",
       "sales": "Sales"
     },
     "category": {
+      "payslips": "My payslips when a pay run is confirmed",
       "projectBudget": "A project I own is near or over its hour budget",
       "shifts": "New, changed or cancelled shifts",
       "shiftReminders": "Reminders: tomorrow's shifts and shifts waiting for my answer",

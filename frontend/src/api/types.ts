@@ -1142,6 +1142,7 @@ export interface CompensationStatusEntry {
   employeeFirstName: string;
   employeeLastName: string;
   employeeEmail: string;
+  fileNumber?: string | null;
   // Whether this person has ever confirmed a first-ever contract (linked
   // User) — reassignments never re-trigger confirmation, so this is the
   // right Draft/Confirmed signal, not a field on currentCompensation itself.
@@ -1206,6 +1207,7 @@ export interface PayrollRunEntry {
   hoursFrom?: string | null;
   hoursTo?: string | null;
   hoursFromTimesheet?: boolean;
+  overtimeKind?: string | null;
 }
 
 export interface ImportHoursResult {
@@ -1271,6 +1273,7 @@ export interface RunDetailEmployeeRow {
   currency: string;
   statusName: string;
   isInactive: boolean;
+  jobTitle?: string | null;
   entries: PayrollRunEntry[];
   baseAmountCents: number;
   adjustmentsTotalCents: number;
@@ -1282,6 +1285,80 @@ export interface RunDetail {
   employeeRows: RunDetailEmployeeRow[];
   excludedCount: number;
   hasUnloadedHours: boolean;
+  // Payroll v2 (unit 3).
+  previousTotals?: Record<string, number> | null;
+  unapprovedWeeks?: { employeeId: string; name: string; weekStart: string; status: string }[];
+  payslipsIssued?: number;
+}
+
+// Payroll v2 (spec-payroll-v2.md): overview, payslips, payment-method catalog, payslip settings.
+export interface PayrollRunSummary {
+  id: string;
+  periodLabel: string;
+  status: 'draft' | 'confirmed';
+  frequency: string | null;
+  createdAt: string;
+  confirmedAt: string | null;
+  totals: Record<string, number>;
+  people: number;
+  hours: number;
+  overtimeHours: number;
+}
+
+export interface PayrollOverview {
+  inPayroll: number;
+  lastRun: (PayrollRunSummary & { variationPct: number | null }) | null;
+  draft: PayrollRunSummary | null;
+  recentRuns: PayrollRunSummary[];
+  pending: {
+    unapprovedWeeks: { employeeId: string; name: string; weekStart: string; status: string }[];
+    unconfirmedContracts: { employeeId: string; name: string }[];
+    staleDrafts: { id: string; periodLabel: string; days: number }[];
+    missingHours: { runId: string; employeeId: string; name: string }[];
+  };
+}
+
+export interface PayslipRow {
+  id: string;
+  number: string;
+  employeeId: string;
+  employeeName: string | null;
+  runId: string | null;
+  periodLabel: string;
+  periodFrom: string | null;
+  periodTo: string | null;
+  paymentDate: string;
+  currency: string;
+  grossCents: number;
+  deductionsCents: number;
+  netCents: number;
+  emailedAt: string | null;
+  createdAt: string;
+}
+
+export interface PayslipVerification {
+  company: string;
+  number: string;
+  employee: string;
+  periodLabel: string;
+  paymentDate: string;
+  issuedAt: string;
+}
+
+export interface PayslipSettingsView {
+  prefix: number;
+  nextNumber: number;
+  nextLabel: string;
+  signerName: string | null;
+  signature: string | null;
+  layout: 'ar' | 'us';
+}
+
+export type PaymentMethodKind = 'bank_ar' | 'mercadopago' | 'bank_intl' | 'wise' | 'payoneer' | 'paypal' | 'cash' | 'other';
+
+export interface PaymentMethodCatalog {
+  country: string | null;
+  items: { kind: PaymentMethodKind; id: string | null; name: string; active: boolean; asks: string; people: number }[];
 }
 
 // A loose (runId: null) off-cycle PayrollEntry, for the unified timeline
@@ -1686,6 +1763,7 @@ export type EmailCategory =
   | 'shiftSwaps'
   | 'attendance'
   | 'projectBudget'
+  | 'payslips'
   | 'skillsExpiring'
   | 'timesheet'
   | 'timeOff'

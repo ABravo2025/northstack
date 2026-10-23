@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { api, ApiError } from './api';
 import type { PermissionsPayload, Tenant } from './api';
 import { setActiveSessionToken, setUnauthorizedHandler } from './api/http';
 import { SUPPORT_TOKEN_KEY, getSupportToken } from './lib/supportSession';
 import i18n from './lib/i18n';
 import { useToast } from './components/common/ToastProvider';
-import { PermissionsProvider } from './contexts/PermissionsContext';
+import { PermissionsProvider, usePermissions } from './contexts/PermissionsContext';
 import { isGrowthFeatureEnabled, planFeaturesFor } from './lib/planLimits';
 import TableSkeleton from './components/common/TableSkeleton';
 import LoginPage from './pages/LoginPage';
@@ -46,6 +46,10 @@ import IntegrationsSettingsPage from './pages/IntegrationsSettingsPage';
 import CompanyPage from './pages/CompanyPage';
 import TimeOffSettingsPage from './pages/TimeOffSettingsPage';
 import ShiftsSettingsPage from './pages/ShiftsSettingsPage';
+import PayrollOverviewPage from './pages/payroll/PayrollOverviewPage';
+import PayslipsPage from './pages/payroll/PayslipsPage';
+import MyPayslipsPage from './pages/payroll/MyPayslipsPage';
+import VerifyPayslipPage from './pages/payroll/VerifyPayslipPage';
 import ShiftsSchedulePage from './pages/shifts/ShiftsSchedulePage';
 import MyShiftsPage from './pages/shifts/MyShiftsPage';
 import TimesheetPage from './pages/shifts/TimesheetPage';
@@ -381,6 +385,8 @@ export default function App() {
       <Route path="/shift-response/:token" element={<ShiftResponsePage />} />
       {/* Shifts phase 2: the hours report shared with a client — public, the token is the credential. */}
       <Route path="/client-report/:token" element={<ClientReportPage />} />
+      {/* Payroll v2: the QR / code printed on a payslip — public, shows no amounts. */}
+      <Route path="/verify/:code" element={<VerifyPayslipPage />} />
       <Route
         path="/apply/:tenantSlug/:formSlug"
         element={
@@ -436,8 +442,16 @@ export default function App() {
         <Route path="/hr/people" element={<EmployeesPage user={user} token={token ?? ''} />} />
         <Route path="/hr/employees" element={<Navigate to="/hr/people" replace />} />
         <Route path="/hr/time-off" element={<TimeOffOverviewPage user={user} token={token ?? ''} />} />
-        <Route path="/hr/payroll" element={featureOnly('payroll', <PayrollPage token={token ?? ''} />, '/')} />
-        <Route path="/hr/payroll/runs/:runId" element={featureOnly('payroll', <PayrollRunDetailPage token={token ?? ''} />, '/')} />
+        {/* Payroll v2 (spec-payroll-v2.md §1): its own sidebar under /payroll; the old /hr/payroll links redirect. */}
+        <Route path="/payroll" element={featureOnly('payroll', <PayrollHome token={token ?? ''} />, '/')} />
+        <Route path="/payroll/runs" element={featureOnly('payroll', <PayrollPage token={token ?? ''} section="runs" />, '/')} />
+        <Route path="/payroll/runs/:runId" element={featureOnly('payroll', <PayrollRunDetailPage token={token ?? ''} />, '/')} />
+        <Route path="/payroll/one-off" element={featureOnly('payroll', <PayrollPage token={token ?? ''} section="oneoff" />, '/')} />
+        <Route path="/payroll/people" element={featureOnly('payroll', <PayrollPage token={token ?? ''} section="people" />, '/')} />
+        <Route path="/payroll/payslips" element={featureOnly('payroll', <PayslipsPage token={token ?? ''} />, '/')} />
+        <Route path="/payroll/mine" element={featureOnly('payroll', <MyPayslipsPage token={token ?? ''} />, '/')} />
+        <Route path="/hr/payroll" element={<Navigate to="/payroll" replace />} />
+        <Route path="/hr/payroll/runs/:runId" element={<LegacyRunRedirect />} />
         <Route path="/companies" element={<CompaniesPage user={user} token={token ?? ''} />} />
         <Route path="/contacts" element={<ContactsPage user={user} token={token ?? ''} />} />
         <Route path="/opportunities" element={<OpportunitiesPage user={user} token={token ?? ''} />} />
@@ -458,6 +472,7 @@ export default function App() {
           <Route path="company" element={<CompanyPage token={token ?? ''} onTenantUpdated={setTenant} />} />
           <Route path="time-off" element={<TimeOffSettingsPage token={token ?? ''} />} />
           <Route path="shifts" element={<ShiftsSettingsPage token={token ?? ''} />} />
+          <Route path="payroll" element={<PayrollPage token={token ?? ''} section="settings" />} />
           {/* Old Settings → Appearance URL — currency now lives in Company, theme in Profile. */}
           <Route path="appearance" element={<Navigate to="/settings/company" replace />} />
           <Route
@@ -483,6 +498,17 @@ export default function App() {
     </Routes>
     </PermissionsProvider>
   );
+}
+
+// Payroll v2: /payroll opens the overview for whoever runs payroll, and everyone else's own payslips.
+function PayrollHome({ token }: { token: string }) {
+  const permissions = usePermissions();
+  return permissions.has('manage_payroll') ? <PayrollOverviewPage token={token} /> : <Navigate to="/payroll/mine" replace />;
+}
+
+function LegacyRunRedirect() {
+  const { runId } = useParams();
+  return <Navigate to={`/payroll/runs/${runId}`} replace />;
 }
 
 // /shifts opens the schedule for whoever can plan or see shifts, and everyone else's own shifts.

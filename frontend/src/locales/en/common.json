@@ -214,17 +214,54 @@
   "settings": {
     "myAccount": "My account",
     "company": "Company",
-    "profile": { "label": "Profile", "desc": "Name, phone, social profiles and password." },
-    "integrations": { "label": "Integrations", "desc": "Connect Northstack to other tools." },
-    "billing": { "label": "Billing", "desc": "Plan, invoices and payment method." },
-    "companyProfile": { "label": "Company profile", "desc": "Name, logo, contact details and currency." },
-    "timeOffRules": { "label": "Time Off", "desc": "Holiday calendar, work week, company days off." },
-    "shifts": { "label": "Shifts", "desc": "Locations, confirmations and scheduling rules." },
-    "users": { "label": "Users", "desc": "Invite people and manage roles." },
-    "publicForms": { "label": "Public Forms", "desc": "External intake forms per module." },
-    "pipelines": { "label": "Pipelines", "desc": "Sales stages and their outcomes." },
-    "activityLog": { "label": "Activity Log", "desc": "Who created, changed, or deleted what." },
-    "rolesPermissions": { "label": "Roles & Permissions", "desc": "Control what each role can see and do." }
+    "profile": {
+      "label": "Profile",
+      "desc": "Name, phone, social profiles and password."
+    },
+    "integrations": {
+      "label": "Integrations",
+      "desc": "Connect Northstack to other tools."
+    },
+    "billing": {
+      "label": "Billing",
+      "desc": "Plan, invoices and payment method."
+    },
+    "companyProfile": {
+      "label": "Company profile",
+      "desc": "Name, logo, contact details and currency."
+    },
+    "timeOffRules": {
+      "label": "Time Off",
+      "desc": "Holiday calendar, work week, company days off."
+    },
+    "shifts": {
+      "label": "Shifts",
+      "desc": "Locations, confirmations and scheduling rules."
+    },
+    "users": {
+      "label": "Users",
+      "desc": "Invite people and manage roles."
+    },
+    "publicForms": {
+      "label": "Public Forms",
+      "desc": "External intake forms per module."
+    },
+    "pipelines": {
+      "label": "Pipelines",
+      "desc": "Sales stages and their outcomes."
+    },
+    "activityLog": {
+      "label": "Activity Log",
+      "desc": "Who created, changed, or deleted what."
+    },
+    "rolesPermissions": {
+      "label": "Roles & Permissions",
+      "desc": "Control what each role can see and do."
+    },
+    "payroll": {
+      "label": "Payroll",
+      "desc": "Pay frequencies, payment methods, overtime and payslips."
+    }
   },
   "profile": {
     "cardTitle": "Profile",
@@ -349,7 +386,8 @@
       "close": "Close tour",
       "skip": "Skip",
       "take": "Take the tour",
-      "skipTour": "Skip tour", "finishButton": "Finish",
+      "skipTour": "Skip tour",
+      "finishButton": "Finish",
       "finish": {
         "title": "You're all set",
         "body": "Want to start adding your real data, or explore with sample data first?"

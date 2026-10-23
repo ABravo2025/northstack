@@ -15,6 +15,7 @@ const GROUPS: { key: string; categories: EmailCategory[] }[] = [
   { key: 'shifts', categories: ['shifts', 'shiftReminders', 'shiftSwaps', 'shiftDeclined', 'attendance', 'skillsExpiring', 'timesheet'] },
   { key: 'timeOff', categories: ['timeOff'] },
   { key: 'projects', categories: ['projectBudget'] },
+  { key: 'payroll', categories: ['payslips'] },
   { key: 'sales', categories: ['opportunityStage', 'opportunityStalled'] },
 ];
 
@@ -44,7 +45,7 @@ export default function EmailPreferencesCard({ token }: EmailPreferencesCardProp
   };
 
   // Sales emails only matter to people who own deals.
-  const groups = GROUPS.filter((g) => g.key !== 'sales' || permissions.has('manage_opportunity'));
+  const groups = GROUPS.filter((g) => (g.key !== 'sales' || permissions.has('manage_opportunity')) && (g.key !== 'payroll' || permissions.features.payroll));
 
   return (
     <div className="card" id="email-notifications">

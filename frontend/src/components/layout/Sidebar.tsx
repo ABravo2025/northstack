@@ -113,8 +113,9 @@ export default function Sidebar({ mobileOpen, onMobileClose, tenant }: SidebarPr
             <ClockIcon className="h-4 w-4 shrink-0" />
             {label(t('sidebar.shifts'))}
           </NavLink>
-          {permissions.has('manage_payroll') && (
-            <NavLink to="/hr/payroll" className={linkClass} title={`${t('sidebar.humanResources')} – ${t('sidebar.payroll')}`} onClick={onMobileClose}>
+          {/* Payroll v2: everyone in a company with Payroll sees their own payslips there. */}
+          {permissions.features.payroll && (
+            <NavLink to="/payroll" className={linkClass} title={`${t('sidebar.humanResources')} – ${t('sidebar.payroll')}`} onClick={onMobileClose}>
               <BriefcaseIcon className="h-4 w-4 shrink-0" />
               {label(t('sidebar.payroll'))}
             </NavLink>

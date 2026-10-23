@@ -43,6 +43,8 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
   const [addingEmployeeId, setAddingEmployeeId] = useState<string | null>(null);
   const [payslipEmployeeId, setPayslipEmployeeId] = useState<string | null>(null);
   const [importingHours, setImportingHours] = useState(false);
+  // Payroll v2 (unit 3): confirming goes through a review dialog with the totals.
+  const [reviewing, setReviewing] = useState(false);
 
   useEffect(() => {
     load();
@@ -76,8 +78,9 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
     if (!runId) return;
     setConfirming(true);
     try {
-      await api.confirmPayrollRun(token, runId);
-      toast.success(t('payroll.runDetail.toasts.runConfirmed'));
+      const confirmed = (await api.confirmPayrollRun(token, runId)) as { payslipsIssued?: number };
+      setReviewing(false);
+      toast.success(t('payroll.runDetail.v2.confirmedToast', { count: confirmed.payslipsIssued ?? 0 }));
       load();
     } catch (error) {
       toast.error(t('payroll.runDetail.toasts.confirmFailed', { error: (error as Error).message }));
@@ -205,13 +208,40 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
   }
 
   const isDraft = detail.run.status === 'draft';
+  // Payroll v2 (spec-payroll-v2.md, unit 3): totals per currency (never added across currencies),
+  // hours, adjustments, the step it's at.
+  const totals: Record<string, number> = {};
+  let hours = 0;
+  let overtimeHours = 0;
+  let bonuses = 0;
+  let deductionsCount = 0;
+  for (const row of detail.employeeRows) {
+    for (const e of row.entries) {
+      totals[e.currency] = (totals[e.currency] ?? 0) + e.amountCents;
+      if (e.type === 'base' && e.hoursQty) hours += e.hoursQty;
+      if (e.type === 'overtime' && e.hoursQty && e.overtimeKind !== 'night') overtimeHours += e.hoursQty;
+      if (e.type === 'bonus' || e.type === 'commission' || e.type === 'reimbursement') bonuses += 1;
+      if (e.type === 'deduction') deductionsCount += 1;
+    }
+  }
+  const loc = i18n.language.startsWith('es') ? 'es-AR' : 'en-US';
+  const fmtNum = (n: number) => n.toLocaleString(loc, { maximumFractionDigits: 2 });
+  const currencies = Object.keys(totals).sort((a, b) => totals[b] - totals[a]);
+  const variation = (c: string) => {
+    const prev = detail.previousTotals?.[c];
+    if (!prev) return null;
+    return Math.round(((totals[c] - prev) / prev) * 1000) / 10;
+  };
+  const hasHourly = detail.employeeRows.some((r) => r.compensationType === 'hourly');
+  const step = !isDraft ? 4 : detail.employeeRows.length === 0 ? 1 : hasHourly && detail.hasUnloadedHours ? 2 : 3;
+  const STEPS = ['people', 'hours', 'adjustments', 'confirm'] as const;
   const shortDay = (d: string) => new Date(`${d}T00:00:00Z`).toLocaleDateString(i18n.language.startsWith('es') ? 'es-AR' : 'en-US', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 
   return (
     <div className="container">
       <div className="page-toolbar">
         <div className="flex items-center gap-2">
-          <button type="button" className="icon-btn" onClick={() => navigate('/hr/payroll')} aria-label={t('payroll.runDetail.backAriaLabel')}>
+          <button type="button" className="icon-btn" onClick={() => navigate('/payroll/runs')} aria-label={t('payroll.runDetail.backAriaLabel')}>
             <ChevronLeftIcon className="h-4 w-4" />
           </button>
           <h2 className="page-title">{detail.run.periodLabel}</h2>
@@ -236,10 +266,10 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
               <button
                 type="button"
                 className="btn-primary"
-                onClick={handleConfirmRun}
+                onClick={() => setReviewing(true)}
                 disabled={confirming || detail.hasUnloadedHours}
               >
-                {confirming ? t('payroll.runDetail.confirming') : t('payroll.runDetail.confirmRun')}
+                {t('payroll.runDetail.v2.review')}
               </button>
             </span>
           </div>
@@ -247,8 +277,74 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
       </div>
 
       <p className="text-sm text-ink-muted dark:text-dark-ink-muted mb-3">
-        {t('payroll.runDetail.payFrequencyLabel', { name: detail.run.payFrequency?.name || '—' })}
+        {t('payroll.runDetail.payFrequencyLabel', { name: detail.run.payFrequency?.name || '—' })} · {t('payroll.runDetail.v2.people', { count: detail.employeeRows.length })}
       </p>
+
+      <ol className="m-0 mb-4 flex list-none flex-wrap gap-1.5 p-0" aria-label={t('payroll.runDetail.v2.stepsLabel')}>
+        {STEPS.map((key, i) => {
+          const n = i + 1;
+          const state = n < step || (n === 4 && !isDraft) ? 'done' : n === step ? 'on' : 'todo';
+          return (
+            <li
+              key={key}
+              className={`flex items-center gap-2 rounded-full border px-3 py-1 text-xs ${
+                state === 'done'
+                  ? 'border-emerald-300 text-emerald-700 dark:border-emerald-800 dark:text-emerald-300'
+                  : state === 'on'
+                    ? 'border-accent font-semibold text-accent dark:border-brand-blue-light dark:text-brand-blue-light'
+                    : 'border-line text-ink-muted dark:border-dark-line dark:text-dark-ink-muted'
+              }`}
+              aria-current={state === 'on' ? 'step' : undefined}
+            >
+              <span className={`grid h-4 w-4 place-items-center rounded-full text-[10px] ${state === 'done' ? 'bg-emerald-600 text-white' : state === 'on' ? 'bg-accent text-white dark:bg-brand-blue-light dark:text-dark-page' : 'bg-surface-2 dark:bg-dark-raised'}`}>
+                {state === 'done' ? '✓' : n}
+              </span>
+              {t(`payroll.runDetail.v2.steps.${key}`)}
+            </li>
+          );
+        })}
+      </ol>
+
+      <div className="sh-kpis mb-3">
+        {currencies.map((c) => {
+          const v = variation(c);
+          return (
+            <div key={c} className="sh-kpi">
+              <span className="sh-kpi-label">{t('payroll.runDetail.v2.total', { currency: c })}</span>
+              <span className="sh-kpi-value">{formatMoney(totals[c], c)}</span>
+              <span className="sh-kpi-hint">{v === null ? '\u00a0' : t('payroll.runDetail.v2.vsPrevious', { pct: `${v > 0 ? '+' : ''}${fmtNum(v)}` })}</span>
+            </div>
+          );
+        })}
+        {hasHourly && (
+          <div className="sh-kpi">
+            <span className="sh-kpi-label">{t('payroll.runDetail.v2.hours')}</span>
+            <span className="sh-kpi-value">{fmtNum(hours + overtimeHours)} h</span>
+            <span className="sh-kpi-hint">{overtimeHours ? t('payroll.runDetail.v2.overtime', { hours: fmtNum(overtimeHours) }) : '\u00a0'}</span>
+          </div>
+        )}
+        <div className="sh-kpi">
+          <span className="sh-kpi-label">{t('payroll.runDetail.v2.adjustments')}</span>
+          <span className="sh-kpi-value">{bonuses + deductionsCount}</span>
+          <span className="sh-kpi-hint">{t('payroll.runDetail.v2.adjustmentsHint', { bonuses, deductions: deductionsCount })}</span>
+        </div>
+        {!isDraft && (
+          <div className="sh-kpi">
+            <span className="sh-kpi-label">{t('payroll.runDetail.v2.payslips')}</span>
+            <span className="sh-kpi-value">{detail.payslipsIssued ?? 0}</span>
+            <button type="button" className="sh-kpi-hint to-link" onClick={() => navigate('/payroll/payslips')}>{t('payroll.runDetail.v2.seePayslips')}</button>
+          </div>
+        )}
+      </div>
+
+      {(detail.unapprovedWeeks ?? []).length > 0 && (
+        <div className="alert alert-warning mb-3 flex flex-col gap-1">
+          <strong>{t('payroll.runDetail.v2.unapprovedTitle')}</strong>
+          {(detail.unapprovedWeeks ?? []).map((w) => (
+            <span key={`${w.employeeId}-${w.weekStart}`}>{t('payroll.runDetail.v2.unapprovedLine', { name: w.name, date: shortDay(w.weekStart) })}</span>
+          ))}
+        </div>
+      )}
 
       {detail.excludedCount > 0 && (
         <div className="alert alert-error mb-3">
@@ -287,7 +383,8 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
                         />
                       </td>
                       <td>
-                        {row.employeeFirstName} {row.employeeLastName}
+                        <span className="font-medium">{row.employeeFirstName} {row.employeeLastName}</span>
+                        {row.jobTitle && <small className="block text-ink-faint dark:text-dark-ink-faint">{row.jobTitle}</small>}
                       </td>
                       <td>
                         <span className="category-chip">
@@ -503,6 +600,37 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
             ))}
           </div>
         )}
+      </Modal>
+
+      <Modal
+        open={reviewing}
+        title={t('payroll.runDetail.v2.reviewTitle', { period: detail.run.periodLabel })}
+        onClose={() => setReviewing(false)}
+        footer={
+          <>
+            <button type="button" className="btn-secondary" onClick={() => setReviewing(false)}>
+              {t('payroll.runDetail.v2.cancel')}
+            </button>
+            <button type="button" className="btn-primary" disabled={confirming} onClick={handleConfirmRun}>
+              {confirming ? t('payroll.runDetail.confirming') : t('payroll.runDetail.v2.confirmAndIssue')}
+            </button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-3 text-sm">
+          <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-6 gap-y-1">
+            <dt className="text-ink-muted dark:text-dark-ink-muted">{t('payroll.runDetail.v2.reviewPeople')}</dt>
+            <dd className="m-0 font-semibold">{detail.employeeRows.length}</dd>
+            {currencies.map((c) => (
+              <Fragment key={c}>
+                <dt className="text-ink-muted dark:text-dark-ink-muted">{t('payroll.runDetail.v2.total', { currency: c })}</dt>
+                <dd className="m-0 font-semibold tabular-nums">{formatMoney(totals[c], c)}</dd>
+              </Fragment>
+            ))}
+          </dl>
+          {(detail.unapprovedWeeks ?? []).length > 0 && <p className="m-0 text-amber-700 dark:text-amber-300">{t('payroll.runDetail.v2.reviewWarn', { count: (detail.unapprovedWeeks ?? []).length })}</p>}
+          <p className="m-0">{t('payroll.runDetail.v2.reviewBody')}</p>
+        </div>
       </Modal>
 
       {importingHours && runId && (

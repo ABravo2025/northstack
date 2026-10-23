@@ -5234,6 +5234,24 @@ Resuelve el pendiente de agosto ("un área en el perfil de las notificaciones qu
 
 **Verificado** (servicios contra `staging`, 6/6): turno fichado 10 min tarde con 15 min de pausa → sugerencia 220 min (planificado 240); turno sin fichaje → 120 planificados; reporte: fichado 220, 1 tardanza, 1 ausencia; sin fichaje en el plan no hay columnas; resumen al Owner y no dos veces el mismo día. 790/790 tests.
 
+## QA-124 — Nómina v2: rediseño, recibos numerados y Mis recibos (2026-10-23, en `staging`, Growth)
+
+Spec: `docs/general/spec-payroll-v2.md` (propuesta aprobada por Alejandro en el artifact "Rediseño de Nómina").
+- **Navegación:** Nómina tiene barra lateral propia (`/payroll`): Resumen, Liquidaciones, Pagos únicos, Personas, Recibos, Mis recibos, Configuración (→ Configuración → Nómina). `/hr/payroll` y `/hr/payroll/runs/:id` redirigen. "Corrida" pasa a "Liquidación" en todo el español.
+- **Permisos:** Owner y `manage_payroll` ven todo; cualquier otra persona, sea cual sea su rol, ve solo **Mis recibos** (sus recibos con montos + horas enviadas a nómina). `/payroll` lleva a cada uno a lo suyo.
+- **Resumen:** personas en nómina, liquidación en curso, última confirmada con variación contra la anterior de la misma frecuencia, horas pagadas, "Antes del próximo cierre" (semanas sin aprobar, contratos sin confirmar, borradores viejos), últimas liquidaciones.
+- **Liquidación:** pasos (Personas → Horas → Ajustes → Confirmar y emitir recibos), totales por moneda con variación, horas y extras, ajustes, aviso de semanas sin aprobar, puesto bajo el nombre, **Revisar y confirmar** con resumen antes de bloquear.
+- **Métodos de pago:** grilla con interruptores, cada uno sabe qué dato pide (CBU/CVU, CVU/alias, IBAN/ACH, email, nada); por defecto según país (AR: transferencia + Mercado Pago); aviso antes de apagar uno en uso; "+ Otro método". La confirmación de contrato pide el dato que corresponde.
+- **Recibo v2:** número correlativo por empresa (`0001-000001`, punto de emisión configurable), código + QR de verificación, legajo (nuevo, editable en Personas, único), puesto, fecha de ingreso, período, fecha de pago, modalidad, método (traducido) con cuenta enmascarada, haberes (cantidad × tarifa) y deducciones, neto en letras (AR), firma de la empresa (imagen) y "Recibí conforme" (AR); modelo **EE. UU.** (pay stub, sin firmas) para el resto. Sin acumulado del año. Se emite al confirmar la liquidación o registrar un pago único y se manda por email (preferencia nueva "Recibos de pago"). Página pública `/verify/:code` sin montos.
+- **Schema** (aplicado en `staging`): `Employee.fileNumber`, `Payslip`, `PayslipSettings`, `PaymentMethodDefinition.kind` + backfill por nombre (`C:	mp
+s-payroll-v2-a.sql`, `-b.sql`). Se borró `payslipService.ts` (v1), ya sin uso.
+
+**Verificado en esta sesión:** API contra `staging` (28/28, tenant QA de Argentina): resumen (Member → 403), catálogo de métodos, activar transferencia CBU, tipo inválido → 400, legajo y legajo repetido → 409, configuración del recibo con firma, vista previa en borrador, detalle con puesto/avisos, confirmar emite 1 recibo `0001-000001` por ARS 125.000 con email, PDF emitido, snapshot (legajo, puesto, líneas, firmante), verificación pública sin montos, código inexistente → 404, Mis recibos del Owner, Member no lista todos (403) ni abre el ajeno (404), pago único al Member → `0001-000002` visible y descargable para él, reenvío, resumen con la última liquidación. Navegador EN claro y ES oscuro (12/12 cada uno, capturas): Resumen, liquidación, Recibos, Personas con legajo, Configuración → Nómina, redirección de `/hr/payroll`, Member cae en Mis recibos y no ve recibos ajenos, verificación en celular; sin "corrida" en pantalla; sin errores de consola. PDFs renderizados y revisados a ojo (AR con extras/nocturnas/bono/deducción, EE. UU., vista previa, emitido real).
+
+**Bugs encontrados y corregidos en la prueba:** en el PDF las columnas de tarifa e importe se pisaban y los valores largos (período, método de cobro) se cortaban (ahora van en 2 líneas); el puesto salía vacío si la persona no tenía puesto de catálogo (ahora usa el del contrato); el método de cobro salía con el nombre guardado en inglés ("Wire transfer") en un recibo en español (ahora se traduce por tipo); los KPIs del Resumen y de la liquidación quedaban centrados con ancho fijo (ahora ocupan la fila).
+
+**Pendiente conocido (no de esta entrega):** los montos en pantalla usan formato `en-US` en toda la app (`formatMoney`), también en español; el PDF sí usa `es-AR`.
+
 ## QA-123 — Horas extra y recargos configurables por empresa (2026-10-21, en `staging`, Growth)
 
 Spec: `docs/general/spec-overtime.md`.

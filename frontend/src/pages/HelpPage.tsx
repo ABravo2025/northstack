@@ -78,7 +78,7 @@ const FAQ_CATEGORIES: FaqCategory[] = [
       },
       {
         q: 'Who can see an employee\'s pay rate?',
-        a: "Only the Owner, by default — and only a role you've explicitly given the Manage Payroll permission, or field-level access to compensation fields, beyond that. There's no self-service view for someone to see their own pay yet.",
+        a: "Only the Owner, by default — and only a role you've explicitly given the Manage Payroll permission, or field-level access to compensation fields, beyond that. Everyone sees their own payslips, with amounts, in Payroll → My payslips — never anyone else's.",
       },
       {
         q: 'How do I transfer ownership of the workspace?',
@@ -167,7 +167,15 @@ const FAQ_CATEGORIES: FaqCategory[] = [
       },
       {
         q: 'Is the payslip PDF a legal document?',
-        a: 'No. It\'s explicitly labeled "Preview only — not sent," meant as a reference document, not an official or legally binding payslip.',
+        a: 'No. Payslips are numbered tracking documents with a QR code anyone can use to check they\'re genuine, but they don\'t replace any payslip required by employment law. While a run is still a draft, its PDF is marked "Preview - not issued."',
+      },
+      {
+        q: 'Who gets a payslip, and when?',
+        a: 'Everyone in a pay run gets one numbered payslip when the run is confirmed (one per currency if they\'re paid in more than one), and everyone in a one-off payment gets one when it\'s recorded. It\'s emailed to them and stays in Payroll → My payslips. Whoever runs payroll can download or resend any of them from Payroll → Payslips.',
+      },
+      {
+        q: 'What does someone see when they scan the QR code on a payslip?',
+        a: 'A public page confirming the payslip is genuine: the company, the payslip number, the person\'s first name and last initial, the period and the pay date. Amounts are never shown there.',
       },
       {
         q: 'How do I put our logo and company details on payslips?',
@@ -428,7 +436,7 @@ const FAQ_CATEGORIES_ES: FaqCategory[] = [
       },
       {
         q: '¿Quién puede ver el sueldo de un empleado?',
-        a: 'Por default, solo el Owner — y, más allá de eso, solo un rol al que le hayas dado explícitamente el permiso Gestionar nómina, o acceso a nivel de campo a los campos de compensación. Todavía no existe una vista de autoconsulta para que alguien vea su propio sueldo.',
+        a: 'Por default, solo el Owner — y, más allá de eso, solo un rol al que le hayas dado explícitamente el permiso Gestionar nómina, o acceso a nivel de campo a los campos de compensación. Cada persona ve sus propios recibos, con montos, en Nómina → Mis recibos — nunca los de otra persona.',
       },
       {
         q: '¿Cómo transfiero la titularidad del espacio de trabajo?',
@@ -512,12 +520,20 @@ const FAQ_CATEGORIES_ES: FaqCategory[] = [
     icon: <BriefcaseIcon />,
     items: [
       {
-        q: '¿Puedo deshacer una corrida de nómina confirmada?',
-        a: 'No — confirmar una corrida la bloquea para siempre; después no se pueden agregar, editar ni eliminar líneas. Revisá bien las horas y los ajustes antes de confirmar.',
+        q: '¿Puedo deshacer una liquidación confirmada?',
+        a: 'No — confirmar una liquidación la bloquea para siempre; después no se pueden agregar, editar ni eliminar líneas. Revisá bien las horas y los ajustes antes de confirmar.',
       },
       {
-        q: '¿El PDF del recibo de sueldo es un documento legal?',
-        a: 'No. Dice explícitamente "Preview only — not sent" ("Solo vista previa — no enviado"), pensado como documento de referencia, no como un recibo de sueldo oficial ni con validez legal.',
+        q: '¿El PDF del recibo de pago es un documento legal?',
+        a: 'No. Los recibos son documentos de seguimiento numerados, con un código QR para que cualquiera verifique que son auténticos, pero no reemplazan al recibo de sueldo que exige la ley laboral. Mientras la liquidación está en borrador, el PDF dice "Vista previa - sin emitir".',
+      },
+      {
+        q: '¿Quién recibe un recibo y cuándo?',
+        a: 'Cada persona de una liquidación recibe un recibo numerado cuando se confirma la liquidación (uno por moneda si cobra en más de una), y cada persona de un pago único, cuando se registra. Le llega por email y queda en Nómina → Mis recibos. Quien gestiona la nómina puede descargar o reenviar cualquiera desde Nómina → Recibos.',
+      },
+      {
+        q: '¿Qué ve alguien que escanea el código QR de un recibo?',
+        a: 'Una página pública que confirma que el recibo es auténtico: la empresa, el número de recibo, el nombre y la inicial del apellido de la persona, el período y la fecha de pago. Nunca se muestran montos.',
       },
       {
         q: '¿Cómo pongo el logo y los datos de la empresa en los recibos?',
@@ -533,10 +549,10 @@ const FAQ_CATEGORIES_ES: FaqCategory[] = [
       },
       {
         q: '¿Qué pasa automáticamente cuando doy de baja a un empleado?',
-        a: 'Su estado pasa a Dado de baja, su compensación se cierra para que deje de aparecer en las próximas corridas de nómina, sus ausencias pendientes se cancelan, y las personas que le reportan directamente se reasignan a un manager que elegís vos. El acceso a la app solo se revoca si marcás esa opción.',
+        a: 'Su estado pasa a Dado de baja, su compensación se cierra para que deje de aparecer en las próximas liquidaciones, sus ausencias pendientes se cancelan, y las personas que le reportan directamente se reasignan a un manager que elegís vos. El acceso a la app solo se revoca si marcás esa opción.',
       },
       {
-        q: 'Una persona recién contratada no aparece en mi corrida de nómina — ¿por qué?',
+        q: 'Una persona recién contratada no aparece en mi liquidación — ¿por qué?',
         a: 'Es probable que su primer contrato de pago todavía no esté confirmado — fijate si tiene un chip "Contrato: pendiente" en su perfil, que pasa a "Vencido" después de 3 días.',
       },
     ],

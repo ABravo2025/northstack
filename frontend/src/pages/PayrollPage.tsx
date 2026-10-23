@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import OvertimeSettingsCard from '../components/payroll/OvertimeSettingsCard';
-import { useNavigate } from 'react-router-dom';
+import PaymentMethodsGrid from '../components/payroll/PaymentMethodsGrid';
+import PayslipSettingsCard from '../components/payroll/PayslipSettingsCard';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import i18n from '../lib/i18n';
 import { api } from '../api';
@@ -31,13 +33,16 @@ import { CURRENCY_CODES, currencyLabel, formatMoney } from '../lib/currencies';
 import { CalendarIcon, EyeIcon, PencilIcon, PlusIcon, TeamIcon } from '../components/common/Icons';
 import PayslipPreviewModal from '../components/payroll/PayslipPreviewModal';
 
+// Payroll v2 (spec-payroll-v2.md §1): no tab bar anymore — each part has its own route and an
+// entry in the Payroll sidebar: pay runs, one-off payments, people; the policies (frequencies,
+// payment methods, overtime) live in Settings → Payroll.
+export type PayrollSection = 'runs' | 'oneoff' | 'people' | 'settings';
+
 interface PayrollPageProps {
   token: string;
+  section: PayrollSection;
 }
 
-// The tab bar exists even while only "policies" has real content (Unidad 3)
-// because docs/spec-payroll.md's later units (Asignaciones, Timeline) add
-// siblings here, not a rebuild of this page's shell.
 type Tab = 'timeline' | 'assignments' | 'policies';
 
 // Plain module-level helpers (not components) resolve via the global i18n instance directly
@@ -191,17 +196,17 @@ function buildAnchorConfig(form: FrequencyFormState): Record<string, unknown> {
   return { preset: form.monthlyPreset };
 }
 
-export default function PayrollPage({ token }: PayrollPageProps) {
+export default function PayrollPage({ token, section }: PayrollPageProps) {
   const { t } = useTranslation('hr');
   const toast = useToast();
   const navigate = useNavigate();
-  const viewsBarRef = useRef<HTMLDivElement>(null);
   const timelineTableRef = useRef<HTMLDivElement>(null);
   const assignmentsTableRef = useRef<HTMLDivElement>(null);
   const frequenciesTableRef = useRef<HTMLDivElement>(null);
   const bulkAssignTableRef = useRef<HTMLDivElement>(null);
   const offPaymentPeopleTableRef = useRef<HTMLDivElement>(null);
-  const [tab, setTab] = useState<Tab>('timeline');
+  const tab: Tab = section === 'people' ? 'assignments' : section === 'settings' ? 'policies' : 'timeline';
+  const [searchParams, setSearchParams] = useSearchParams();
   const [frequencies, setFrequencies] = useState<PayFrequency[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [compensationStatus, setCompensationStatus] = useState<CompensationStatusEntry[]>([]);
@@ -462,8 +467,10 @@ export default function PayrollPage({ token }: PayrollPageProps) {
   usePrimaryAction(
     !canManagePayroll
       ? null
-      : tab === 'timeline'
+      : section === 'runs'
         ? { label: t('payroll.page.timeline.newRun'), onClick: openNewRunModal }
+        : section === 'oneoff'
+          ? { label: t('payroll.page.timeline.oneOffPayment'), onClick: openOffPaymentModal }
         : tab === 'policies'
           ? { label: t('payroll.page.policies.newPolicy'), onClick: openAddFrequency }
           : null,
@@ -480,7 +487,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
       });
       setNewRunModalOpen(false);
       toast.success(t('payroll.page.toasts.runCreated'));
-      navigate(`/hr/payroll/runs/${run.id}`);
+      navigate(`/payroll/runs/${run.id}`);
     } catch (error) {
       toast.error(t('payroll.page.toasts.runCreateFailed', { error: (error as Error).message }));
     } finally {
@@ -488,7 +495,8 @@ export default function PayrollPage({ token }: PayrollPageProps) {
     }
   };
 
-  const openOffPaymentModal = () => {
+  // A declaration (hoisted): the primary action above opens it on the one-off page.
+  function openOffPaymentModal() {
     setOffPaymentSelectedIds(new Set());
     setOffPaymentType('bonus');
     setOffPaymentAmount('');
@@ -496,7 +504,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
     setOffPaymentLabel('');
     setOffPaymentDate(new Date().toISOString().slice(0, 10));
     setOffPaymentModalOpen(true);
-  };
+  }
 
   const toggleOffPaymentSelected = (employeeId: string) => {
     setOffPaymentSelectedIds((prev) => {
@@ -536,10 +544,20 @@ export default function PayrollPage({ token }: PayrollPageProps) {
     | { kind: 'run'; date: string; run: PayrollRun }
     | { kind: 'off-cycle'; date: string; entry: OffCyclePayrollEntry };
 
+  // Pay runs and one-off payments are separate entries now (they shared the old timeline).
   const timelineItems: TimelineItem[] = [
-    ...payrollRuns.map((run): TimelineItem => ({ kind: 'run', date: run.confirmedAt || run.createdAt, run })),
-    ...offCyclePayments.map((entry): TimelineItem => ({ kind: 'off-cycle', date: entry.paymentDate, entry })),
+    ...(section === 'runs' ? payrollRuns.map((run): TimelineItem => ({ kind: 'run', date: run.confirmedAt || run.createdAt, run })) : []),
+    ...(section === 'oneoff' ? offCyclePayments.map((entry): TimelineItem => ({ kind: 'off-cycle', date: entry.paymentDate, entry })) : []),
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  // The overview's "+ New pay run" / "One-off payment" buttons land here with ?new=1.
+  useEffect(() => {
+    if (loading || searchParams.get('new') !== '1') return;
+    if (section === 'runs') openNewRunModal();
+    if (section === 'oneoff') openOffPaymentModal();
+    setSearchParams({}, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, section]);
 
   if (!canManagePayroll) {
     return (
@@ -553,29 +571,12 @@ export default function PayrollPage({ token }: PayrollPageProps) {
   }
 
   return (
-    <div className="container">
+    <div className={section === 'settings' ? '' : 'container'}>
       <div className="page-toolbar">
-        <h2 className="page-title">{t('payroll.page.title')}</h2>
+        <h2 className="page-title">{t(`payroll.nav.${section}`)}</h2>
       </div>
 
-      <div className="views-bar" ref={viewsBarRef}>
-        <button type="button" className={`view-tab ${tab === 'timeline' ? 'active' : ''}`} onClick={() => setTab('timeline')}>
-          {t('payroll.page.tabs.timeline')}
-        </button>
-        <button
-          type="button"
-          className={`view-tab ${tab === 'assignments' ? 'active' : ''}`}
-          onClick={() => setTab('assignments')}
-        >
-          {t('payroll.page.tabs.assignments')}
-        </button>
-        <button type="button" className={`view-tab ${tab === 'policies' ? 'active' : ''}`} onClick={() => setTab('policies')}>
-          {t('payroll.page.tabs.policies')}
-        </button>
-      </div>
-      <HorizontalScrollbar targetRef={viewsBarRef} />
-
-      <div className="mt-4">
+      <div className="mt-2">
         {loading ? (
           <TableSkeleton rows={5} columns={5} />
         ) : (
@@ -584,9 +585,9 @@ export default function PayrollPage({ token }: PayrollPageProps) {
             <>
               <div className="flex items-start justify-between gap-4 mb-3">
                 <p className="text-sm text-ink-muted dark:text-dark-ink-muted">
-                  {t('payroll.page.timeline.description')}
+                  {t(section === 'oneoff' ? 'payroll.nav.oneoffDescription' : 'payroll.nav.runsDescription')}
                 </p>
-                {canManagePayroll && (
+                {canManagePayroll && section === 'oneoff' && (
                   <div className="flex items-center gap-2">
                     <button type="button" className="btn-secondary gap-1.5" onClick={openOffPaymentModal}>
                       <PlusIcon className="h-3.5 w-3.5" />
@@ -616,7 +617,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                           <button
                             type="button"
                             className="btn-secondary btn-sm mt-2"
-                            onClick={() => navigate(`/hr/payroll/runs/${item.run.id}`)}
+                            onClick={() => navigate(`/payroll/runs/${item.run.id}`)}
                           >
                             {t('payroll.page.timeline.open')}
                           </button>
@@ -656,7 +657,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                         <th></th>
                       </tr>
                     </thead>
-                    <TableBody colSpan={5} isEmpty={timelineItems.length === 0} empty={{ icon: <CalendarIcon />, title: t('payroll.page.timeline.emptyTitle'), body: t('payroll.page.timeline.emptyBody') }} onAdd={canManagePayroll ? openNewRunModal : undefined} addLabel={t('payroll.page.timeline.newRun')}>
+                    <TableBody colSpan={5} isEmpty={timelineItems.length === 0} empty={{ icon: <CalendarIcon />, title: t('payroll.page.timeline.emptyTitle'), body: t('payroll.page.timeline.emptyBody') }} onAdd={canManagePayroll ? (section === 'oneoff' ? openOffPaymentModal : openNewRunModal) : undefined} addLabel={t(section === 'oneoff' ? 'payroll.page.timeline.oneOffPayment' : 'payroll.page.timeline.newRun')}>
                       {timelineItems.map((item) =>
                         item.kind === 'run' ? (
                           <tr key={`run-${item.run.id}`}>
@@ -675,7 +676,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                               <button
                                 type="button"
                                 className="btn-secondary btn-sm"
-                                onClick={() => navigate(`/hr/payroll/runs/${item.run.id}`)}
+                                onClick={() => navigate(`/payroll/runs/${item.run.id}`)}
                               >
                                 {t('payroll.page.timeline.open')}
                               </button>
@@ -878,12 +879,13 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                               </th>
                             )}
                             <th>{t('payroll.page.assignments.columns.name')}</th>
+                            <th>{t('payroll.people.fileNumber')}</th>
                             <th>{t('payroll.page.assignments.columns.email')}</th>
                             <th>{t('payroll.page.assignments.columns.currentPolicy')}</th>
                             <th>{t('payroll.page.assignments.columns.status')}</th>
                           </tr>
                         </thead>
-                        <TableBody colSpan={5} isEmpty={visibleAssignments.length === 0} empty={compensationStatus.length === 0
+                        <TableBody colSpan={6} isEmpty={visibleAssignments.length === 0} empty={compensationStatus.length === 0
                             ? {
                                 icon: <TeamIcon />,
                                 title: t('payroll.page.assignments.emptyTitle'),
@@ -908,6 +910,28 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                               )}
                               <td>
                                 {entry.employeeFirstName} {entry.employeeLastName}
+                              </td>
+                              <td>
+                                {/* Payroll v2: file number ("legajo"), printed on payslips; saved on blur. */}
+                                <input
+                                  aria-label={t('payroll.people.fileNumberFor', { name: `${entry.employeeFirstName} ${entry.employeeLastName}` })}
+                                  className="select-compact !w-24"
+                                  defaultValue={entry.fileNumber ?? ''}
+                                  maxLength={30}
+                                  disabled={!canManagePayroll}
+                                  onBlur={async (e) => {
+                                    const value = e.target.value.trim();
+                                    if (value === (entry.fileNumber ?? '')) return;
+                                    try {
+                                      await api.setFileNumber(token, entry.employeeId, value);
+                                      setCompensationStatus((prev) => prev.map((x) => (x.employeeId === entry.employeeId ? { ...x, fileNumber: value || null } : x)));
+                                      toast.success(t('payroll.people.fileNumberSaved'));
+                                    } catch (error) {
+                                      e.target.value = entry.fileNumber ?? '';
+                                      toast.error((error as Error).message);
+                                    }
+                                  }}
+                                />
                               </td>
                               <td>{entry.employeeEmail}</td>
                               <td>
@@ -1041,34 +1065,25 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                 </>
               )}
 
-              <div className="flex items-start justify-between gap-4 mt-6 mb-3">
-                <h3 className="card-title">{t('payroll.page.policies.paymentMethodsTitle')}</h3>
-                {canManagePayroll && (
-                  <button type="button" className="btn-outline gap-1.5" onClick={openAddMethod}>
-                    <PlusIcon className="h-3.5 w-3.5" />
-                    {t('payroll.page.policies.addMethod')}
-                  </button>
-                )}
+              {/* Payroll v2 (unit 4): one grid of switches instead of a card per method. */}
+              <div className="mt-6 mb-3">
+                <h3 className="card-title mb-1">{t('payroll.page.policies.paymentMethodsTitle')}</h3>
+                <p className="text-sm text-ink-muted dark:text-dark-ink-muted">{t('payroll.methods.lead')}</p>
               </div>
-              <div className="flex flex-col gap-2">
-                {paymentMethods.map((method) => (
-                  <div
-                    key={method.id}
-                    className="flex items-center justify-between gap-3 card"
-                    style={{ padding: '0.5rem 0.75rem' }}
-                  >
-                    <span className={!method.isActive ? 'line-through text-ink-muted dark:text-dark-ink-muted' : ''}>{method.name}</span>
-                    {canManagePayroll && (
-                      <button type="button" className="btn-secondary btn-sm" onClick={() => handleToggleMethodActive(method)}>
-                        {method.isActive ? t('payroll.page.policies.deactivate') : t('payroll.page.policies.activate')}
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
+              <PaymentMethodsGrid
+                token={token}
+                canManage={canManagePayroll}
+                onAddCustom={openAddMethod}
+                onToggleCustom={async (id) => {
+                  const method = paymentMethods.find((m) => m.id === id);
+                  if (method) await handleToggleMethodActive(method);
+                }}
+                version={paymentMethods.map((m) => `${m.id}${m.isActive}`).join().length + paymentMethods.length}
+              />
 
               {/* Overtime and surcharges (spec-overtime.md) */}
               {canManagePayroll && <OvertimeSettingsCard token={token} />}
+              {canManagePayroll && <PayslipSettingsCard token={token} />}
             </>
           )}
           </>

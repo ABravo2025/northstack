@@ -1,5 +1,5 @@
 import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
-import type { ImportHoursResult, OvertimePolicy, OvertimeSetup,
+import type { ImportHoursResult, PayrollOverview, PayslipRow, PayslipVerification, PayslipSettingsView, PaymentMethodCatalog, OvertimePolicy, OvertimeSetup,
   BulkCompensationEntryResult,
   CompensationStatusEntry,
   DueDateOffset,
@@ -237,6 +237,73 @@ export const payrollApi = {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) await throwApiError(res);
+  },
+
+  // Payroll v2 (spec-payroll-v2.md).
+  getPayrollOverview: async (token: string): Promise<PayrollOverview> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/overview`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+  listPayslips: async (token: string, q?: string): Promise<PayslipRow[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/payslips${q ? `?q=${encodeURIComponent(q)}` : ''}`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+  listMyPayslips: async (token: string): Promise<PayslipRow[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/payroll/me/payslips`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+  getPayslipPdf: async (token: string, payslipId: string): Promise<Blob> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/payroll/payslips/${payslipId}/pdf`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) await throwApiError(res);
+    return res.blob();
+  },
+  resendPayslip: async (token: string, payslipId: string): Promise<void> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/payslips/${payslipId}/resend`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) await throwApiError(res);
+  },
+  verifyPayslip: async (code: string): Promise<PayslipVerification> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/public/payslips/${encodeURIComponent(code)}`);
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+  getPayslipSettings: async (token: string): Promise<PayslipSettingsView> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/payslip-settings`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+  savePayslipSettings: async (token: string, body: { prefix: number; signerName: string | null; signature?: string | null }): Promise<void> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/payslip-settings`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) await throwApiError(res);
+  },
+  setFileNumber: async (token: string, employeeId: string, fileNumber: string): Promise<{ fileNumber: string | null }> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/people/${employeeId}/file-number`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ fileNumber }),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+  getPaymentMethodCatalog: async (token: string): Promise<PaymentMethodCatalog> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payment-methods/catalog`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+  setKnownPaymentMethod: async (token: string, kind: string, active: boolean): Promise<PaymentMethodCatalog> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payment-methods/known/${kind}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ active }),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
   },
 
   // Overtime and surcharges (spec-overtime.md).

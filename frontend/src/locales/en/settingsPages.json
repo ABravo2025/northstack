@@ -1146,12 +1146,14 @@
     "lead": "Choose which emails you get. You'll still see everything in the bell.",
     "group": {
       "projects": "Projects",
+      "payroll": "Payroll",
       "shifts": "Shifts and timesheet",
       "timeOff": "Time off",
       "sales": "Sales"
     },
     "category": {
       "projectBudget": "A project I own is near or over its hour budget",
+      "payslips": "My payslips when a pay run is confirmed",
       "shifts": "New, changed or cancelled shifts",
       "shiftReminders": "Reminders: tomorrow's shifts and shifts waiting for my answer",
       "shiftSwaps": "Hand-overs and swaps: asks, approvals, outcomes",

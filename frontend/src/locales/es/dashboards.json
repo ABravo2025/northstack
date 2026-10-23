@@ -16,7 +16,7 @@
   "sections": {
     "hr": { "label": "RRHH", "desc": "Dotación, antigüedad y composición organizacional." },
     "timeOff": { "label": "Ausencias", "desc": "Saldos, uso y tendencias de las políticas." },
-    "payroll": { "label": "Nómina", "desc": "Corridas, costos y actividad de pagos." },
+    "payroll": { "label": "Nómina", "desc": "Liquidaciones, costos y actividad de pagos." },
     "payments": { "label": "Pagos", "desc": "Facturas abiertas, reembolsos y suscripciones de Stripe." },
     "sales": { "label": "Ventas", "desc": "Salud del pipeline y tendencias de oportunidades." },
     "tasks": { "label": "Tareas", "desc": "Tasas de finalización y carga de trabajo." },

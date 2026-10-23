@@ -15,7 +15,8 @@ export interface ContractConfirmationDetails {
   effectiveFrom: string;
   nationality: string | null;
   timeOffPolicyNames: string[];
-  paymentMethods: { id: string; name: string }[];
+  // Payroll v2: `asks` = which account detail to ask for (cbu, cvu, iban_ach, email, none, text).
+  paymentMethods: { id: string; name: string; kind?: string; asks?: string }[];
 }
 
 export const contractConfirmationPublicApi = {

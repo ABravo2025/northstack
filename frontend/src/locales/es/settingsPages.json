@@ -494,7 +494,7 @@
     "footerTrialActive_one": "Tu prueba termina en {{count}} día. ¿Agregaste una tarjeta para Starter o Growth? Se te cobra automáticamente en ese momento, sin ningún paso extra. ¿Elegiste Prueba gratuita en cambio? Tu espacio de trabajo sigue funcionando 14 días más antes de pausarse — tenés tiempo de sobra, sin bloqueos sorpresa.",
     "footerTrialActive_other": "Tu prueba termina en {{count}} días. ¿Agregaste una tarjeta para Starter o Growth? Se te cobra automáticamente en ese momento, sin ningún paso extra. ¿Elegiste Prueba gratuita en cambio? Tu espacio de trabajo sigue funcionando 14 días más antes de pausarse — tenés tiempo de sobra, sin bloqueos sorpresa.",
     "footerTrialExpired": "Tu prueba gratuita terminó. Agregá una tarjeta para Starter o Growth para que se te cobre de inmediato y mantener acceso completo.",
-    "footerPayrollDisclaimer": "* Nómina calcula y registra las corridas de pago hoy — todavía no mueve dinero. El procesamiento de pago con un clic llega a través de una futura alianza.",
+    "footerPayrollDisclaimer": "* Nómina calcula y registra las liquidaciones hoy — todavía no mueve dinero. El procesamiento de pago con un clic llega a través de una futura alianza.",
     "cards": {
       "trial": {
         "name": "Prueba gratuita",
@@ -957,7 +957,7 @@
       "timeOffSettings": "Configuración de ausencias",
       "employeeCompensation": "Compensación",
       "employeeTermination": "Baja",
-      "payrollRun": "Corrida de nómina",
+      "payrollRun": "Liquidación de nómina",
       "payFrequency": "Frecuencia de pago",
       "paymentMethod": "Método de pago",
       "statusDefinition": "Estado",
@@ -1113,7 +1113,7 @@
       },
       "money": {
         "title": "Dinero",
-        "manage_payroll": { "label": "Gestionar nómina", "description": "Compensación, corridas de nómina, y la exportación CSV de datos de empleados." },
+        "manage_payroll": { "label": "Gestionar nómina", "description": "Compensación, liquidaciones de nómina, y la exportación CSV de datos de empleados." },
         "manage_billing": { "label": "Gestionar facturación", "description": "Cambiar de plan, método de pago, y cancelar la suscripción." },
         "manage_payments": { "label": "Gestionar pagos", "description": "Conectar Stripe y ver el historial de pagos de clientes." },
         "manage_api_access": { "label": "Gestionar API y webhooks", "description": "Crear y revocar claves de API privadas y webhooks salientes." },
@@ -1151,12 +1151,14 @@
     "lead": "Elegí qué emails recibís. En la campana vas a seguir viendo todo.",
     "group": {
       "projects": "Proyectos",
+      "payroll": "Nómina",
       "shifts": "Turnos y timesheet",
       "timeOff": "Ausencias",
       "sales": "Ventas"
     },
     "category": {
       "projectBudget": "Un proyecto mío está por pasar o pasó sus horas presupuestadas",
+      "payslips": "Mis recibos cuando se confirma una liquidación",
       "shifts": "Turnos nuevos, modificados o cancelados",
       "shiftReminders": "Recordatorios: turnos de mañana y turnos que esperan mi respuesta",
       "shiftSwaps": "Turnos cedidos e intercambios: pedidos, aprobaciones y resultados",

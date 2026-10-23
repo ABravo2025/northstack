@@ -277,7 +277,7 @@
     "revokeAccessLabel": "También revocar su acceso a Northstack",
     "includeFinalPaymentLabel": "Incluir un pago final",
     "finalPaymentDefaultLabel": "Pago final",
-    "additionalPaymentsNote": "Pagos adicionales — las mismas opciones que en una corrida de nómina normal",
+    "additionalPaymentsNote": "Pagos adicionales — las mismas opciones que en una liquidación de nómina normal",
     "addLine": "+ Agregar línea",
     "removeLineAriaLabel": "Quitar línea",
     "scheduleTermination": "Programar desvinculación",
@@ -350,16 +350,16 @@
         "none": "—"
       },
       "timeline": {
-        "description": "Cada corrida de nómina y pago único en un solo lugar, del más reciente al más antiguo.",
+        "description": "Cada liquidación de nómina y pago único en un solo lugar, del más reciente al más antiguo.",
         "oneOffPayment": "Pago único",
-        "newRun": "Nueva corrida",
+        "newRun": "Nueva liquidación",
         "emptyTitle": "Todavía no hay actividad de nómina",
-        "emptyBody": "Creá una corrida para una frecuencia de pago, o registrá un pago único.",
-        "runMeta": "{{date}} · Corrida",
+        "emptyBody": "Creá una liquidación para una frecuencia de pago, o registrá un pago único.",
+        "runMeta": "{{date}} · Liquidación",
         "open": "Abrir",
         "payslipPreview": "Vista previa del recibo",
         "payslipPreviewAriaLabel": "Vista previa del recibo de {{name}}",
-        "runChip": "Corrida",
+        "runChip": "Liquidación",
         "oneOffChip": "Único",
         "columns": {
           "date": "Fecha",
@@ -451,14 +451,14 @@
         "assignedSuccess_one": "Se asignó la política de pago a {{count}} persona.",
         "assignedSuccess_other": "Se asignó la política de pago a {{count}} personas.",
         "assignFailed": "Error al asignar la política de pago: {{error}}",
-        "runCreated": "Corrida de nómina creada.",
-        "runCreateFailed": "Error al crear la corrida: {{error}}",
+        "runCreated": "Liquidación de nómina creada.",
+        "runCreateFailed": "Error al crear la liquidación: {{error}}",
         "offPaymentCreated_one": "Se creó {{count}} pago único.",
         "offPaymentCreated_other": "Se crearon {{count}} pagos únicos.",
         "offPaymentFailed": "Error al crear el pago único: {{error}}"
       },
       "newRunModal": {
-        "title": "Nueva corrida",
+        "title": "Nueva liquidación",
         "fields": {
           "payFrequency": "Frecuencia de pago",
           "period": "Período",
@@ -562,16 +562,16 @@
     },
     "runDetail": {
       "ownerOnly": "Nómina solo es visible para el dueño del tenant.",
-      "runNotFound": "No se encontró la corrida",
+      "runNotFound": "No se encontró la liquidación",
       "backAriaLabel": "Volver a Nómina",
       "payFrequencyLabel": "Frecuencia de pago: {{name}}",
-      "addPersonToRun": "Agregar persona a esta corrida",
-      "confirmRun": "Confirmar corrida",
+      "addPersonToRun": "Agregar persona a esta liquidación",
+      "confirmRun": "Confirmar liquidación",
       "confirming": "Confirmando…",
       "confirmDisabledTooltip": "Cargá las horas de cada persona por hora antes de confirmar",
       "excludedNotice_one": "{{count}} persona excluida — el contrato todavía no está confirmado.",
       "excludedNotice_other": "{{count}} personas excluidas — el contrato todavía no está confirmado.",
-      "noOneInRun": "Todavía no hay nadie en esta corrida.",
+      "noOneInRun": "Todavía no hay nadie en esta liquidación.",
       "columns": {
         "name": "Nombre",
         "type": "Tipo",
@@ -610,22 +610,22 @@
         }
       },
       "addPersonModal": {
-        "title": "Agregar persona a esta corrida",
-        "emptyMessage": "No queda nadie para agregar — o todos los que están en esta frecuencia de pago ya están en esta corrida, o nadie más tiene una compensación activa en {{payFrequency}}.",
-        "fallbackPayFrequency": "la frecuencia de pago de esta corrida",
+        "title": "Agregar persona a esta liquidación",
+        "emptyMessage": "No queda nadie para agregar — o todos los que están en esta frecuencia de pago ya están en esta liquidación, o nadie más tiene una compensación activa en {{payFrequency}}.",
+        "fallbackPayFrequency": "la frecuencia de pago de esta liquidación",
         "noActiveCompensationNote": " — sin compensación activa",
         "add": "Agregar"
       },
       "toasts": {
-        "runConfirmed": "Corrida confirmada.",
-        "confirmFailed": "Error al confirmar la corrida: {{error}}",
+        "runConfirmed": "Liquidación confirmada.",
+        "confirmFailed": "Error al confirmar la liquidación: {{error}}",
         "hoursUpdateFailed": "Error al actualizar las horas: {{error}}",
         "adjustmentAdded": "Ajuste agregado.",
         "adjustmentAddFailed": "Error al agregar el ajuste: {{error}}",
         "adjustmentRemoved": "Ajuste eliminado.",
         "adjustmentRemoveFailed": "Error al eliminar el ajuste: {{error}}",
         "peopleLoadFailed": "Error al cargar las personas: {{error}}",
-        "personAdded": "Persona agregada a esta corrida.",
+        "personAdded": "Persona agregada a esta liquidación.",
         "personAddFailed": "Error al agregar a la persona: {{error}}"
       },
       "importHours": {
@@ -653,6 +653,37 @@
           "returned": "devuelta"
         },
         "breakdown": "{{regular}} h normales · {{weekday}} h extra · {{rest}} h en descanso · {{night}} h nocturnas"
+      },
+      "v2": {
+        "people_one": "{{count}} persona",
+        "people_other": "{{count}} personas",
+        "stepsLabel": "Pasos de la liquidación",
+        "steps": {
+          "people": "Personas",
+          "hours": "Horas",
+          "adjustments": "Ajustes",
+          "confirm": "Confirmar y emitir recibos"
+        },
+        "total": "Total {{currency}}",
+        "vsPrevious": "{{pct}} % contra la anterior",
+        "hours": "Horas",
+        "overtime": "{{hours}} h extra",
+        "adjustments": "Ajustes",
+        "adjustmentsHint": "{{bonuses}} adicionales · {{deductions}} deducciones",
+        "payslips": "Recibos",
+        "seePayslips": "Ver recibos",
+        "unapprovedTitle": "Semanas esperando aprobación (sus horas no están incluidas):",
+        "unapprovedLine": "{{name}}: semana del {{date}}",
+        "review": "Revisar y confirmar",
+        "reviewTitle": "Confirmar {{period}}",
+        "reviewPeople": "Personas",
+        "cancel": "Cancelar",
+        "confirmAndIssue": "Confirmar y emitir recibos",
+        "reviewWarn_one": "{{count}} semana sigue esperando aprobación y no está incluida.",
+        "reviewWarn_other": "{{count}} semanas siguen esperando aprobación y no están incluidas.",
+        "reviewBody": "Cada persona recibe su recibo numerado por email y lo ve en Mis recibos. La liquidación queda bloqueada al confirmarla.",
+        "confirmedToast_one": "Liquidación confirmada · {{count}} recibo emitido",
+        "confirmedToast_other": "Liquidación confirmada · {{count}} recibos emitidos"
       }
     },
     "overtime": {
@@ -692,6 +723,159 @@
       "save": "Guardar",
       "saving": "Guardando…",
       "saved": "Reglas de horas extra guardadas"
+    },
+    "nav": {
+      "back": "Volver",
+      "section": "Nómina",
+      "overview": "Resumen",
+      "runs": "Liquidaciones",
+      "oneoff": "Pagos únicos",
+      "people": "Personas",
+      "payslips": "Recibos",
+      "mine": "Mis recibos",
+      "settings": "Configuración",
+      "runsDescription": "Todas las liquidaciones, de la más reciente a la más antigua.",
+      "oneoffDescription": "Bonos, reintegros y adelantos pagados fuera de una liquidación."
+    },
+    "overview": {
+      "title": "Nómina",
+      "subtitle_one": "{{count}} persona en nómina",
+      "subtitle_other": "{{count}} personas en nómina",
+      "inProgress": "Liquidación en curso",
+      "noDraft": "No hay una liquidación en curso",
+      "lastRun": "Última liquidación",
+      "noRuns": "Todavía no hay liquidaciones confirmadas",
+      "people_one": "{{count}} persona",
+      "people_other": "{{count}} personas",
+      "payslips_one": "{{count}} recibo",
+      "payslips_other": "{{count}} recibos",
+      "hoursPaid": "Horas pagadas",
+      "overtime": "{{hours}} h extra",
+      "variation": "Variación",
+      "vsPrevious": "contra la liquidación anterior de la misma frecuencia",
+      "pendingTitle": "Antes del próximo cierre",
+      "pendingCount_one": "{{count}} pendiente",
+      "pendingCount_other": "{{count}} pendientes",
+      "allClear": "Todo en orden",
+      "nothingPending": "Nada pendiente: horas aprobadas, contratos confirmados y sin borradores viejos.",
+      "kind": {
+        "hours": "Horas",
+        "contract": "Contrato",
+        "draft": "Borrador"
+      },
+      "unapprovedWeek": "La semana del {{date}} de {{name}} no está aprobada: todavía no se pueden traer sus horas",
+      "missingHours": "{{name}} cobra por hora y no tiene horas en la liquidación en curso",
+      "unconfirmed": "{{name}} no confirmó su contrato: no entra en las liquidaciones",
+      "staleDraft_one": "\"{{period}}\" está en borrador hace {{count}} día",
+      "staleDraft_other": "\"{{period}}\" está en borrador hace {{count}} días",
+      "goApprovals": "Ir a Aprobaciones",
+      "goPeople": "Ver personas",
+      "open": "Abrir",
+      "recentTitle": "Últimas liquidaciones",
+      "seeAll": "Ver todas",
+      "cols": {
+        "period": "Período",
+        "frequency": "Frecuencia",
+        "people": "Personas",
+        "total": "Total",
+        "status": "Estado"
+      }
+    },
+    "payslips": {
+      "subtitle": "Todos los recibos emitidos. Cada uno tiene número y se puede verificar con su código.",
+      "search": "Buscar por persona o período",
+      "cols": {
+        "number": "N.º",
+        "person": "Persona",
+        "period": "Período",
+        "paymentDate": "Fecha de pago",
+        "net": "Neto",
+        "sent": "Enviado"
+      },
+      "sent": "Enviado",
+      "view": "Ver",
+      "resend": "Reenviar",
+      "resent": "Recibo enviado a {{name}}",
+      "emptyTitle": "Todavía no hay recibos",
+      "emptyBody": "Se emiten al confirmar una liquidación o al hacer un pago único.",
+      "modalTitle": "Recibo {{number}}",
+      "modalHint": "Recibo emitido. La persona lo recibió por email y lo ve en Mis recibos."
+    },
+    "mine": {
+      "subtitle": "Tus recibos. Solo los ves vos (y quien liquida la nómina).",
+      "gross": "Haberes",
+      "deductions": "Deducciones",
+      "emptyTitle": "Todavía no hay recibos",
+      "emptyBody": "Tu recibo aparece acá cuando tu empresa confirma una liquidación.",
+      "modalHint": "Tu recibo. Descargalo para guardar una copia."
+    },
+    "verify": {
+      "title": "Verificación de recibo",
+      "loading": "Verificando…",
+      "valid": "Este recibo es auténtico",
+      "invalid": "No hay ningún recibo con el código {{code}}",
+      "invalidBody": "Revisá el código impreso al pie del recibo.",
+      "company": "Emitido por",
+      "number": "Número",
+      "person": "Persona",
+      "period": "Período",
+      "paymentDate": "Fecha de pago",
+      "issued": "Emitido el",
+      "note": "Por privacidad, acá nunca se muestran montos."
+    },
+    "methods": {
+      "lead": "Activá los métodos con los que paga tu empresa. Cada persona elige uno al confirmar su contrato.",
+      "kinds": {
+        "bank_ar": "Transferencia bancaria (CBU/CVU)",
+        "mercadopago": "Mercado Pago",
+        "bank_intl": "Transferencia internacional",
+        "wise": "Wise",
+        "payoneer": "Payoneer",
+        "paypal": "PayPal",
+        "cash": "Efectivo"
+      },
+      "asks": {
+        "cbu": "Pide CBU o CVU",
+        "cvu": "Pide CVU o alias",
+        "iban_ach": "Pide IBAN o ACH",
+        "email": "Pide el email de la cuenta",
+        "none": "No pide datos",
+        "text": "Pide los datos de la cuenta"
+      },
+      "people_one": "{{count}} persona",
+      "people_other": "{{count}} personas",
+      "nobody": "nadie todavía",
+      "addOther": "Otro método",
+      "turnOn": "Activar",
+      "turnOff": "Desactivar",
+      "offTitle": "¿Desactivar {{name}}?",
+      "offBody_one": "{{count}} persona cobra con este método. Lo mantiene hasta su próximo contrato, donde elige otro.",
+      "offBody_other": "{{count}} personas cobran con este método. Lo mantienen hasta su próximo contrato, donde eligen otro.",
+      "hintAr": "Para empresas de Argentina vienen activados la transferencia bancaria y Mercado Pago.",
+      "hintOther": "Vienen activados la transferencia internacional, Wise y Payoneer."
+    },
+    "payslipSettings": {
+      "title": "Recibo de pago",
+      "lead": {
+        "ar": "Modelo Argentina: datos de la empresa y de la persona, haberes y deducciones, neto en letras, firmas y código de verificación.",
+        "us": "Modelo EE. UU. (pay stub): haberes, deducciones y neto, con código de verificación."
+      },
+      "prefix": "Prefijo de numeración",
+      "next": "Próximo número",
+      "signer": "Firma",
+      "signerPlaceholder": "Ej.: Camila Ortega, RR. HH.",
+      "signature": "Firma",
+      "noSignature": "Sin firma",
+      "upload": "Subir imagen",
+      "remove": "Quitar",
+      "badType": "Subí una imagen PNG o JPG",
+      "tooBig": "La imagen es muy grande (máx. 300 KB)",
+      "saved": "Configuración del recibo guardada"
+    },
+    "people": {
+      "fileNumber": "Legajo",
+      "fileNumberFor": "Legajo de {{name}}",
+      "fileNumberSaved": "Legajo guardado"
     }
   }
 }

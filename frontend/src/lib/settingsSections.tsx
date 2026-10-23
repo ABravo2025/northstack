@@ -64,6 +64,10 @@ export function getSettingsSections(permissions: SettingsSectionsPermissions): S
   if (permissions.has('manage_shifts')) {
     companyItems.push({ to: 'shifts', label: t('settings.shifts.label'), desc: t('settings.shifts.desc'), icon: <ClockIcon /> });
   }
+  // Payroll v2 (spec-payroll-v2.md §1): pay frequencies, payment methods, overtime, payslip.
+  if (permissions.has('manage_payroll')) {
+    companyItems.push({ to: 'payroll', label: t('settings.payroll.label'), desc: t('settings.payroll.desc'), icon: <BriefcaseIcon /> });
+  }
   if (permissions.has('manage_users')) {
     companyItems.push({ to: 'users', label: t('settings.users.label'), desc: t('settings.users.desc'), icon: <TeamIcon /> });
   }

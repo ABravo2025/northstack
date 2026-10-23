@@ -214,17 +214,54 @@
   "settings": {
     "myAccount": "Mi cuenta",
     "company": "Empresa",
-    "profile": { "label": "Perfil", "desc": "Nombre, teléfono, redes sociales y contraseña." },
-    "integrations": { "label": "Integraciones", "desc": "Conectá Northstack con otras herramientas." },
-    "billing": { "label": "Facturación", "desc": "Plan, facturas y método de pago." },
-    "companyProfile": { "label": "Datos de la empresa", "desc": "Nombre, logo, datos de contacto y moneda." },
-    "timeOffRules": { "label": "Time Off", "desc": "Calendario de feriados, semana laboral, días libres." },
-    "shifts": { "label": "Turnos", "desc": "Locaciones, confirmaciones y reglas de asignación." },
-    "users": { "label": "Usuarios", "desc": "Invitá personas y gestioná roles." },
-    "publicForms": { "label": "Formularios públicos", "desc": "Formularios externos de carga por módulo." },
-    "pipelines": { "label": "Pipelines", "desc": "Etapas de venta y sus resultados." },
-    "activityLog": { "label": "Registro de actividad", "desc": "Quién creó, cambió o eliminó qué." },
-    "rolesPermissions": { "label": "Roles y permisos", "desc": "Controlá qué puede ver y hacer cada rol." }
+    "profile": {
+      "label": "Perfil",
+      "desc": "Nombre, teléfono, redes sociales y contraseña."
+    },
+    "integrations": {
+      "label": "Integraciones",
+      "desc": "Conectá Northstack con otras herramientas."
+    },
+    "billing": {
+      "label": "Facturación",
+      "desc": "Plan, facturas y método de pago."
+    },
+    "companyProfile": {
+      "label": "Datos de la empresa",
+      "desc": "Nombre, logo, datos de contacto y moneda."
+    },
+    "timeOffRules": {
+      "label": "Time Off",
+      "desc": "Calendario de feriados, semana laboral, días libres."
+    },
+    "shifts": {
+      "label": "Turnos",
+      "desc": "Locaciones, confirmaciones y reglas de asignación."
+    },
+    "users": {
+      "label": "Usuarios",
+      "desc": "Invitá personas y gestioná roles."
+    },
+    "publicForms": {
+      "label": "Formularios públicos",
+      "desc": "Formularios externos de carga por módulo."
+    },
+    "pipelines": {
+      "label": "Pipelines",
+      "desc": "Etapas de venta y sus resultados."
+    },
+    "activityLog": {
+      "label": "Registro de actividad",
+      "desc": "Quién creó, cambió o eliminó qué."
+    },
+    "rolesPermissions": {
+      "label": "Roles y permisos",
+      "desc": "Controlá qué puede ver y hacer cada rol."
+    },
+    "payroll": {
+      "label": "Nómina",
+      "desc": "Frecuencias de pago, métodos de pago, horas extra y recibos."
+    }
   },
   "profile": {
     "cardTitle": "Perfil",
@@ -349,7 +386,8 @@
       "close": "Cerrar el recorrido",
       "skip": "Saltar",
       "take": "Hacer el recorrido",
-      "skipTour": "Saltar el recorrido", "finishButton": "Terminar",
+      "skipTour": "Saltar el recorrido",
+      "finishButton": "Terminar",
       "finish": {
         "title": "¡Listo!",
         "body": "¿Querés empezar a cargar tus datos reales, o preferís explorar primero con datos de ejemplo?"

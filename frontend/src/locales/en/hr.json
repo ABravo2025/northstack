@@ -653,6 +653,37 @@
           "returned": "sent back"
         },
         "breakdown": "{{regular}} h normal · {{weekday}} h overtime · {{rest}} h rest day · {{night}} h night"
+      },
+      "v2": {
+        "people_one": "{{count}} person",
+        "people_other": "{{count}} people",
+        "stepsLabel": "Pay run steps",
+        "steps": {
+          "people": "People",
+          "hours": "Hours",
+          "adjustments": "Adjustments",
+          "confirm": "Confirm and issue payslips"
+        },
+        "total": "Total {{currency}}",
+        "vsPrevious": "{{pct}} % vs. previous",
+        "hours": "Hours",
+        "overtime": "{{hours}} h overtime",
+        "adjustments": "Adjustments",
+        "adjustmentsHint": "{{bonuses}} additions · {{deductions}} deductions",
+        "payslips": "Payslips",
+        "seePayslips": "See payslips",
+        "unapprovedTitle": "Weeks waiting for approval (their hours are not included):",
+        "unapprovedLine": "{{name}}: week of {{date}}",
+        "review": "Review and confirm",
+        "reviewTitle": "Confirm {{period}}",
+        "reviewPeople": "People",
+        "cancel": "Cancel",
+        "confirmAndIssue": "Confirm and issue payslips",
+        "reviewWarn_one": "{{count}} week is still waiting for approval and is not included.",
+        "reviewWarn_other": "{{count}} weeks are still waiting for approval and are not included.",
+        "reviewBody": "Each person gets a numbered payslip by email and can see it in My payslips. The pay run is locked once confirmed.",
+        "confirmedToast_one": "Pay run confirmed · {{count}} payslip issued",
+        "confirmedToast_other": "Pay run confirmed · {{count}} payslips issued"
       }
     },
     "overtime": {
@@ -692,6 +723,159 @@
       "save": "Save",
       "saving": "Saving…",
       "saved": "Overtime rules saved"
+    },
+    "nav": {
+      "back": "Back",
+      "section": "Payroll",
+      "overview": "Overview",
+      "runs": "Pay runs",
+      "oneoff": "One-off payments",
+      "people": "People",
+      "payslips": "Payslips",
+      "mine": "My payslips",
+      "settings": "Settings",
+      "runsDescription": "Every pay run, newest first.",
+      "oneoffDescription": "Bonuses, reimbursements and advances paid outside a pay run."
+    },
+    "overview": {
+      "title": "Payroll",
+      "subtitle_one": "{{count}} person in payroll",
+      "subtitle_other": "{{count}} people in payroll",
+      "inProgress": "Pay run in progress",
+      "noDraft": "No pay run in progress",
+      "lastRun": "Last pay run",
+      "noRuns": "No confirmed pay runs yet",
+      "people_one": "{{count}} person",
+      "people_other": "{{count}} people",
+      "payslips_one": "{{count}} payslip",
+      "payslips_other": "{{count}} payslips",
+      "hoursPaid": "Hours paid",
+      "overtime": "{{hours}} h overtime",
+      "variation": "Change",
+      "vsPrevious": "vs. the previous run of the same frequency",
+      "pendingTitle": "Before the next close",
+      "pendingCount_one": "{{count}} pending",
+      "pendingCount_other": "{{count}} pending",
+      "allClear": "All clear",
+      "nothingPending": "Nothing pending: approved hours, confirmed contracts, no old drafts.",
+      "kind": {
+        "hours": "Hours",
+        "contract": "Contract",
+        "draft": "Draft"
+      },
+      "unapprovedWeek": "{{name}}'s week of {{date}} isn't approved: its hours can't be brought in yet",
+      "missingHours": "{{name}} is paid by the hour and has no hours in the pay run in progress",
+      "unconfirmed": "{{name}} hasn't confirmed their contract: they aren't included in pay runs",
+      "staleDraft_one": "\"{{period}}\" has been a draft for {{count}} day",
+      "staleDraft_other": "\"{{period}}\" has been a draft for {{count}} days",
+      "goApprovals": "Go to Approvals",
+      "goPeople": "See people",
+      "open": "Open",
+      "recentTitle": "Latest pay runs",
+      "seeAll": "See all",
+      "cols": {
+        "period": "Period",
+        "frequency": "Frequency",
+        "people": "People",
+        "total": "Total",
+        "status": "Status"
+      }
+    },
+    "payslips": {
+      "subtitle": "Every issued payslip. Each is numbered and can be verified with its code.",
+      "search": "Search by person or period",
+      "cols": {
+        "number": "No.",
+        "person": "Person",
+        "period": "Period",
+        "paymentDate": "Payment date",
+        "net": "Net pay",
+        "sent": "Emailed"
+      },
+      "sent": "Sent",
+      "view": "View",
+      "resend": "Resend",
+      "resent": "Payslip sent to {{name}}",
+      "emptyTitle": "No payslips yet",
+      "emptyBody": "They are issued when a pay run is confirmed or a one-off payment is made.",
+      "modalTitle": "Payslip {{number}}",
+      "modalHint": "Issued payslip. The person received it by email and can see it in My payslips."
+    },
+    "mine": {
+      "subtitle": "Your payslips. Only you (and whoever runs payroll) can see them.",
+      "gross": "Gross",
+      "deductions": "Deductions",
+      "emptyTitle": "No payslips yet",
+      "emptyBody": "Your payslip shows up here when your company confirms a pay run.",
+      "modalHint": "Your payslip. Download it to keep a copy."
+    },
+    "verify": {
+      "title": "Payslip verification",
+      "loading": "Checking…",
+      "valid": "This payslip is genuine",
+      "invalid": "No payslip with the code {{code}}",
+      "invalidBody": "Check the code printed at the bottom of the payslip.",
+      "company": "Issued by",
+      "number": "Number",
+      "person": "Person",
+      "period": "Period",
+      "paymentDate": "Payment date",
+      "issued": "Issued on",
+      "note": "For privacy, amounts are never shown here."
+    },
+    "methods": {
+      "lead": "Turn on the methods your company pays with. People pick one when they confirm their contract.",
+      "kinds": {
+        "bank_ar": "Bank transfer (CBU/CVU)",
+        "mercadopago": "Mercado Pago",
+        "bank_intl": "International transfer",
+        "wise": "Wise",
+        "payoneer": "Payoneer",
+        "paypal": "PayPal",
+        "cash": "Cash"
+      },
+      "asks": {
+        "cbu": "Asks for CBU or CVU",
+        "cvu": "Asks for CVU or alias",
+        "iban_ach": "Asks for IBAN or ACH",
+        "email": "Asks for the account email",
+        "none": "Asks for nothing",
+        "text": "Asks for the account details"
+      },
+      "people_one": "{{count}} person",
+      "people_other": "{{count}} people",
+      "nobody": "nobody yet",
+      "addOther": "Other method",
+      "turnOn": "Turn on",
+      "turnOff": "Turn off",
+      "offTitle": "Turn off {{name}}?",
+      "offBody_one": "{{count}} person is paid with it. They keep it until their next contract, where they pick another method.",
+      "offBody_other": "{{count}} people are paid with it. They keep it until their next contract, where they pick another method.",
+      "hintAr": "For companies in Argentina, bank transfer and Mercado Pago come on by default.",
+      "hintOther": "International transfer, Wise and Payoneer come on by default."
+    },
+    "payslipSettings": {
+      "title": "Payslip",
+      "lead": {
+        "ar": "Argentina model: company and person details, earnings and deductions, net pay in words, signatures and a verification code.",
+        "us": "Pay stub: earnings, deductions and net pay, with a verification code."
+      },
+      "prefix": "Number prefix",
+      "next": "Next number",
+      "signer": "Signed by",
+      "signerPlaceholder": "e.g. Camila Ortega, HR",
+      "signature": "Signature",
+      "noSignature": "No signature",
+      "upload": "Upload image",
+      "remove": "Remove",
+      "badType": "Upload a PNG or JPG image",
+      "tooBig": "The image is too big (max 300 KB)",
+      "saved": "Payslip settings saved"
+    },
+    "people": {
+      "fileNumber": "File no.",
+      "fileNumberFor": "File number for {{name}}",
+      "fileNumberSaved": "File number saved"
     }
   }
 }

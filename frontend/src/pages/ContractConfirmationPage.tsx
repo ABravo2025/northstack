@@ -54,7 +54,10 @@ export default function ContractConfirmationPage({ onConfirmed }: ContractConfir
   // "Wire transfer" is matched by name, not a dedicated flag — this is the
   // spec's own chosen mechanism (docs/spec-payroll.md Unidad 7): any other
   // payment method gets a single username/email field.
-  const isWireTransfer = selectedMethod?.name === 'Wire transfer';
+  // Payroll v2: the method's `asks` decides the field (older backends: by name, as before).
+  const asks = selectedMethod?.asks ?? (selectedMethod?.name === 'Wire transfer' ? 'iban_ach' : 'text');
+  const isWireTransfer = asks === 'iban_ach';
+  const asksNothing = asks === 'none';
 
   const canSubmit =
     Boolean(phone.trim()) &&
@@ -65,7 +68,7 @@ export default function ContractConfirmationPage({ onConfirmed }: ContractConfir
       ? subType === 'iban'
         ? Boolean(ibanValue.trim())
         : Boolean(routingNumber.trim()) && Boolean(accountNumber.trim())
-      : Boolean(usernameValue.trim())) &&
+      : asksNothing || Boolean(usernameValue.trim())) &&
     acceptedContract &&
     acceptedTerms;
 
@@ -78,7 +81,9 @@ export default function ContractConfirmationPage({ onConfirmed }: ContractConfir
         ? subType === 'iban'
           ? ibanValue.trim()
           : JSON.stringify({ routingNumber: routingNumber.trim(), accountNumber: accountNumber.trim() })
-        : usernameValue.trim();
+        : asksNothing
+          ? '-'
+          : usernameValue.trim();
 
       const response = await api.confirmContract(token, {
         phone,
@@ -240,7 +245,7 @@ export default function ContractConfirmationPage({ onConfirmed }: ContractConfir
                     <option value="">{t('common.select')}</option>
                     {details.paymentMethods.map((method) => (
                       <option key={method.id} value={method.id}>
-                        {method.name}
+                        {method.kind && method.kind !== 'other' ? t(`contract.methodKinds.${method.kind}`, { defaultValue: method.name }) : method.name}
                       </option>
                     ))}
                   </select>
@@ -318,10 +323,10 @@ export default function ContractConfirmationPage({ onConfirmed }: ContractConfir
                   </>
                 )}
 
-                {paymentMethodId && !isWireTransfer && (
+                {paymentMethodId && !isWireTransfer && !asksNothing && (
                   <div className="form-group">
                     <label htmlFor="confirm-username">
-                      {t('contract.usernameOn', { method: selectedMethod?.name ?? '' })}
+                      {asks === 'text' ? t('contract.usernameOn', { method: selectedMethod?.name ?? '' }) : t(`contract.asks.${asks}`)}
                       <RequiredMark />
                     </label>
                     <input

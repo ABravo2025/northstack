@@ -4,6 +4,7 @@ import { api } from '../../api';
 import type { ImportHoursResult } from '../../api';
 import Modal from '../common/Modal';
 import { useToast } from '../common/ToastProvider';
+import { formatNumber } from '../../lib/currencies';
 
 interface ImportHoursModalProps {
   token: string;
@@ -105,14 +106,14 @@ export default function ImportHoursModal({ token, runId, cadence, onClose, onImp
             {result.updated.map((u) => (
               <li key={u.employeeId} className="flex flex-wrap justify-between gap-x-3">
                 <span>{u.name}</span>
-                <span className="font-semibold tabular-nums">{t('payroll.runDetail.importHours.hours', { hours: u.hours.toLocaleString(i18n.language.startsWith('es') ? 'es-AR' : 'en-US') })}</span>
+                <span className="font-semibold tabular-nums">{t('payroll.runDetail.importHours.hours', { hours: formatNumber(u.hours) })}</span>
                 {u.overtime && (u.overtime.weekdayHours > 0 || u.overtime.restHours > 0 || u.overtime.nightHours > 0) && (
                   <span className="w-full text-xs text-ink-muted dark:text-dark-ink-muted">
                     {t('payroll.runDetail.importHours.breakdown', {
-                      regular: u.overtime.regularHours.toLocaleString(i18n.language.startsWith('es') ? 'es-AR' : 'en-US'),
-                      weekday: u.overtime.weekdayHours.toLocaleString(i18n.language.startsWith('es') ? 'es-AR' : 'en-US'),
-                      rest: u.overtime.restHours.toLocaleString(i18n.language.startsWith('es') ? 'es-AR' : 'en-US'),
-                      night: u.overtime.nightHours.toLocaleString(i18n.language.startsWith('es') ? 'es-AR' : 'en-US'),
+                      regular: formatNumber(u.overtime.regularHours),
+                      weekday: formatNumber(u.overtime.weekdayHours),
+                      rest: formatNumber(u.overtime.restHours),
+                      night: formatNumber(u.overtime.nightHours),
                     })}
                   </span>
                 )}

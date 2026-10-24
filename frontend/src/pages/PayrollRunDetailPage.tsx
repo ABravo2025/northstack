@@ -10,7 +10,7 @@ import StatusChip from '../components/common/StatusChip';
 import PayslipPreviewModal from '../components/payroll/PayslipPreviewModal';
 import ImportHoursModal from '../components/payroll/ImportHoursModal';
 import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar';
-import { formatMoney } from '../lib/currencies';
+import { formatMoney, formatNumber } from '../lib/currencies';
 import { ChevronDownIcon, ChevronLeftIcon, ClockIcon, EyeIcon, PlusIcon, TrashIcon } from '../components/common/Icons';
 import { usePermissions } from '../contexts/PermissionsContext';
 
@@ -224,8 +224,7 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
       if (e.type === 'deduction') deductionsCount += 1;
     }
   }
-  const loc = i18n.language.startsWith('es') ? 'es-AR' : 'en-US';
-  const fmtNum = (n: number) => n.toLocaleString(loc, { maximumFractionDigits: 2 });
+  const fmtNum = (n: number) => formatNumber(n);
   const currencies = Object.keys(totals).sort((a, b) => totals[b] - totals[a]);
   const variation = (c: string) => {
     const prev = detail.previousTotals?.[c];
@@ -494,7 +493,7 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
                                     <tr key={adj.id}>
                                       <td>{t(`payroll.runDetail.adjustmentForm.typeOptions.${adj.type}`, { defaultValue: adj.type })}</td>
                                       <td>{formatMoney(adj.amountCents, adj.currency)}</td>
-                                      <td>{adj.type === 'overtime' && adj.hoursQty != null ? `${adj.label ?? ''} · ${adj.hoursQty.toLocaleString(i18n.language.startsWith('es') ? 'es-AR' : 'en-US')} h` : adj.label || '—'}</td>
+                                      <td>{adj.type === 'overtime' && adj.hoursQty != null ? `${adj.label ?? ''} · ${formatNumber(adj.hoursQty)} h` : adj.label || '—'}</td>
                                       {isDraft && (
                                         <td>
                                           <button

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../api';
 import type { MyPayrollHours } from '../../api';
+import { formatNumber } from '../../lib/currencies';
 
 // Timesheet → "Hours sent to payroll" (Alejandro, 2026-10-21: transparency for each person): the hours
 // of each pay run they're in — from their approved weeks or typed in by payroll — and whether the
@@ -41,8 +42,8 @@ export default function PayrollHoursCard({ token }: { token: string }) {
                 <td className="font-medium">{r.periodLabel}</td>
                 <td>{r.from && r.to ? `${day(r.from)} – ${day(r.to)}` : t('timesheet.payroll.manual')}</td>
                 <td className="tabular-nums">{r.overtimeHours
-                    ? t('timesheet.payroll.hoursWithExtra', { hours: (r.hours + r.overtimeHours).toLocaleString(i18n.language.startsWith('es') ? 'es-AR' : 'en-US'), extra: r.overtimeHours.toLocaleString(i18n.language.startsWith('es') ? 'es-AR' : 'en-US') })
-                    : t('timesheet.payroll.hoursValue', { hours: r.hours.toLocaleString(i18n.language.startsWith('es') ? 'es-AR' : 'en-US') })}</td>
+                    ? t('timesheet.payroll.hoursWithExtra', { hours: formatNumber((r.hours + r.overtimeHours)), extra: formatNumber(r.overtimeHours) })
+                    : t('timesheet.payroll.hoursValue', { hours: formatNumber(r.hours) })}</td>
                 <td>
                   <span className={`to-chip ${r.status === 'confirmed' ? 'to-chip-approved' : 'to-chip-pending'}`}>{t(`timesheet.payroll.state.${r.status}`)}</span>
                 </td>

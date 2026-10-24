@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
+let nextFileNumber = 1001;
 vi.mock('../src/lib/prisma.js', () => ({
   default: {
+    tenant: {
+      update: vi.fn(async () => ({ nextFileNumber: ++nextFileNumber })),
+    },
     employee: {
       create: vi.fn(async (data) => ({
         id: 'employee-id',
@@ -42,5 +46,13 @@ describe('HR employee service', () => {
     });
 
     expect(employee.statusId).toBe('custom-status-id');
+  });
+
+  it('gives each new person the next correlative 5-digit file number', async () => {
+    nextFileNumber = 1001;
+    const first = await createEmployee({ firstName: 'Ana', lastName: 'Lopez', email: 'ana@example.com', departmentId: null, tenantId: 'tenant-id' });
+    const second = await createEmployee({ firstName: 'Beto', lastName: 'Diaz', email: 'beto@example.com', departmentId: null, tenantId: 'tenant-id' });
+    expect(first.fileNumber).toBe('01001');
+    expect(second.fileNumber).toBe('01002');
   });
 });

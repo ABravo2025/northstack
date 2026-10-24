@@ -911,28 +911,8 @@ export default function PayrollPage({ token, section }: PayrollPageProps) {
                               <td>
                                 {entry.employeeFirstName} {entry.employeeLastName}
                               </td>
-                              <td>
-                                {/* Payroll v2: file number ("legajo"), printed on payslips; saved on blur. */}
-                                <input
-                                  aria-label={t('payroll.people.fileNumberFor', { name: `${entry.employeeFirstName} ${entry.employeeLastName}` })}
-                                  className="select-compact !w-24"
-                                  defaultValue={entry.fileNumber ?? ''}
-                                  maxLength={30}
-                                  disabled={!canManagePayroll}
-                                  onBlur={async (e) => {
-                                    const value = e.target.value.trim();
-                                    if (value === (entry.fileNumber ?? '')) return;
-                                    try {
-                                      await api.setFileNumber(token, entry.employeeId, value);
-                                      setCompensationStatus((prev) => prev.map((x) => (x.employeeId === entry.employeeId ? { ...x, fileNumber: value || null } : x)));
-                                      toast.success(t('payroll.people.fileNumberSaved'));
-                                    } catch (error) {
-                                      e.target.value = entry.fileNumber ?? '';
-                                      toast.error((error as Error).message);
-                                    }
-                                  }}
-                                />
-                              </td>
+                              {/* Payroll v2: file number ("legajo"), assigned automatically when the person is created. */}
+                              <td className="tabular-nums">{entry.fileNumber ?? '—'}</td>
                               <td>{entry.employeeEmail}</td>
                               <td>
                                 {entry.currentCompensation ? (

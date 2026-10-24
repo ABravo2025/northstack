@@ -5,6 +5,7 @@ import type { PayrollEntry, Prisma } from '@prisma/client';
 import prisma from '../../lib/prisma.js';
 import { decryptPaymentAccountData } from '../../lib/encryption.js';
 import { amountInWords } from './amountInWords.js';
+import { localeForCountry } from '../../lib/numberLocale.js';
 
 // Payroll v2 (spec-payroll-v2.md, unit 5): the payslip. Issued and numbered per company when a pay
 // run is confirmed or a one-off payment is made, with a snapshot of everything it shows. Two
@@ -114,11 +115,11 @@ const L = {
 
 const safe = (text: string) => text.replace(/[−]/g, '-').replace(/[^\x20-\x7e\xa0-\xff·–—•]/g, '?');
 
-function money(cents: number, currency: string, lang: 'es' | 'en', withCode = false) {
-  const n = new Intl.NumberFormat(lang === 'es' ? 'es-AR' : 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(cents / 100);
+function money(cents: number, currency: string, locale: string, withCode = false) {
+  const n = new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(cents / 100);
   return withCode ? `${currency} ${n}` : n;
 }
-const hoursText = (h: number, lang: 'es' | 'en') => `${new Intl.NumberFormat(lang === 'es' ? 'es-AR' : 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(h)} h`;
+const hoursText = (h: number, locale: string) => `${new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(h)} h`;
 const dateText = (iso: string | null, lang: 'es' | 'en') => (iso ? new Date(`${iso.slice(0, 10)}T00:00:00Z`).toLocaleDateString(lang === 'es' ? 'es-AR' : 'en-US', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric' }) : '—');
 
 export interface RenderInput {
@@ -133,6 +134,8 @@ export interface RenderInput {
   snapshot: PayslipSnapshot;
   logo: { bytes: Uint8Array; mimeType: string } | null;
   signature: { bytes: Uint8Array; mimeType: string } | null;
+  // Number format from the company's country (lib/numberLocale.ts); defaults by layout.
+  numberLocale?: string;
 }
 
 // ---- PDF ---------------------------------------------------------------------------------------
@@ -140,6 +143,7 @@ export interface RenderInput {
 export async function renderPayslipV2(input: RenderInput): Promise<Uint8Array> {
   const t = L[input.lang];
   const { snapshot: s, currency, lang } = input;
+  const loc = input.numberLocale ?? (input.layout === 'ar' ? 'es-AR' : 'en-US');
   const doc = await PDFDocument.create();
   const page = doc.addPage([612, 792]);
   const font = await doc.embedFont(StandardFonts.Helvetica);
@@ -243,14 +247,14 @@ export async function renderPayslipV2(input: RenderInput): Promise<Uint8Array> {
     for (const r of rows) {
       y -= 15;
       text(page, fit(lineLabel(r), showQty ? cQty - X0 - 20 : X1 - X0 - 120, 9), X0, y, 9);
-      if (showQty && r.qty !== null) right(page, hoursText(r.qty, lang), cQty + 40, y, 9);
-      if (showQty && r.rateCents !== null && r.qty !== null) right(page, money(r.kind === 'night' ? Math.round((r.rateCents * (r.pct ?? 0)) / 100) : Math.round(r.rateCents * (1 + (r.kind === 'overtime' ? (r.pct ?? 0) / 100 : 0))), currency, lang), cRate + 40, y, 9);
-      right(page, money(r.amountCents, currency, lang), X1, y, 9);
+      if (showQty && r.qty !== null) right(page, hoursText(r.qty, loc), cQty + 40, y, 9);
+      if (showQty && r.rateCents !== null && r.qty !== null) right(page, money(r.kind === 'night' ? Math.round((r.rateCents * (r.pct ?? 0)) / 100) : Math.round(r.rateCents * (1 + (r.kind === 'overtime' ? (r.pct ?? 0) / 100 : 0))), currency, loc), cRate + 40, y, 9);
+      right(page, money(r.amountCents, currency, loc), X1, y, 9);
       page.drawLine({ start: { x: X0, y: y - 5 }, end: { x: X1, y: y - 5 }, thickness: 0.4, color: line, dashArray: [1, 2] });
     }
     y -= 17;
     text(page, totalLabel, X0, y, 9, bold);
-    right(page, money(rows.reduce((n, r) => n + r.amountCents, 0), currency, lang), X1, y, 9, bold);
+    right(page, money(rows.reduce((n, r) => n + r.amountCents, 0), currency, loc), X1, y, 9, bold);
   };
   table(t.earnings, s.earnings, t.totalEarnings, true);
   if (s.deductions.length) table(t.deductions, s.deductions, t.totalDeductions, false);
@@ -262,7 +266,7 @@ export async function renderPayslipV2(input: RenderInput): Promise<Uint8Array> {
   page.drawRectangle({ x: X0, y: y - boxH + 12, width: W, height: boxH, color: rgb(0.953, 0.941, 0.996) });
   text(page, t.net, X0 + 12, y - 6, 11, bold);
   if (input.layout === 'ar') text(page, fit(amountInWords(net, currency, lang), 330, 8.5), X0 + 12, y - 20, 8.5, font, muted);
-  right(page, money(net, currency, lang, true), X1 - 12, y - 10, 17, bold);
+  right(page, money(net, currency, loc, true), X1 - 12, y - 10, 17, bold);
   y -= boxH + 18;
 
   // Signatures (Argentina) + verification.
@@ -411,12 +415,13 @@ function periodText(p: { periodLabel: string; periodFrom: Date | null; periodTo:
 
 async function brandingImages(tenantId: string) {
   const [tenant, settings] = await Promise.all([
-    prisma.tenant.findUniqueOrThrow({ where: { id: tenantId }, select: { logoData: true, logoMimeType: true } }),
+    prisma.tenant.findUniqueOrThrow({ where: { id: tenantId }, select: { logoData: true, logoMimeType: true, country: true } }),
     prisma.payslipSettings.findUnique({ where: { tenantId }, select: { signatureData: true, signatureMime: true } }),
   ]);
   return {
     logo: tenant.logoData && tenant.logoMimeType ? { bytes: tenant.logoData, mimeType: tenant.logoMimeType } : null,
     signature: settings?.signatureData && settings.signatureMime ? { bytes: settings.signatureData, mimeType: settings.signatureMime } : null,
+    numberLocale: localeForCountry(tenant.country),
   };
 }
 

@@ -14,6 +14,32 @@ export function currencyLabel(code: string): string {
   return name && name !== code ? `${code} — ${name}` : code;
 }
 
+// Numbers follow the company's country, not the viewer's language (Alejandro, 2026-10-24):
+// Argentina 125.000,00, the US 125,000.00, every other country its own convention. App.tsx sets
+// the country once the tenant loads; until then (and with no country) it's en-US.
+let numberLocaleTag = 'en-US';
+
+export function localeForCountry(country: string | null | undefined): string {
+  const cc = (country ?? '').trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(cc)) return 'en-US';
+  try {
+    const likely = new Intl.Locale(`und-${cc}`).maximize();
+    return likely.language && likely.language !== 'und' ? `${likely.language}-${cc}` : 'en-US';
+  } catch {
+    return 'en-US';
+  }
+}
+
+export function setNumberCountry(country: string | null | undefined): void {
+  numberLocaleTag = localeForCountry(country);
+}
+
+export const numberLocale = (): string => numberLocaleTag;
+
+export function formatNumber(n: number, maximumFractionDigits = 2): string {
+  return n.toLocaleString(numberLocaleTag, { maximumFractionDigits });
+}
+
 export function formatMoney(cents: number, currency: string): string {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(cents / 100);
+  return new Intl.NumberFormat(numberLocaleTag, { style: 'currency', currency }).format(cents / 100);
 }

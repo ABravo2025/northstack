@@ -53,8 +53,16 @@ export interface UpdateEmployeeInput {
 // import, onboarding sample data) passes it; publicFormService.ts's anonymous form submission
 // path doesn't (there's no User behind a public form fill-out), and simply doesn't get an Activity
 // Log entry — a deliberate scope cut, see docs/general/spec-activity-log.md.
+// Payroll v2: hands out the company's next file number ("legajo") — correlative, 5 digits, 01001
+// first. The increment is atomic, so two people created at once never share a number.
+export async function nextFileNumber(client: Pick<ExtendedPrismaClient, 'tenant'>, tenantId: string): Promise<string> {
+  const tenant = await client.tenant.update({ where: { id: tenantId }, data: { nextFileNumber: { increment: 1 } }, select: { nextFileNumber: true } });
+  return String(tenant.nextFileNumber - 1).padStart(5, '0');
+}
+
 export async function createEmployee(input: CreateEmployeeInput, changedByUserId?: string, client: ExtendedPrismaClient = prisma): Promise<Employee> {
   const statusId = input.statusId ?? (await getDefaultStatusId(input.tenantId, 'employee'));
+  const fileNumber = await nextFileNumber(client, input.tenantId);
 
   const employee = await client.employee.create({
     data: {
@@ -74,6 +82,7 @@ export async function createEmployee(input: CreateEmployeeInput, changedByUserId
       statusId,
       managerId: input.managerId ?? null,
       tenantId: input.tenantId,
+      fileNumber,
     },
   });
 

@@ -1363,7 +1363,7 @@ export default function GuidePage() {
               <ul>
                 <li><strong>Resumen</strong> — cuántas personas hay en nómina, la liquidación en curso, la última confirmada (con la variación contra la anterior de la misma frecuencia) y lo que falta resolver antes del próximo cierre: semanas de horas sin aprobar, contratos sin confirmar y borradores viejos.</li>
                 <li><strong>Liquidaciones</strong> y <strong>Pagos únicos</strong> — los ciclos de pago y los pagos fuera de ciclo, cada uno en su lista.</li>
-                <li><strong>Personas</strong> — quién está en nómina, su política de pago y su <strong>legajo</strong> (número interno que se imprime en el recibo; se edita ahí mismo y no se puede repetir).</li>
+                <li><strong>Personas</strong> — quién está en nómina, su política de pago y su <strong>legajo</strong>, que se imprime en el recibo. El legajo se asigna solo al dar de alta a la persona: es correlativo por empresa, de 5 dígitos, y empieza en 01001.</li>
                 <li><strong>Recibos</strong> — todos los recibos emitidos, con búsqueda, descarga y reenvío por email.</li>
                 <li><strong>Mis recibos</strong> — los recibos propios de quien está mirando.</li>
                 <li><strong>Configuración</strong> — lleva a <strong>Configuración → Nómina</strong>: frecuencias de pago, métodos de pago, horas extra y recargos, y el recibo de pago.</li>
@@ -1486,7 +1486,7 @@ export default function GuidePage() {
               <ul>
                 <li><strong>Overview</strong> — how many people are on payroll, the run in progress, the last confirmed one (with the change against the previous run of the same frequency) and what's left before the next close: unapproved hour weeks, unconfirmed contracts and old drafts.</li>
                 <li><strong>Pay runs</strong> and <strong>One-off payments</strong> — pay cycles and off-cycle payments, each in its own list.</li>
-                <li><strong>People</strong> — who's on payroll, their pay policy and their <strong>file number</strong> (an internal ID printed on the payslip; edited right there, and it can't repeat).</li>
+                <li><strong>People</strong> — who's on payroll, their pay policy and their <strong>file number</strong>, printed on the payslip. It's assigned automatically when the person is added: correlative per company, 5 digits, starting at 01001.</li>
                 <li><strong>Payslips</strong> — every issued payslip, with search, download and email resend.</li>
                 <li><strong>My payslips</strong> — the viewer's own payslips.</li>
                 <li><strong>Settings</strong> — opens <strong>Settings → Payroll</strong>: pay frequencies, payment methods, overtime and surcharges, and the payslip.</li>

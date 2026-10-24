@@ -873,9 +873,7 @@
       "saved": "Configuración del recibo guardada"
     },
     "people": {
-      "fileNumber": "Legajo",
-      "fileNumberFor": "Legajo de {{name}}",
-      "fileNumberSaved": "Legajo guardado"
+      "fileNumber": "Legajo"
     }
   }
 }

@@ -282,15 +282,6 @@ export const payrollApi = {
     });
     if (!res.ok) await throwApiError(res);
   },
-  setFileNumber: async (token: string, employeeId: string, fileNumber: string): Promise<{ fileNumber: string | null }> => {
-    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/people/${employeeId}/file-number`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ fileNumber }),
-    });
-    if (!res.ok) await throwApiError(res);
-    return res.json();
-  },
   getPaymentMethodCatalog: async (token: string): Promise<PaymentMethodCatalog> => {
     const res = await apiFetch(`${API_BASE_URL}/api/hr/payment-methods/catalog`, { headers: { Authorization: `Bearer ${token}` } });
     if (!res.ok) await throwApiError(res);

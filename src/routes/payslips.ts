@@ -152,18 +152,3 @@ payslipsRouter.put('/api/hr/payroll/payslip-settings', async (req, res) => {
   });
   return res.json({ ok: true });
 });
-
-// File number ("legajo") of a person, from Payroll → People.
-payslipsRouter.patch('/api/hr/payroll/people/:employeeId/file-number', async (req, res) => {
-  const user = await validateSession(req, res);
-  if (!user || !requirePayrollAccess(user, res)) return;
-  const value = typeof req.body?.fileNumber === 'string' && req.body.fileNumber.trim() ? req.body.fileNumber.trim().slice(0, 30) : null;
-  const employeeId = String(req.params.employeeId);
-  if (value) {
-    const taken = await prisma.employee.findFirst({ where: { tenantId: user.tenantId!, fileNumber: value, NOT: { id: employeeId } }, select: { id: true } });
-    if (taken) return res.status(409).json({ error: 'Another person already has that file number', field: 'fileNumber' });
-  }
-  const r = await prisma.employee.updateMany({ where: { id: employeeId, tenantId: user.tenantId! }, data: { fileNumber: value } });
-  if (r.count === 0) return res.status(404).json({ error: 'Person not found' });
-  return res.json({ fileNumber: value });
-});

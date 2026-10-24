@@ -7,7 +7,7 @@ import TableBody from '../../components/common/TableBody';
 import TableSkeleton from '../../components/common/TableSkeleton';
 import { BriefcaseIcon, CheckIcon } from '../../components/common/Icons';
 import { useToast } from '../../components/common/ToastProvider';
-import { formatMoney } from '../../lib/currencies';
+import { formatMoney, formatNumber } from '../../lib/currencies';
 
 // Payroll v2 (spec-payroll-v2.md, unit 2): the Payroll overview, for whoever runs payroll — the
 // latest pay run in numbers (one figure per currency), what's blocking the next close, recent runs.
@@ -25,11 +25,10 @@ export default function PayrollOverviewPage({ token }: { token: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  const loc = i18n.language.startsWith('es') ? 'es-AR' : 'en-US';
-  const num = (n: number) => n.toLocaleString(loc, { maximumFractionDigits: 2 });
+  const num = (n: number) => formatNumber(n);
   const totals = (tt: Record<string, number>) =>
     Object.keys(tt).length ? Object.entries(tt).sort((a, b) => b[1] - a[1]).map(([c, v]) => formatMoney(v, c)).join(' + ') : '—';
-  const day = (d: string) => new Date(`${d.slice(0, 10)}T00:00:00Z`).toLocaleDateString(loc, { day: 'numeric', month: 'short', timeZone: 'UTC' });
+  const day = (d: string) => new Date(`${d.slice(0, 10)}T00:00:00Z`).toLocaleDateString(i18n.language.startsWith('es') ? 'es-AR' : 'en-US', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 
   if (!data) return <div className="container"><TableSkeleton /></div>;
   const p = data.pending;

@@ -346,6 +346,8 @@ model Tenant {
   slug                      String                     @unique
   status                    TenantStatus               @default(active)
   createdAt                 DateTime                   @default(now())
+  // Payroll v2: next file number ("legajo") to hand out; correlative per company, starts at 1001.
+  nextFileNumber            Int                        @default(1001)
   companySize               String?
   industry                  String?
   country                   String?
@@ -797,9 +799,12 @@ model Employee {
   @@unique([tenantId, email])
   // spec-overtime.md: paid all hours at the base rate (e.g. management, outside the agreement).
   overtimeExempt           Boolean                    @default(false)
-  // Payroll v2: file number ("legajo"), printed on payslips. Free text, unique per company.
+  // Payroll v2: file number ("legajo"), printed on payslips. Assigned on creation from
+  // Tenant.nextFileNumber (5 digits, "01001" first), never edited.
   fileNumber               String?
   payslips                 Payslip[]
+
+  @@unique([tenantId, fileNumber])
 }
 
 // Audit trail of every termination (past, executed, or still scheduled) — a business event with

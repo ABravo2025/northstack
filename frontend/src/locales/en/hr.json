@@ -368,7 +368,7 @@
         }
       },
       "assignments": {
-        "description": "Retrofit people with no pay policy yet, or migrate a group to a new one. New people get their first contract from their own alta, not here.",
+        "description": "Retrofit people with no pay policy yet, or migrate a group to a new one. New people get their first contract when they are added, not here.",
         "assignReassign": "Assign/Reassign Policy ({{count}})",
         "emptyTitle": "No contractors or employees yet",
         "emptyBody": "Add People with Type Contractor or Employee to assign a pay policy.",
@@ -872,9 +872,7 @@
       "saved": "Payslip settings saved"
     },
     "people": {
-      "fileNumber": "File no.",
-      "fileNumberFor": "File number for {{name}}",
-      "fileNumberSaved": "File number saved"
+      "fileNumber": "File no."
     }
   }
 }

@@ -5242,7 +5242,7 @@ Spec: `docs/general/spec-payroll-v2.md` (propuesta aprobada por Alejandro en el 
 - **Resumen:** personas en nómina, liquidación en curso, última confirmada con variación contra la anterior de la misma frecuencia, horas pagadas, "Antes del próximo cierre" (semanas sin aprobar, contratos sin confirmar, borradores viejos), últimas liquidaciones.
 - **Liquidación:** pasos (Personas → Horas → Ajustes → Confirmar y emitir recibos), totales por moneda con variación, horas y extras, ajustes, aviso de semanas sin aprobar, puesto bajo el nombre, **Revisar y confirmar** con resumen antes de bloquear.
 - **Métodos de pago:** grilla con interruptores, cada uno sabe qué dato pide (CBU/CVU, CVU/alias, IBAN/ACH, email, nada); por defecto según país (AR: transferencia + Mercado Pago); aviso antes de apagar uno en uso; "+ Otro método". La confirmación de contrato pide el dato que corresponde.
-- **Recibo v2:** número correlativo por empresa (`0001-000001`, punto de emisión configurable), código + QR de verificación, legajo (nuevo, editable en Personas, único), puesto, fecha de ingreso, período, fecha de pago, modalidad, método (traducido) con cuenta enmascarada, haberes (cantidad × tarifa) y deducciones, neto en letras (AR), firma de la empresa (imagen) y "Recibí conforme" (AR); modelo **EE. UU.** (pay stub, sin firmas) para el resto. Sin acumulado del año. Se emite al confirmar la liquidación o registrar un pago único y se manda por email (preferencia nueva "Recibos de pago"). Página pública `/verify/:code` sin montos.
+- **Recibo v2:** número correlativo por empresa (`0001-000001`, punto de emisión configurable), código + QR de verificación, legajo (automático al crear la persona: correlativo por empresa, 5 dígitos, desde 01001; ver abajo), puesto, fecha de ingreso, período, fecha de pago, modalidad, método (traducido) con cuenta enmascarada, haberes (cantidad × tarifa) y deducciones, neto en letras (AR), firma de la empresa (imagen) y "Recibí conforme" (AR); modelo **EE. UU.** (pay stub, sin firmas) para el resto. Sin acumulado del año. Se emite al confirmar la liquidación o registrar un pago único y se manda por email (preferencia nueva "Recibos de pago"). Página pública `/verify/:code` sin montos.
 - **Schema** (aplicado en `staging`): `Employee.fileNumber`, `Payslip`, `PayslipSettings`, `PaymentMethodDefinition.kind` + backfill por nombre (`C:	mp
 s-payroll-v2-a.sql`, `-b.sql`). Se borró `payslipService.ts` (v1), ya sin uso.
 
@@ -5250,7 +5250,10 @@ s-payroll-v2-a.sql`, `-b.sql`). Se borró `payslipService.ts` (v1), ya sin uso.
 
 **Bugs encontrados y corregidos en la prueba:** en el PDF las columnas de tarifa e importe se pisaban y los valores largos (período, método de cobro) se cortaban (ahora van en 2 líneas); el puesto salía vacío si la persona no tenía puesto de catálogo (ahora usa el del contrato); el método de cobro salía con el nombre guardado en inglés ("Wire transfer") en un recibo en español (ahora se traduce por tipo); los KPIs del Resumen y de la liquidación quedaban centrados con ancho fijo (ahora ocupan la fila).
 
-**Pendiente conocido (no de esta entrega):** los montos en pantalla usan formato `en-US` en toda la app (`formatMoney`), también en español; el PDF sí usa `es-AR`.
+**Cambios pedidos por Alejandro el 2026-10-24:**
+- **Legajo automático:** correlativo por empresa, 5 dígitos, el primero es `01001` (`Tenant.nextFileNumber`, incremento atómico en `employeeService.nextFileNumber`, también para el owner al registrarse). Ya no se edita (se quitó la ruta `PATCH .../file-number`). Las personas existentes se numeraron por orden de alta y hay índice único (`tenantId`, `fileNumber`). SQL: `C:	mp
+s-payroll-v2-c.sql` (aplicado en `staging`).
+- **Formato de números por país de la empresa**, no por idioma: Argentina 125.000,00, EE. UU. 125,000.00, el resto según su país (`localeForCountry`, en `frontend/src/lib/currencies.ts` y `src/lib/numberLocale.ts`). Aplica a `formatMoney` en toda la app, a las horas de Nómina/Timesheet y al PDF del recibo.
 
 ## QA-123 — Horas extra y recargos configurables por empresa (2026-10-21, en `staging`, Growth)
 

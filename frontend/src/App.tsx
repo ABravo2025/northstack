@@ -78,6 +78,7 @@ import { isPublicFormsEnabled } from './lib/featureFlags';
 import { clearReturnTo, peekReturnTo, rememberReturnTo } from './lib/returnTo';
 import OAuthConsentPage from './pages/OAuthConsentPage';
 import './App.css';
+import { setNumberCountry } from './lib/currencies';
 
 export default function App() {
   const toast = useToast();
@@ -316,6 +317,9 @@ export default function App() {
   // Plan-tier hiding (2026-10-01) — a Starter tenant guessing a Growth-only URL is sent back
   // instead of landing on a page whose "no permission / owner only" copy would misread as a
   // role problem. Sidebar/sections already hide the links themselves (see PermissionsContext).
+  // Money and hours follow the company's country (lib/currencies.ts). Set during render, not in an
+  // effect, so the first paint after the tenant loads already uses it.
+  setNumberCountry(tenant?.country);
   const growthPlan = isGrowthFeatureEnabled(tenant);
   // Per module since 2026-10-03 (plan + Admin Center agreement, from GET /api/auth/me).
   const features = planFeaturesFor(tenant, permissions);

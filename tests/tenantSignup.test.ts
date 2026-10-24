@@ -59,9 +59,14 @@ vi.mock('../src/lib/prisma.js', () => {
     tenant: {
       findUnique: vi.fn(async ({ where }: any) => tenants.find((t) => t.slug === where.slug) ?? null),
       create: vi.fn(async ({ data }: any) => {
-        const tenant = { id: `tenant-${tenants.length + 1}`, ...data };
+        const tenant = { id: `tenant-${tenants.length + 1}`, nextFileNumber: 1001, ...data };
         tenants.push(tenant);
         return tenant;
+      }),
+      update: vi.fn(async ({ where }: any) => {
+        const tenant = tenants.find((t) => t.id === where.id);
+        tenant.nextFileNumber += 1;
+        return { nextFileNumber: tenant.nextFileNumber };
       }),
     },
     session: {

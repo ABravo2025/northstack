@@ -14,6 +14,7 @@ import { seedDefaultStatusDefinitions } from '../hr/statusService.js';
 import { seedDefaultPipelines } from '../crm/pipelineService.js';
 import { seedDefaultPayFrequencies } from '../hr/payFrequencyService.js';
 import { seedDefaultPaymentMethods } from '../hr/paymentMethodService.js';
+import { nextFileNumber } from '../hr/employeeService.js';
 import { seedDefaultRolesForTenant } from '../auth/roleService.js';
 import { getEmailDomain } from '../../lib/email.js';
 import { CURRENT_PLAN_PRICES_CENTS } from './planService.js';
@@ -282,6 +283,7 @@ export async function registerTenantWithOwner(input: RegisterTenantWithOwnerInpu
         statusId: ownerDefaultStatus.id,
         tenantId: tenant.id,
         userId: user.id,
+        fileNumber: await nextFileNumber(tx, tenant.id),
       },
     });
 

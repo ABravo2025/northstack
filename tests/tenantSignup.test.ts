@@ -154,6 +154,7 @@ const validPersonFields = {
   companySize: '1-10',
   industry: 'Software',
   country: 'United States',
+  taxId: '12-3456789',
 };
 
 describe('emailVerificationService', () => {

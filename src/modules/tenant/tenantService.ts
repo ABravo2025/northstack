@@ -15,6 +15,7 @@ import { seedDefaultPipelines } from '../crm/pipelineService.js';
 import { seedDefaultPayFrequencies } from '../hr/payFrequencyService.js';
 import { seedDefaultPaymentMethods } from '../hr/paymentMethodService.js';
 import { nextFileNumber } from '../hr/employeeService.js';
+import { companyTaxIdKind, companyTaxIdRequired, taxIdLabel, validateTaxId } from '../../lib/taxId.js';
 import { seedDefaultRolesForTenant } from '../auth/roleService.js';
 import { getEmailDomain } from '../../lib/email.js';
 import { CURRENT_PLAN_PRICES_CENTS } from './planService.js';
@@ -116,6 +117,9 @@ export interface RegisterTenantWithOwnerInput {
   companySize: string;
   industry: string;
   country: string;
+  // Payroll v2 (2026-10-24): CUIT in Argentina / EIN in the US (required there), optional
+  // elsewhere — src/lib/taxId.ts.
+  taxId?: string;
   acquisitionChannel?: AcquisitionChannel;
   jobFunction?: JobFunction;
   // Proof the owner's email was verified via the link sent by startSignupVerification —
@@ -164,6 +168,14 @@ export async function registerTenantWithOwner(input: RegisterTenantWithOwnerInpu
   }
   if (!input.country?.trim()) {
     return { success: false, error: 'Country is required', field: 'country' };
+  }
+  let taxId: string | null = null;
+  if (input.taxId?.trim()) {
+    const check = validateTaxId(companyTaxIdKind(input.country), input.taxId);
+    if (!check.ok) return { success: false, error: check.error, field: 'taxId' };
+    taxId = check.value;
+  } else if (companyTaxIdRequired(input.country)) {
+    return { success: false, error: `${taxIdLabel(companyTaxIdKind(input.country))} is required`, field: 'taxId' };
   }
 
   const existingTenant = await prisma.tenant.findUnique({
@@ -214,6 +226,7 @@ export async function registerTenantWithOwner(input: RegisterTenantWithOwnerInpu
         companySize: input.companySize,
         industry: input.industry.trim(),
         country: input.country,
+        taxId,
         // A referred company always counts as a referral, whatever they picked in the survey.
         acquisitionChannel: referralMember ? 'referral' : input.acquisitionChannel,
         status: 'trialing',

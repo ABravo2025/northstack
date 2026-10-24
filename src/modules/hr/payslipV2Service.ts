@@ -1,11 +1,14 @@
 import { randomBytes } from 'node:crypto';
-import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
+import { PDFDocument, StandardFonts, degrees, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
 import QRCode from 'qrcode';
 import type { PayrollEntry, Prisma } from '@prisma/client';
 import prisma from '../../lib/prisma.js';
-import { decryptPaymentAccountData } from '../../lib/encryption.js';
+import { decryptPaymentAccountData, encryptPaymentAccountData } from '../../lib/encryption.js';
+import { companyTaxIdKind, type TaxIdKind } from '../../lib/taxId.js';
+import { taxIdForPayslip } from './employeeTaxIdService.js';
 import { amountInWords } from './amountInWords.js';
 import { localeForCountry } from '../../lib/numberLocale.js';
+import { countryCode } from '../../lib/country.js';
 
 // Payroll v2 (spec-payroll-v2.md, unit 5): the payslip. Issued and numbered per company when a pay
 // run is confirmed or a one-off payment is made, with a snapshot of everything it shows. Two
@@ -26,8 +29,11 @@ export interface PayslipLine {
 }
 
 export interface PayslipSnapshot {
-  company: { name: string; legalName: string | null; address: string | null; phone: string | null; website: string | null };
-  employee: { name: string; fileNumber: string | null; jobTitle: string | null; department: string | null; startDate: string | null };
+  // taxId fields added 2026-10-24 (optional: payslips issued before don't have them).
+  company: { name: string; legalName: string | null; address: string | null; phone: string | null; website: string | null; taxId?: string | null; taxIdKind?: TaxIdKind };
+  // Person's tax ID: `encrypted` holds the full CUIL (Argentine payslips print it), `value` the
+  // masked form used everywhere else; resolveSnapshot decrypts right before drawing.
+  employee: { name: string; fileNumber: string | null; jobTitle: string | null; department: string | null; startDate: string | null; taxId?: { kind: TaxIdKind; value?: string; encrypted?: string } | null };
   pay: { type: 'hourly' | 'fixed'; frequency: string | null; rateCents: number | null; method: string | null; account: string | null };
   signerName: string | null;
   earnings: PayslipLine[];
@@ -37,7 +43,7 @@ export interface PayslipSnapshot {
 // ---- pure (tested) -----------------------------------------------------------------------------
 
 export function layoutFor(country: string | null): PayslipLayout {
-  return (country ?? '').toUpperCase() === 'AR' ? 'ar' : 'us';
+  return countryCode(country) === 'AR' ? 'ar' : 'us';
 }
 
 export function maskAccount(raw: string | null): string | null {
@@ -97,7 +103,9 @@ const L = {
     title: 'Recibo de pago', stub: 'Recibo de pago', person: 'Persona', file: 'Legajo', job: 'Puesto', dept: 'Área', start: 'Fecha de ingreso', period: 'Período', payDate: 'Fecha de pago', mode: 'Modalidad', method: 'Cobro',
     hourly: 'Por hora', fixed: 'Sueldo fijo', earnings: 'Haberes', deductions: 'Deducciones', concept: 'Concepto', qty: 'Cantidad', rate: 'Tarifa', amount: 'Importe', totalEarnings: 'Total haberes', totalDeductions: 'Total deducciones',
     net: 'Neto a cobrar', companySign: 'Firma de la empresa', received: 'Recibí conforme', verify: 'Verificar', preview: 'VISTA PREVIA - SIN EMITIR', number: 'N.º',
-    legal: 'Documento de seguimiento emitido con Northstack. No reemplaza al recibo de sueldo que exige la ley laboral de cada país.',
+    notLegal: 'NO VÁLIDO COMO DOCUMENTO LEGAL',
+    legal: 'Documento interno de seguimiento emitido con Northstack. No válido como documento legal ni como recibo de sueldo hasta que se certifique según las normas de cada país.',
+    taxId: { cuit: 'CUIT', cuil: 'CUIL', ein: 'EIN', ssn: 'SSN', other: 'Id. fiscal' } as Record<TaxIdKind, string>,
     lines: { base_fixed: 'Sueldo básico', base_hours: 'Horas normales', overtime: 'Horas extra', rest: 'Horas extra en descanso / feriado', night: 'Recargo nocturno', bonus: 'Bono', commission: 'Comisión', reimbursement: 'Reintegro', deduction: 'Deducción' },
     hoursUnit: 'h',
     methods: { bank_ar: 'Transferencia bancaria', mercadopago: 'Mercado Pago', bank_intl: 'Transferencia internacional', wise: 'Wise', payoneer: 'Payoneer', paypal: 'PayPal', cash: 'Efectivo' } as Record<string, string>,
@@ -106,7 +114,9 @@ const L = {
     title: 'Payslip', stub: 'Pay stub', person: 'Employee', file: 'Employee ID', job: 'Job title', dept: 'Department', start: 'Start date', period: 'Pay period', payDate: 'Pay date', mode: 'Pay type', method: 'Paid by',
     hourly: 'Hourly', fixed: 'Salary', earnings: 'Earnings', deductions: 'Deductions', concept: 'Description', qty: 'Hours', rate: 'Rate', amount: 'Current', totalEarnings: 'Gross pay', totalDeductions: 'Total deductions',
     net: 'Net pay', companySign: 'Company signature', received: 'Received by', verify: 'Verify', preview: 'PREVIEW - NOT ISSUED', number: 'No.',
-    legal: 'Tracking document issued with Northstack. It does not replace any payslip required by employment law.',
+    notLegal: 'NOT VALID AS A LEGAL DOCUMENT',
+    legal: "Internal tracking document issued with Northstack. Not valid as a legal document or as an official payslip until it is certified under each country's rules.",
+    taxId: { cuit: 'CUIT', cuil: 'CUIL', ein: 'EIN', ssn: 'SSN', other: 'Tax ID' } as Record<TaxIdKind, string>,
     lines: { base_fixed: 'Regular salary', base_hours: 'Regular hours', overtime: 'Overtime', rest: 'Overtime, rest day / holiday', night: 'Night differential', bonus: 'Bonus', commission: 'Commission', reimbursement: 'Reimbursement', deduction: 'Deduction' },
     hoursUnit: 'h',
     methods: { bank_ar: 'Bank transfer', mercadopago: 'Mercado Pago', bank_intl: 'Wire transfer', wise: 'Wise', payoneer: 'Payoneer', paypal: 'PayPal', cash: 'Cash' } as Record<string, string>,
@@ -176,10 +186,18 @@ export async function renderPayslipV2(input: RenderInput): Promise<Uint8Array> {
     return words.length ? [first, fit(words.join(' '), max, size, f)] : [first];
   };
 
+  // "Not valid as a legal document" three ways (Alejandro, 2026-10-24): a faint diagonal watermark
+  // behind everything, a red line on top and the footer — until each country's certification.
+  const red = rgb(0.7, 0.15, 0.15);
+  const mark = safe(t.notLegal);
+  const markSize = 30;
+  const markW = bold.widthOfTextAtSize(mark, markSize);
+  const angle = 35;
+  const rad = (angle * Math.PI) / 180;
+  page.drawText(mark, { x: 306 - (markW / 2) * Math.cos(rad), y: 400 - (markW / 2) * Math.sin(rad), size: markSize, font: bold, color: red, opacity: 0.07, rotate: degrees(angle) });
+
   let y = 744;
-  if (!input.numberText) {
-    text(page, t.preview, X0, y + 22, 9, bold, rgb(0.7, 0.15, 0.15));
-  }
+  text(page, input.numberText ? t.notLegal : `${t.preview} · ${t.notLegal}`, X0, y + 22, 9, bold, red);
   // Header: logo + company, title + number.
   let cx = X0;
   if (input.logo) {
@@ -193,7 +211,8 @@ export async function renderPayslipV2(input: RenderInput): Promise<Uint8Array> {
     }
   }
   text(page, fit(s.company.legalName || s.company.name, 300, 15, serif), cx, y - 12, 15, serif);
-  const coMeta = [s.company.address, s.company.phone, s.company.website].filter(Boolean).join(' · ');
+  const coTaxId = s.company.taxId ? `${t.taxId[s.company.taxIdKind ?? 'other']} ${s.company.taxId}` : null;
+  const coMeta = [coTaxId, s.company.address, s.company.phone, s.company.website].filter(Boolean).join(' · ');
   if (coMeta) text(page, fit(coMeta, 300, 8.5), cx, y - 26, 8.5, font, muted);
   right(page, input.layout === 'us' ? t.stub : t.title, X1, y - 12, 13, serif);
   right(page, input.numberText ? `${t.number} ${input.numberText}` : '—', X1, y - 26, 9, bold, violet);
@@ -201,8 +220,9 @@ export async function renderPayslipV2(input: RenderInput): Promise<Uint8Array> {
   page.drawLine({ start: { x: X0, y }, end: { x: X1, y }, thickness: 1.6, color: ink });
 
   // Meta grid: 4 columns × 2 rows.
-  const meta: [string, string][] = [
-    [t.person, s.employee.name],
+  const personTaxId = s.employee.taxId?.value ? `${t.taxId[s.employee.taxId.kind]} ${s.employee.taxId.value}` : null;
+  const meta: [string, string, string?][] = [
+    [t.person, s.employee.name, personTaxId ?? undefined],
     [t.file, s.employee.fileNumber || '—'],
     [t.job, s.employee.jobTitle || '—'],
     [input.layout === 'ar' ? t.start : t.dept, input.layout === 'ar' ? dateText(s.employee.startDate, lang) : s.employee.department || '—'],
@@ -212,13 +232,19 @@ export async function renderPayslipV2(input: RenderInput): Promise<Uint8Array> {
     [t.method, [s.pay.method, s.pay.account].filter(Boolean).join(' ') || '—'],
   ];
   const colW = W / 4;
-  meta.forEach(([k, v], i) => {
+  meta.forEach(([k, v, sub], i) => {
     const col = i % 4;
     const row = Math.floor(i / 4);
     const mx = X0 + col * colW;
     const my = y - 16 - row * 38;
     text(page, k.toUpperCase(), mx, my, 6.8, bold, faint);
-    wrap2(v, colW - 10, 9, bold).forEach((ln, j) => text(page, ln, mx, my - 11 - j * 10.5, 9, bold));
+    if (sub) {
+      // The person's name, then their tax ID underneath in a lighter weight.
+      text(page, fit(v, colW - 10, 9, bold), mx, my - 11, 9, bold);
+      text(page, fit(sub, colW - 10, 8.5), mx, my - 21.5, 8.5, font, muted);
+    } else {
+      wrap2(v, colW - 10, 9, bold).forEach((ln, j) => text(page, ln, mx, my - 11 - j * 10.5, 9, bold));
+    }
   });
   y -= 92;
   page.drawLine({ start: { x: X0, y }, end: { x: X1, y }, thickness: 0.6, color: line });
@@ -297,7 +323,7 @@ export async function renderPayslipV2(input: RenderInput): Promise<Uint8Array> {
   }
 
   page.drawLine({ start: { x: X0, y: 64 }, end: { x: X1, y: 64 }, thickness: 0.6, color: line });
-  text(page, t.legal, X0, 52, 7.5, font, faint);
+  wrap2(t.legal, W, 7.5).forEach((ln, j) => text(page, ln, X0, 52 - j * 9.5, 7.5, font, faint));
   return doc.save();
 }
 
@@ -332,14 +358,18 @@ async function snapshotFor(tenantId: string, employeeId: string, entries: Payrol
   const lang: 'es' | 'en' = (employee.user?.locale ?? (layout === 'ar' ? 'es' : 'en')).startsWith('es') ? 'es' : 'en';
   const pay = { type: (comp?.compensationType ?? 'fixed') as 'hourly' | 'fixed', frequency: comp?.payFrequency?.name ?? null, rateCents: comp?.compensationType === 'hourly' ? comp.rateCents : null, method: comp?.paymentMethod ? (L[lang].methods[comp.paymentMethod.kind] ?? comp.paymentMethod.name) : null, account };
   const lines = buildLines(entries, pay);
+  // Argentine payslips print the full CUIL (kept encrypted inside the snapshot too); everywhere
+  // else only the last 4.
+  const personTaxId = await taxIdForPayslip(tenantId, employeeId, layout === 'ar');
   const snapshot: PayslipSnapshot = {
-    company: { name: tenant.name, legalName: tenant.legalName, address: tenant.address, phone: tenant.phone, website: tenant.website },
+    company: { name: tenant.name, legalName: tenant.legalName, address: tenant.address, phone: tenant.phone, website: tenant.website, taxId: tenant.taxId, taxIdKind: companyTaxIdKind(tenant.country) },
     employee: {
       name: `${employee.firstName} ${employee.lastName}`.trim(),
       fileNumber: employee.fileNumber,
       jobTitle: employee.jobTitleDefn?.name ?? comp?.jobTitle ?? null,
       department: employee.departmentDefn?.name ?? null,
       startDate: employee.startDate ? employee.startDate.toISOString().slice(0, 10) : null,
+      taxId: personTaxId ? (layout === 'ar' ? { kind: personTaxId.kind, encrypted: encryptPaymentAccountData(personTaxId.value) } : { kind: personTaxId.kind, value: personTaxId.value }) : null,
     },
     pay,
     signerName: settings?.signerName ?? null,
@@ -413,6 +443,19 @@ function periodText(p: { periodLabel: string; periodFrom: Date | null; periodTo:
   return `${dateText(p.periodFrom.toISOString(), lang)} – ${dateText(p.periodTo.toISOString(), lang)}`;
 }
 
+// Decrypts the person's full tax ID (Argentine payslips) right before drawing.
+function resolveSnapshot(snapshot: PayslipSnapshot): PayslipSnapshot {
+  const tax = snapshot.employee.taxId;
+  if (!tax?.encrypted) return snapshot;
+  let value: string | undefined;
+  try {
+    value = decryptPaymentAccountData(tax.encrypted);
+  } catch {
+    value = undefined;
+  }
+  return { ...snapshot, employee: { ...snapshot.employee, taxId: { kind: tax.kind, value } } };
+}
+
 async function brandingImages(tenantId: string) {
   const [tenant, settings] = await Promise.all([
     prisma.tenant.findUniqueOrThrow({ where: { id: tenantId }, select: { logoData: true, logoMimeType: true, country: true } }),
@@ -439,7 +482,7 @@ export async function renderIssuedPayslip(payslipId: string, tenantId: string, l
     periodText: periodText(p, lang),
     paymentDate: p.paymentDate.toISOString(),
     currency: p.currency,
-    snapshot: p.snapshot as unknown as PayslipSnapshot,
+    snapshot: resolveSnapshot(p.snapshot as unknown as PayslipSnapshot),
     ...(await brandingImages(tenantId)),
   });
 }
@@ -455,7 +498,7 @@ export async function renderRunPreview(tenantId: string, runId: string, employee
   return renderPayslipV2({
     layout, lang, numberText: null, verifyCode: null, verifyUrl: null,
     periodText: periodText({ periodLabel: run.periodLabel, periodFrom: base?.hoursFrom ?? null, periodTo: base?.hoursTo ?? null }, lang),
-    paymentDate: entries[0].paymentDate.toISOString(), currency: entries[0].currency, snapshot,
+    paymentDate: entries[0].paymentDate.toISOString(), currency: entries[0].currency, snapshot: resolveSnapshot(snapshot),
     ...(await brandingImages(tenantId)),
   });
 }

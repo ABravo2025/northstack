@@ -5,6 +5,7 @@ import { renderContractPdf } from './contractPdfService.js';
 import { toTenantBranding } from '../tenant/tenantProfileService.js';
 import { recordActivity } from '../activity/activityLogService.js';
 import { employeeCompensationActivityFieldConfig } from '../activity/fieldConfigs/employeeCompensationFieldConfig.js';
+import { maskTaxId, personTaxIdRequired, type TaxIdKind } from '../../lib/taxId.js';
 
 export interface CreateCompensationInput {
   tenantId: string;
@@ -191,8 +192,11 @@ export interface CompensationStatusEntry {
   employeeFirstName: string;
   employeeLastName: string;
   employeeEmail: string;
-  // Payroll v2: file number ("legajo"), editable in Payroll → People.
+  // Payroll v2: file number ("legajo"), assigned automatically when the person is created.
   fileNumber: string | null;
+  // Payroll v2: tax ID (CUIL / SSN / other), only ever masked; required in AR/US for employees.
+  taxIdMasked: string | null;
+  taxIdRequired: boolean;
   // Whether this person has ever confirmed a first-ever contract (has a
   // linked User) — the right signal for a Draft/Confirmed split, since a
   // reassignment (Unidad 10) never re-triggers confirmation: a raise's new
@@ -212,9 +216,11 @@ export interface CompensationStatusEntry {
 // their current (effectiveTo: null) compensation, or null if they've never
 // had one (the retrofit case this tool exists for).
 export async function getCompensationStatus(tenantId: string): Promise<CompensationStatusEntry[]> {
+  const tenant = await prisma.tenant.findUniqueOrThrow({ where: { id: tenantId }, select: { country: true } });
   const employees = await prisma.employee.findMany({
     where: { tenantId, personType: { in: ['contractor', 'employee'] } },
     include: {
+      taxId: { select: { kind: true, last4: true } },
       compensations: {
         where: { effectiveTo: null },
         include: { payFrequency: true },
@@ -231,6 +237,8 @@ export async function getCompensationStatus(tenantId: string): Promise<Compensat
     employeeLastName: employee.lastName,
     employeeEmail: employee.email,
     fileNumber: employee.fileNumber,
+    taxIdMasked: employee.taxId ? maskTaxId(employee.taxId.kind as TaxIdKind, employee.taxId.last4) : null,
+    taxIdRequired: personTaxIdRequired(tenant.country, employee.personType),
     isConfirmed: Boolean(employee.userId),
     personType: employee.personType,
     currentCompensation: employee.compensations[0]

@@ -354,10 +354,14 @@ model Tenant {
   acquisitionChannel        AcquisitionChannel?
   currency                  String                     @default("USD") // ISO-4217, tenant-wide default (Opportunity/EmployeeCompensation can override per record)
   // Company profile (Settings → Company, 2026-09-25) — shown only on Payroll payslips, employee
-  // contracts, invitation emails and the app sidebar. Deliberately no tax ID: collecting it is
-  // ruled out by the privacy policy. Logo is stored inline (PNG/JPEG, resized client-side to
-  // ≤512px, capped server-side) rather than in a file store — see tenantProfileService.ts.
+  // contracts, invitation emails and the app sidebar. Logo is stored inline (PNG/JPEG, resized
+  // client-side to ≤512px, capped server-side) rather than in a file store — see
+  // tenantProfileService.ts.
   legalName                 String?
+  // Payroll v2 (Alejandro, 2026-10-24): CUIT in Argentina, EIN in the US — required there, asked
+  // at signup; optional free text elsewhere. Normalized by src/lib/taxId.ts. A business ID, so
+  // stored as plain text (each person's own tax ID is encrypted, see EmployeeTaxId).
+  taxId                     String?
   address                   String?
   phone                     String?
   website                   String?
@@ -462,6 +466,7 @@ model Tenant {
   overtimePolicy            OvertimePolicy?
   payslips                  Payslip[]
   payslipSettings           PayslipSettings?
+  employeeTaxIds            EmployeeTaxId[]
 }
 
 // Billing Integration (spec-billing-integration.md). plan/lockedPriceCents are deliberately NOT
@@ -803,6 +808,7 @@ model Employee {
   // Tenant.nextFileNumber (5 digits, "01001" first), never edited.
   fileNumber               String?
   payslips                 Payslip[]
+  taxId                    EmployeeTaxId?
 
   @@unique([tenantId, fileNumber])
 }
@@ -3250,6 +3256,27 @@ model Payslip {
 
 // Payroll v2: Settings → Payroll → Payslip. Numbering "0001-000248" (prefix + next number) and the
 // company's signature image printed on every payslip.
+// Payroll v2 (Alejandro, 2026-10-24): a person's tax ID — CUIL in Argentina, SSN in the US
+// (required there for employees, asked when the person is added), free text elsewhere. Its own
+// table so it never travels with the Employee rows every list and API returns. Encrypted at rest
+// with the payroll key (encryptPaymentAccountData, same purpose: payroll-only personal data);
+// last4 is what screens show.
+model EmployeeTaxId {
+  id              String   @id @default(uuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employeeId      String   @unique
+  employee        Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  kind            String // cuil | ssn | other (src/lib/taxId.ts)
+  valueEncrypted  String
+  last4           String
+  updatedByUserId String?
+  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId])
+}
+
 model PayslipSettings {
   id            String   @id @default(uuid())
   tenantId      String   @unique

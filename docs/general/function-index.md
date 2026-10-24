@@ -504,6 +504,13 @@ Spec: `docs/general/spec-payroll-v2.md`. Puras (testeadas en `tests/payrollV2.te
 - **issuePayslipsForRun(tenantId, runId)** / **issuePayslipsForEntries(tenantId, entryIds, periodLabel)** — un `Payslip` por persona y moneda, numeración correlativa en `$transaction` sobre `PayslipSettings.nextNumber`; guarda un `snapshot` (empresa, persona, legajo, método traducido por `kind`, líneas) para que el recibo no cambie después.
 - **renderIssuedPayslip(id, tenantId)**, **renderRunPreview(tenantId, runId, employeeId)**, **listPayslips(tenantId, {employeeId, runId, q})**, **verifyPayslip(code)** (sin montos; persona como "Nombre I."), **verifyUrl(code)**.
 
+### `src/lib/taxId.ts` + `src/modules/hr/employeeTaxIdService.ts` (Nómina v2, 2026-10-24)
+Puras (`tests/taxId.test.ts`): **companyTaxIdKind** / **personTaxIdKind** (AR → `cuit`/`cuil`, US → `ein`/`ssn`, resto `other`), **companyTaxIdRequired**, **personTaxIdRequired** (AR/US y `employee`), **validateTaxId** (dígito verificador CUIT/CUIL, 9 dígitos EIN/SSN, texto libre en otros; normaliza `20-12345678-6`, `12-3456789`, `123-45-6789`), **maskTaxId** (`XXX-XX-1234` / `•••• 1234`). Servicio: **setEmployeeTaxId** (cifra con la clave de nómina en `EmployeeTaxId`, guarda `last4`), **checkTaxIdForTenant** (antes de crear la persona; solo si la empresa tiene Nómina), **hasEmployeeTaxId**, **taxIdForPayslip** (completo para el recibo AR, enmascarado para el resto). Rutas: `POST /api/hr/employees` acepta `taxId`; `PUT /api/hr/payroll/people/:employeeId/tax-id` (gestión de nómina, o quien da de alta mientras esté vacío). Empresa: `Tenant.taxId` en el alta (`registerTenantWithOwner`) y en `updateTenantProfile`. Front: `frontend/src/lib/taxId.ts` (espejo), **TaxIdModal**.
+
+### `src/lib/country.ts` + `src/lib/numberLocale.ts`
+- **countryCode(country)** — `Tenant.country` guarda el nombre en inglés ("Argentina"); devuelve el ISO-2 ("AR"), acepta también el código. Índice armado con `Intl.DisplayNames` (sin códigos retirados) + alias. Espejo en `frontend/src/lib/countries.ts`.
+- **localeForCountry(country)** — formato de números del país de la empresa (`es-AR`, `en-US`, `de-DE`…). Espejo en `frontend/src/lib/currencies.ts` (`formatMoney`, `formatNumber`).
+
 ### `src/modules/hr/amountInWords.ts` (Nómina v2)
 - **amountInWords(cents, currency, 'es'|'en')** — "Dos millones cuatrocientos mil pesos", apócope ("un millón de pesos", "veintiún"), centavos "con 50/100". Tests: `tests/amountInWords.test.ts`.
 

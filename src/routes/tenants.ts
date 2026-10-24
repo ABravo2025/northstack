@@ -86,6 +86,7 @@ tenantsRouter.post('/api/tenants/register', async (req, res) => {
     companySize: req.body.companySize,
     industry: req.body.industry,
     country: req.body.country,
+    taxId: typeof req.body.taxId === 'string' ? req.body.taxId : undefined,
     acquisitionChannel: req.body.acquisitionChannel,
     jobFunction: req.body.jobFunction || undefined,
     verificationToken: req.body.verificationToken,

@@ -7,6 +7,7 @@ import PasswordChecklist from '../components/common/PasswordChecklist';
 import AcceptTermsCheckbox from '../components/common/AcceptTermsCheckbox';
 import RequiredMark from '../components/common/RequiredMark';
 import { COUNTRIES } from '../lib/countries';
+import { companyTaxIdKind, companyTaxIdRequired, isTaxIdValid } from '../lib/taxId';
 import { COMPANY_SIZE_OPTIONS } from '../lib/companySize';
 import { api, ApiError } from '../api';
 import type { Tenant } from '../api';
@@ -25,6 +26,7 @@ const FIELD_STEP: Record<string, SurveyStep> = {
   companySize: 'company',
   industry: 'company',
   country: 'company',
+  taxId: 'company',
   acquisitionChannel: 'company',
   referralCode: 'company',
   ownerFirstName: 'you',
@@ -64,6 +66,10 @@ export default function CompleteSignupPage({ onRegistered }: CompleteSignupPageP
   const [companySize, setCompanySize] = useState('');
   const [industry, setIndustry] = useState('');
   const [country, setCountry] = useState('');
+  // Payroll v2 (2026-10-24): CUIT in Argentina / EIN in the US (required there), optional elsewhere.
+  const [taxId, setTaxId] = useState('');
+  const taxIdKind = companyTaxIdKind(country);
+  const taxIdRequired = companyTaxIdRequired(country);
   const [acquisitionChannel, setAcquisitionChannel] = useState('');
   // Referral program: from the email link's &ref= (or this browser's remembered code), editable.
   const [referralCode, setReferralCode] = useState(() => captureReferralCode() ?? '');
@@ -98,6 +104,11 @@ export default function CompleteSignupPage({ onRegistered }: CompleteSignupPageP
 
   const goToStep = (step: SurveyStep) => (e: React.FormEvent) => {
     e.preventDefault();
+    if (step === 'you' && ((taxIdRequired && !taxId.trim()) || (taxId.trim() && !isTaxIdValid(taxIdKind, taxId)))) {
+      setFieldError({ field: 'taxId', message: t(`common:taxId.invalid.${taxIdKind}`) });
+      return;
+    }
+    setFieldError(null);
     setSurveyStep(step);
   };
 
@@ -122,6 +133,7 @@ export default function CompleteSignupPage({ onRegistered }: CompleteSignupPageP
         companySize,
         industry,
         country,
+        taxId: taxId.trim() || undefined,
         acquisitionChannel: acquisitionChannel || undefined,
         jobFunction: jobFunction || undefined,
         verificationToken: token!,
@@ -250,6 +262,17 @@ export default function CompleteSignupPage({ onRegistered }: CompleteSignupPageP
             </select>
             {fieldErrorFor('country') && <div className="field-error">{fieldErrorFor('country')}</div>}
           </div>
+          {country && (
+            <div className="form-group">
+              <label htmlFor="signup-taxId">
+                {t(`common:taxId.label.${taxIdKind}`)}
+                {taxIdRequired && <RequiredMark />}
+              </label>
+              <input id="signup-taxId" value={taxId} onChange={(e) => setTaxId(e.target.value)} required={taxIdRequired} maxLength={30} autoComplete="off" />
+              <small className="text-ink-faint dark:text-dark-ink-faint">{t(`common:taxId.hint.${taxIdKind}`)}</small>
+              {fieldErrorFor('taxId') && <div className="field-error">{fieldErrorFor('taxId')}</div>}
+            </div>
+          )}
           <div className="form-group">
             <label htmlFor="signup-acquisitionChannel">{t('signup.heardFrom')}</label>
             <select
@@ -269,12 +292,12 @@ export default function CompleteSignupPage({ onRegistered }: CompleteSignupPageP
             )}
           </div>
           <div className="form-group">
-            <label htmlFor="signup-referralCode">Referral code (optional)</label>
+            <label htmlFor="signup-referralCode">{t('signup.referralCode')}</label>
             <input
               id="signup-referralCode"
               value={referralCode}
               onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
-              placeholder="e.g. K7QM-4XPA"
+              placeholder={t('signup.referralPlaceholder')}
               maxLength={20}
               autoComplete="off"
             />

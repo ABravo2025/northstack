@@ -65,6 +65,17 @@ pago (firma, numeración).
    confirmar (preferencia de email nueva "Recibos de pago"). Página Recibos para `manage_payroll`.
 7. **Centro de ayuda y anuncio.**
 
+## 2b. Agregados del 2026-10-24 (pedidos de Alejandro)
+
+- Legajo automático: correlativo por empresa, 5 dígitos, desde `01001`.
+- Números con el formato del país de la empresa (AR 125.000,00, EE. UU. 125,000.00, el resto el suyo).
+- CUIT/CUIL (EIN/SSN en EE. UU.): de la empresa al registrarse, de cada persona al darla de alta;
+  obligatorios solo en Argentina y EE. UU. (la persona, si es `employee`); cifrado el de la persona.
+  Requiere ampliar la excepción de Nómina de los Términos §3.4 y la Política de privacidad (lo hace el
+  agente legal) antes de producción.
+- Todo recibo dice "No válido como documento legal" (arriba, marca de agua y pie) hasta la
+  certificación de cada país.
+
 ## 3. Después (no en esta etapa)
 
 Exportar para pagar (archivo por método), conceptos recurrentes por persona, fechas de pago reales

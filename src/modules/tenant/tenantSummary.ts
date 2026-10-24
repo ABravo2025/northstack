@@ -19,6 +19,7 @@ export const TENANT_SUMMARY_SELECT = {
   address: true,
   phone: true,
   website: true,
+  taxId: true,
   // Only the timestamp, never logoData itself — the frontend builds the public logo URL
   // (/api/public/tenant-logo/:id?v=<logoUpdatedAt>) from this, so the bytes stay out of every
   // tenant payload.

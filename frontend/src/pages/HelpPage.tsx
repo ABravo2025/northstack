@@ -167,7 +167,11 @@ const FAQ_CATEGORIES: FaqCategory[] = [
       },
       {
         q: 'Is the payslip PDF a legal document?',
-        a: 'No. Payslips are numbered tracking documents with a QR code anyone can use to check they\'re genuine, but they don\'t replace any payslip required by employment law. While a run is still a draft, its PDF is marked "Preview - not issued."',
+        a: 'No. Every payslip says "Not valid as a legal document": they\'re numbered internal tracking documents, with a QR code to check they were issued by Northstack, and they don\'t replace any payslip required by employment law until they\'re certified under each country\'s rules. While a run is still a draft, its PDF is also marked "Preview - not issued."',
+      },
+      {
+        q: 'Why do you ask for a CUIT/CUIL or an EIN/SSN?',
+        a: 'They\'re printed on payslips. In Argentina and the US they\'re required: the company\'s (CUIT / EIN) when the account is created, and each employee\'s (CUIL / SSN) when they\'re added. Elsewhere they\'re optional. A person\'s tax ID is stored encrypted, only whoever runs payroll can change it, and screens only ever show its last 4 digits.',
       },
       {
         q: 'Who gets a payslip, and when?',
@@ -525,7 +529,11 @@ const FAQ_CATEGORIES_ES: FaqCategory[] = [
       },
       {
         q: '¿El PDF del recibo de pago es un documento legal?',
-        a: 'No. Los recibos son documentos de seguimiento numerados, con un código QR para que cualquiera verifique que son auténticos, pero no reemplazan al recibo de sueldo que exige la ley laboral. Mientras la liquidación está en borrador, el PDF dice "Vista previa - sin emitir".',
+        a: 'No. Todo recibo dice "No válido como documento legal": son documentos internos de seguimiento, numerados y con un código QR para verificar que los emitió Northstack, y no reemplazan al recibo de sueldo que exige la ley laboral hasta que se certifiquen según las normas de cada país. Mientras la liquidación está en borrador, el PDF además dice "Vista previa - sin emitir".',
+      },
+      {
+        q: '¿Por qué piden CUIT y CUIL (o EIN y SSN)?',
+        a: 'Van impresos en los recibos. En Argentina y EE. UU. son obligatorios: el de la empresa (CUIT / EIN) al crear la cuenta, y el de cada empleado (CUIL / SSN) al darlo de alta. En los demás países son opcionales. La identificación de cada persona se guarda cifrada, solo quien gestiona la nómina la puede cambiar, y en pantalla solo se ven los últimos 4 dígitos.',
       },
       {
         q: '¿Quién recibe un recibo y cuándo?',

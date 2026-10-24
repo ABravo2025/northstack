@@ -4,6 +4,7 @@ import { api } from '../../api';
 import type { PaymentMethodCatalog, PaymentMethodKind } from '../../api';
 import ConfirmDialog from '../common/ConfirmDialog';
 import { useToast } from '../common/ToastProvider';
+import { countryCode } from '../../lib/countries';
 
 // Settings → Payroll → Payment methods (spec-payroll-v2.md, unit 4): every known method with a
 // switch, what it asks the person for and how many people are paid with it, plus the company's own
@@ -90,7 +91,7 @@ export default function PaymentMethodsGrid({ token, canManage, onAddCustom, onTo
           </button>
         )}
       </div>
-      <p className="rules-hint m-0">{t(`payroll.methods.hint${(catalog.country ?? '').toUpperCase() === 'AR' ? 'Ar' : 'Other'}`)}</p>
+      <p className="rules-hint m-0">{t(`payroll.methods.hint${countryCode(catalog.country) === 'AR' ? 'Ar' : 'Other'}`)}</p>
       {confirmOff && (
         <ConfirmDialog
           title={t('payroll.methods.offTitle', { name: label(confirmOff) })}

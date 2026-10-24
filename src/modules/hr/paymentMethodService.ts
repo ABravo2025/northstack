@@ -3,6 +3,7 @@ import prisma from '../../lib/prisma.js';
 import { recordActivity } from '../activity/activityLogService.js';
 import { paymentMethodActivityFieldConfig } from '../activity/fieldConfigs/paymentMethodFieldConfig.js';
 import type { PaymentMethodDefinition } from '@prisma/client';
+import { countryCode } from '../../lib/country.js';
 
 type PrismaTx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
@@ -24,7 +25,7 @@ export const asksFor = (kind: string): string => (isMethodKind(kind) ? METHOD_KI
 // On by default, by the company's country (§0.4): Argentina → bank transfer (CBU/CVU) and Mercado
 // Pago; everyone else → wire transfer, Wise and Payoneer. Pure (tested).
 export function defaultMethodKinds(country: string | null | undefined): (keyof typeof METHOD_KINDS)[] {
-  return (country ?? '').toUpperCase() === 'AR' ? ['bank_ar', 'mercadopago'] : ['bank_intl', 'wise', 'payoneer'];
+  return countryCode(country) === 'AR' ? ['bank_ar', 'mercadopago'] : ['bank_intl', 'wise', 'payoneer'];
 }
 
 export async function seedDefaultPaymentMethods(tx: PrismaTx, tenantId: string, country?: string | null): Promise<void> {

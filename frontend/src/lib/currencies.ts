@@ -1,3 +1,5 @@
+import { countryCode } from './countries';
+
 // ISO-4217 codes come straight from the runtime's own Intl data instead of a
 // hand-maintained list. Falls back to a short common-currency list on engines
 // without Intl.supportedValuesOf (Safari < 15.4).
@@ -20,8 +22,8 @@ export function currencyLabel(code: string): string {
 let numberLocaleTag = 'en-US';
 
 export function localeForCountry(country: string | null | undefined): string {
-  const cc = (country ?? '').trim().toUpperCase();
-  if (!/^[A-Z]{2}$/.test(cc)) return 'en-US';
+  const cc = countryCode(country);
+  if (!cc) return 'en-US';
   try {
     const likely = new Intl.Locale(`und-${cc}`).maximize();
     return likely.language && likely.language !== 'und' ? `${likely.language}-${cc}` : 'en-US';

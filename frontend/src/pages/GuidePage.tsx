@@ -1417,8 +1417,28 @@ export default function GuidePage() {
               </p>
               <p>
                 Mientras la liquidación está en borrador, el ícono de vista previa abre un PDF marcado
-                <strong> "Vista previa — sin emitir"</strong>. Los recibos son documentos de seguimiento: no reemplazan
-                al recibo de sueldo que exige la ley laboral de cada país.
+                <strong> "Vista previa — sin emitir"</strong>.
+              </p>
+              <p>
+                Todo recibo dice <strong>"No válido como documento legal"</strong> arriba, en una marca de agua y al pie:
+                son documentos internos de seguimiento y no reemplazan al recibo de sueldo que exige la ley laboral,
+                hasta que se certifiquen según las normas de cada país.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>CUIT y CUIL</h3>
+              <p>
+                El recibo lleva la identificación fiscal de la empresa y la de cada persona. En <strong>Argentina</strong>{' '}
+                son el CUIT de la empresa y el CUIL de la persona; en <strong>EE. UU.</strong>, el EIN y el SSN. En esos
+                dos países son obligatorios: el CUIT o EIN se pide al crear la cuenta de la empresa (y se cambia en
+                Configuración → Datos de la empresa), y el CUIL o SSN, al agregar a alguien como empleado (para
+                contractors es opcional). En el resto de los países son opcionales.
+              </p>
+              <p>
+                La identificación de cada persona se guarda cifrada y en pantalla solo se ven los últimos 4 dígitos.
+                El recibo argentino imprime el CUIL completo; el de EE. UU., el SSN con solo los últimos 4. Quien
+                gestiona la nómina lo puede cambiar en Nómina → Personas, y el Resumen avisa a quién le falta.
               </p>
             </div>
 
@@ -1539,7 +1559,27 @@ export default function GuidePage() {
               </p>
               <p>
                 While the run is a draft, the preview icon opens a PDF marked <strong>"Preview - not issued"</strong>.
-                Payslips are tracking documents: they don't replace any payslip required by employment law.
+              </p>
+              <p>
+                Every payslip says <strong>"Not valid as a legal document"</strong> at the top, as a watermark and in the
+                footer: they're internal tracking documents and don't replace any payslip required by employment law,
+                until they're certified under each country's rules.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Tax IDs</h3>
+              <p>
+                The payslip carries the company's tax ID and each person's. In <strong>Argentina</strong> they're the
+                company's CUIT and the person's CUIL; in the <strong>US</strong>, the EIN and the SSN. In those two
+                countries they're required: the CUIT or EIN is asked when the company account is created (and changed
+                in Settings → Company profile), and the CUIL or SSN when someone is added as an employee (optional for
+                contractors). Everywhere else they're optional.
+              </p>
+              <p>
+                Each person's tax ID is stored encrypted and screens only show its last 4 digits. The Argentine payslip
+                prints the full CUIL; the US pay stub shows only the SSN's last 4. Whoever runs payroll can change it in
+                Payroll → People, and the Overview flags who's missing one.
               </p>
             </div>
 

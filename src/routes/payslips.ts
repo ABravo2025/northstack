@@ -4,9 +4,10 @@ import { validateSession } from '../lib/httpAuth.js';
 import { requirePayrollAccess } from '../lib/payrollAccess.js';
 import prisma from '../lib/prisma.js';
 import { sendPayslipEmail } from '../lib/mailer.js';
-import { canManagePayroll } from '../modules/auth/permissionService.js';
+import { canManageEmployee, canManagePayroll } from '../modules/auth/permissionService.js';
 import { getPlanLimits } from '../modules/tenant/planLimits.js';
-import { listPayslips, numberLabel, renderIssuedPayslip, verifyPayslip } from '../modules/hr/payslipV2Service.js';
+import { layoutFor, listPayslips, numberLabel, renderIssuedPayslip, verifyPayslip } from '../modules/hr/payslipV2Service.js';
+import { hasEmployeeTaxId, setEmployeeTaxId } from '../modules/hr/employeeTaxIdService.js';
 
 // Payroll v2 (spec-payroll-v2.md, units 5–6): issued payslips. Whoever runs payroll (owner or
 // manage_payroll) sees and resends everyone's; everyone else, only their own (§0.1–2). The
@@ -125,7 +126,7 @@ payslipsRouter.get('/api/hr/payroll/payslip-settings', async (req, res) => {
     nextLabel: numberLabel(s?.prefix ?? 1, s?.nextNumber ?? 1),
     signerName: s?.signerName ?? null,
     signature: s?.signatureData && s.signatureMime ? `data:${s.signatureMime};base64,${Buffer.from(s.signatureData).toString('base64')}` : null,
-    layout: (tenant.country ?? '').toUpperCase() === 'AR' ? 'ar' : 'us',
+    layout: layoutFor(tenant.country),
   });
 });
 
@@ -151,4 +152,19 @@ payslipsRouter.put('/api/hr/payroll/payslip-settings', async (req, res) => {
     update: { prefix, signerName, ...signatureData },
   });
   return res.json({ ok: true });
+});
+
+// A person's tax ID (CUIL / SSN / other). Never returned in full. Payroll managers can change it
+// (Payroll → People); whoever adds people can only fill it in while it's still empty (the Add
+// person form, when the record was saved before the person became an Employee).
+payslipsRouter.put('/api/hr/payroll/people/:employeeId/tax-id', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) return;
+  if (!getPlanLimits(user.tenant).payrollEnabled) return res.status(403).json({ error: 'Payroll is part of the Growth plan' });
+  const employeeId = String(req.params.employeeId);
+  const allowed = canManagePayroll(user.roleContext) || (canManageEmployee(user.roleContext) && !(await hasEmployeeTaxId(user.tenantId!, employeeId)));
+  if (!allowed) return res.status(403).json({ error: 'Insufficient permissions' });
+  const result = await setEmployeeTaxId(user.tenantId!, employeeId, req.body?.taxId, user.id);
+  if (!result.ok) return res.status(result.error === 'Person not found' ? 404 : 400).json({ error: result.error, field: 'taxId' });
+  return res.json({ taxIdMasked: result.masked });
 });

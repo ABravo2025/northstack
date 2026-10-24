@@ -19,7 +19,7 @@ _Última actualización: 2026-10-03_
 | Pase técnico | ✅ Hecho 2026-10-02 (títulos, descripciones, canonical, hreflang, OG por idioma, JSON-LD, robots, sitemap) |
 | Páginas por módulo | ✅ Pase 1 (Vacaciones ES/EN) **en producción desde 2026-10-03** · ⬜ CRM, RR.HH., Nómina |
 | Backlinks / directorios | 🟡 En curso: **G2 aprobado 2026-10-03**. Resto pendiente (tabla en `2026-10/semana-01/directorios/perfil-producto.md`) |
-| Analítica del sitio | ⬜ No hay (ni Analytics ni Plausible/Vercel Analytics) |
+| Analítica del sitio | 🟡 GTM `GTM-TJHVX9R4` + Consent Mode v2 + banner de cookies + política de privacidad 2.4 armados (rama `analytics`, local, sin push). Falta: configurar el tag de GA4 dentro de GTM (Alejandro) |
 
 ## Problemas conocidos
 
@@ -98,6 +98,15 @@ Indexación de las 2 páginas nuevas pedida en Search Console el 2026-10-03.
 - **No toca** la sección "Qué incluye" de la portada: la rama `landing-plans` (ae79fd0, otra sesión) ya agrega Turnos y Proyectos ahí. Cuando se publique, sumar links de las tarjetas a las páginas de módulo.
 - Pendiente para un pase 3: Legajo digital y Recibos de sueldo; `sameAs` (LinkedIn + G2) en el JSON-LD cuando estén los links.
 
+## Analítica (2026-10-24)
+
+- Contenedor **Google Tag Manager `GTM-TJHVX9R4`** (lo creó Alejandro) en todas las páginas del landing, arriba del `<head>` + `<noscript>` al abrir `<body>`.
+- **Consent Mode v2** antes de GTM: `analytics_storage` denegado hasta que la persona acepta; `ad_storage`, `ad_user_data`, `ad_personalization` siempre denegados.
+- **Banner de cookies** `landing/consent.js` (EN/ES según el idioma de la página): Aceptar / Rechazar, guarda la elección en `localStorage` (`ns-consent`), link "Preferencias de cookies" / "Cookie settings" en el pie para cambiarla.
+- **Política de privacidad EN/ES**: nueva sección 2.4 (analítica solo con consentimiento, sin publicidad, solo en el sitio, nunca dentro de la app), Google en la tabla de proveedores, fecha de vigencia 24/10/2026. La app muestra esta misma página en su modal de legales.
+- **Dentro de GTM** (lo configura Alejandro): etiqueta "Etiqueta de Google" con el ID de medición de GA4 (`G-…`), activador *Initialization - All Pages*, y en *Configuración avanzada → Configuración de consentimiento* → "Requerir consentimiento adicional": `analytics_storage`. Publicar el contenedor. Sin ese paso la política (GA no corre si rechazás) no sería cierta.
+- Herramientas: `tools/seo/analytics.cjs` (idempotente, etiqueta cualquier página nueva) + `tools/seo/consent.js`. **Toda página nueva del landing tiene que llevar GTM**: correr `analytics.cjs` después de generarla.
+
 ## Herramientas
 
 `tools/seo/` — pase 2: `pages.cjs` (contenido de cada página), `build2.cjs` (genera páginas + pie + sitemap + rewrites, `LANDING=<carpeta> node build2.cjs --write`), `preview2.cjs` (vista previa para Artifact). Pase 1: `build-seo.cjs` + plantillas `vacaciones.es.html` / `vacaciones.en.html`. El script
@@ -107,6 +116,7 @@ Artifact. Fue escrito para el pase 1 (los retoques de portada fallan a propósit
 aplicados); para los próximos módulos, copiar una plantilla y reutilizar `buildModule()`.
 
 ## Changelog SEO (más nuevo arriba)
+- **2026-10-24** — GTM + Consent Mode + banner + política de privacidad armados en la rama `analytics` (local). `seo-pass-2` rebaseada encima, con GTM en sus 6 páginas.
 - **2026-10-20** — Pase 2 armado (Turnos/CRM/Proyectos EN/ES + arreglos de sitemap, About, legales ES). Vista previa publicada, sin push.
 - **2026-10-20** — Auditoría del landing (ver sección "Auditoría 2026-10-20"). G2: perfil visible; reseñas descartadas por ahora (deben venir de clientes con su propia cuenta).
 - **2026-10-03** — Perfil de Northstack en **G2 aprobado** (primer directorio / primer backlink externo).

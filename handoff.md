@@ -4,7 +4,7 @@ Running context of the whole project, kept current so any session (or person) ca
 last one left off. **Update this file whenever a feature ships or something important changes**
 (newest entries on top in "Changelog"). Rule set in `README.md`.
 
-_Last updated: 2026-10-23_
+_Last updated: 2026-10-24_
 
 ---
 
@@ -86,7 +86,7 @@ SEO is part of marketing: every SEO change is logged in `seo/README.md` + a chan
 ---
 
 ## Changelog (newest first)
-- **2026-10-23** — WhatsApp statuses: 14 image-only 1080×1920 cards in Spanish, one per feature (people, time off, calendar, shifts, clock-in, hours, client report, projects, tasks, CRM, payroll tracking, roles, AI assistant, 2FA) in `2026-10/semana-04/whatsapp/`, tooling `tools/whatsapp/estados.mjs`. Ready for Alejandro to post one at a time.
+- **2026-10-23** — WhatsApp statuses: 14 image-only 1080×1920 cards in Spanish and English (added 2026-10-24), one per feature (people, time off, calendar, shifts, clock-in, hours, client report, projects, tasks, CRM, payroll tracking, roles, AI assistant, 2FA) in `2026-10/semana-04/whatsapp/`, tooling `tools/whatsapp/estados.mjs`. Ready for Alejandro to post one at a time.
 - **2026-10-20** — SEO pass 2 built, not live: Shifts/CRM/Projects module pages EN/ES + sitemap/About/ES-legal fixes (landing branch `seo-pass-2`, local). Preview https://claude.ai/artifact/KMdMhxBJs1H5NV1Dgke6Br
 - **2026-10-20** — **AI assistants reach the whole app** (main `866df7e`): a live assistant couldn't load an employee's contract or create/assign a time-off policy, so the Private API was reviewed against every app route and everything operational was added (58 → 122 MCP tools) by running the app's own routes as the connected person — permissions and plan limits can't drift again. Sensitive actions (publish/cancel shifts, invitations, client emails, balance adjustments) ask the user to confirm; the assistant can't invite as Admin or into salary/payment roles. No DB changes. Marketing angle: "run your HR and CRM by talking to your own AI — it can only do what you can" (Growth upgrade reason). Real-assistant QA by Alejandro pending.
 - **2026-10-20** — **Two-step verification live in production** (main `f263ad2`): authenticator-app codes (Google/Microsoft Authenticator, Authy, password managers) + 10 recovery codes, "remember this device" 30 days. Required for account owners, anyone with billing or payments permissions, and Northstack staff (Admin Center); optional for everyone else, on every plan. Lost phone: company admins reset it from Settings → Users; the owner's only Northstack support (Admin, audited). Turns on once `MFA_ENCRYPTION_KEY` is set in Vercel Production. Marketing angle: "bank-level sign-in on every plan, at no extra cost" — trust signal for payroll/payments data.

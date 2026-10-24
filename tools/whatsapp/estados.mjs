@@ -1,4 +1,4 @@
-// WhatsApp status images (1080×1920 PNG, 9:16), one per feature, in Spanish.
+// WhatsApp status images (1080×1920 PNG, 9:16), one per feature, in ES and EN (<name>-es.png / -en.png).
 //   PW_DIR=<dir with node_modules/playwright> CHROME=<chrome.exe> node estados.mjs
 // Writes into 2026-10/semana-04/whatsapp/. Keeps ~200 px clear at the top (progress bar + name) and
 // ~230 px at the bottom (reply bar). Text lives here, design in CSS below.
@@ -82,8 +82,9 @@ h1 em{font-family:'Instrument Serif',Georgia,serif;font-weight:400;font-style:it
 .qr{width:220px;height:220px;flex:none;padding:14px;background:#fff;border-radius:24px;border:2px solid #e7e1fb}
 `;
 
+const T = (es, en) => ({ es, en });
 const brand = `<div class="brand"><span class="mark">${LOGO}</span>Northstack</div>`;
-const foot = `<div class="foot"><span class="trial">Prueba gratis 15 días<br>Sin tarjeta</span><span class="url">joinnorthstack.com/es</span></div>`;
+const foot = (l) => `<div class="foot"><span class="trial">${T('Prueba gratis 15 días<br>Sin tarjeta', 'Free 15-day trial<br>No credit card')[l]}</span><span class="url">${T('joinnorthstack.com/es', 'joinnorthstack.com')[l]}</span></div>`;
 const head = (kicker, title) => `${brand}<div class="kicker">${kicker}</div><h1>${title}</h1>`;
 
 // Illustrative QR (finder squares + seeded noise). Not scannable on purpose.
@@ -102,173 +103,175 @@ const qr = (() => {
 
 // One status per feature. `violet` alternates the background so consecutive posts look different.
 const ESTADOS = [
-  { name: '01-personas', html: () => `${head('Personas', 'Tu equipo, <em>sin carpetas</em> ni planillas')}
+  { name: '01-personas', html: (l) => `${head(T('Personas', 'People')[l], T('Tu equipo, <em>sin carpetas</em> ni planillas', 'Your team, <em>no folders</em>, no spreadsheets')[l])}
     <div class="mock"><div class="panel">
-      <div class="row" style="margin-bottom:30px"><span class="av a1">LG</span><div><div class="title">Lucía Gómez</div><div class="muted small">Analista contable · Administración</div></div></div>
+      <div class="row" style="margin-bottom:30px"><span class="av a1">LG</span><div><div class="title">Lucía Gómez</div><div class="muted small">${T('Analista contable · Administración', 'Accountant · Finance')[l]}</div></div></div>
       <div class="rows">
-        <div class="row"><span class="ic">📄</span>Contrato<span class="right pill p-ok">Confirmado</span></div>
-        <div class="row"><span class="ic">👤</span>Líder<span class="right b">Diego Ruiz</span></div>
-        <div class="row"><span class="ic">🌴</span>Vacaciones<span class="right b">9 días disponibles</span></div>
-        <div class="row"><span class="ic">🎂</span>Cumpleaños<span class="right b">14 de marzo</span></div>
-        <div class="row"><span class="ic">📎</span>Documentos<span class="right b">4 archivos</span></div>
+        <div class="row"><span class="ic">📄</span>${T('Contrato', 'Contract')[l]}<span class="right pill p-ok">${T('Confirmado', 'Confirmed')[l]}</span></div>
+        <div class="row"><span class="ic">👤</span>${T('Líder', 'Manager')[l]}<span class="right b">Diego Ruiz</span></div>
+        <div class="row"><span class="ic">🌴</span>${T('Vacaciones', 'Time off')[l]}<span class="right b">${T('9 días disponibles', '9 days left')[l]}</span></div>
+        <div class="row"><span class="ic">🎂</span>${T('Cumpleaños', 'Birthday')[l]}<span class="right b">${T('14 de marzo', 'March 14')[l]}</span></div>
+        <div class="row"><span class="ic">📎</span>${T('Documentos', 'Documents')[l]}<span class="right b">${T('4 archivos', '4 files')[l]}</span></div>
       </div>
     </div></div>
-    <div class="sub">Datos, contrato, documentos y quién es su líder. Todo en una ficha por persona.</div>${foot}` },
+    <div class="sub">${T('Datos, contrato, documentos y quién es su líder. Todo en una ficha por persona.', 'Details, contract, documents and who their manager is. One profile per person.')[l]}</div>${foot(l)}` },
 
-  { name: '02-vacaciones', violet: true, html: () => `${head('Vacaciones', '¿Cuántos días <em>le quedan?</em>')}
+  { name: '02-vacaciones', violet: true, html: (l) => `${head(T('Vacaciones', 'Time off')[l], T('¿Cuántos días <em>le quedan?</em>', 'How many days <em>are left?</em>')[l])}
     <div class="mock"><div class="panel">
-      <div class="row"><span class="av a2">MS</span><div><div class="title">Martina Sosa</div><div class="muted small">pidió vacaciones</div></div><span class="right pill p-wait">Pendiente</span></div>
+      <div class="row"><span class="av a2">MS</span><div><div class="title">Martina Sosa</div><div class="muted small">${T('pidió vacaciones', 'requested time off')[l]}</div></div><span class="right pill p-wait">${T('Pendiente', 'Pending')[l]}</span></div>
       <div class="rows" style="margin-top:30px">
-        <div class="row"><span class="ic">📅</span>10 – 14 de noviembre<span class="right b">5 días hábiles</span></div>
-        <div class="row" style="display:block"><div style="display:flex"><span>Le quedan</span><span class="right b">9 de 14 días</span></div><div class="bar"><i style="width:64%"></i></div></div>
+        <div class="row"><span class="ic">📅</span>${T('9 – 13 de noviembre', 'November 9 – 13')[l]}<span class="right b">${T('5 días hábiles', '5 business days')[l]}</span></div>
+        <div class="row" style="display:block"><div style="display:flex"><span>${T('Le quedan', 'Left after this')[l]}</span><span class="right b">${T('9 de 14 días', '9 of 14 days')[l]}</span></div><div class="bar"><i style="width:64%"></i></div></div>
       </div>
-      <div class="btns"><span class="btn">Rechazar</span><span class="btn pri">Aprobar</span></div>
+      <div class="btns"><span class="btn">${T('Rechazar', 'Decline')[l]}</span><span class="btn pri">${T('Aprobar', 'Approve')[l]}</span></div>
     </div></div>
-    <div class="sub">Feriados de tu país, días hábiles y saldos al día. Sin preguntarle a nadie.</div>${foot}` },
+    <div class="sub">${T('Feriados de tu país, días hábiles y saldos al día. Sin preguntarle a nadie.', 'Your country’s holidays, business days and up-to-date balances. No need to ask anyone.')[l]}</div>${foot(l)}` },
 
-  { name: '03-calendario', html: () => `${head('Calendario del equipo', '¿Quién está <em>esta semana?</em>')}
+  { name: '03-calendario', html: (l) => `${head(T('Calendario del equipo', 'Team calendar')[l], T('¿Quién está <em>esta semana?</em>', 'Who’s in <em>this week?</em>')[l])}
     <div class="mock"><div class="panel cal">
-      <div class="days">${['Lun', 'Mar', 'Mié', 'Jue', 'Vie'].map((d) => `<div class="d">${d}</div>`).join('')}</div>
+      <div class="days">${T(['Lun', 'Mar', 'Mié', 'Jue', 'Vie'], ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'])[l].map((d) => `<div class="d">${d}</div>`).join('')}</div>
       <div class="days">
         <div class="c"><span class="chip v">🌴 Martina</span><span class="chip v">🌴 Diego</span></div>
         <div class="c"><span class="chip v">🌴 Martina</span><span class="chip y">🎂 Camila</span></div>
         <div class="c"><span class="chip v">🌴 Martina</span></div>
-        <div class="c"><span class="chip g">🗓️ Feriado</span></div>
+        <div class="c"><span class="chip g">🗓️ ${T('Feriado', 'Holiday')[l]}</span></div>
         <div class="c"><span class="chip v">🌴 Tomás</span></div>
       </div>
     </div></div>
-    <div class="sub">Vacaciones, cumpleaños y feriados en un solo lugar, sincronizado con Google Calendar.</div>${foot}` },
+    <div class="sub">${T('Vacaciones, cumpleaños y feriados en un solo lugar, sincronizado con Google Calendar.', 'Time off, birthdays and holidays in one place, synced with Google Calendar.')[l]}</div>${foot(l)}` },
 
-  { name: '04-turnos', violet: true, html: () => `${head('Turnos', 'Deja de confirmar turnos <em>por WhatsApp</em>')}
+  { name: '04-turnos', violet: true, html: (l) => `${head(T('Turnos', 'Shifts')[l], T('Deja de confirmar turnos <em>por WhatsApp</em>', 'Stop confirming shifts <em>over WhatsApp</em>')[l])}
     <div class="mock"><div class="panel">
-      <div class="row"><span class="ic">🗓️</span><div><div class="title">Nuevo turno</div><div class="muted small">Sede Palermo</div></div><span class="right pill p-v">Publicado</span></div>
+      <div class="row"><span class="ic">🗓️</span><div><div class="title">${T('Nuevo turno', 'New shift')[l]}</div><div class="muted small">${T('Sede Palermo', 'Palermo site')[l]}</div></div><span class="right pill p-v">${T('Publicado', 'Published')[l]}</span></div>
       <div class="rows" style="margin-top:28px">
-        <div class="row">Sábado 25 de octubre<span class="right b">07:00 – 15:00</span></div>
+        <div class="row">${T('Sábado 31 de octubre', 'Saturday, October 31')[l]}<span class="right b">${T('07:00 – 15:00', '7 AM – 3 PM')[l]}</span></div>
       </div>
-      <div class="btns"><span class="btn">No puedo</span><span class="btn pri">Confirmo ✓</span></div>
+      <div class="btns"><span class="btn">${T('No puedo', 'Can’t make it')[l]}</span><span class="btn pri">${T('Confirmo ✓', 'Confirm ✓')[l]}</span></div>
     </div>
     <div class="panel"><div class="rows">
-      <div class="row">Confirmaron<span class="right pill p-ok">8 personas</span></div>
-      <div class="row">Sin responder<span class="right pill p-wait">2 personas</span></div>
-      <div class="row">Sin cubrir<span class="right pill p-no">1 turno</span></div>
+      <div class="row">${T('Confirmaron', 'Confirmed')[l]}<span class="right pill p-ok">${T('8 personas', '8 people')[l]}</span></div>
+      <div class="row">${T('Sin responder', 'No answer yet')[l]}<span class="right pill p-wait">${T('2 personas', '2 people')[l]}</span></div>
+      <div class="row">${T('Sin cubrir', 'Uncovered')[l]}<span class="right pill p-no">${T('1 turno', '1 shift')[l]}</span></div>
     </div></div></div>
-    <div class="sub">Lo reciben en su calendario y responden con un clic.</div>${foot}` },
+    <div class="sub">${T('Lo reciben en su calendario y responden con un clic.', 'It lands in their calendar and they answer with one click.')[l]}</div>${foot(l)}` },
 
-  { name: '05-fichaje', html: () => `${head('Fichaje', 'Fichan con <em>su propio celular</em>')}
+  { name: '05-fichaje', html: (l) => `${head(T('Fichaje', 'Clock-in')[l], T('Fichan con <em>su propio celular</em>', 'They clock in with <em>their own phone</em>')[l])}
     <div class="mock"><div class="panel">
       <div class="row" style="gap:32px">${qr}
-        <div><div class="title">Sede Belgrano</div><div class="muted small" style="margin-top:8px">Escanea para entrar, salir o tomar un descanso</div></div></div>
+        <div><div class="title">${T('Sede Belgrano', 'Belgrano site')[l]}</div><div class="muted small" style="margin-top:8px">${T('Escanea para entrar, salir o tomar un descanso', 'Scan to clock in, clock out or take a break')[l]}</div></div></div>
     </div>
-    <div class="panel"><div class="title" style="margin-bottom:24px">Hoy</div><div class="rows">
-      <div class="row"><span class="av sm a3">CL</span>Camila<span class="right pill p-ok">Entró 08:58</span></div>
-      <div class="row"><span class="av sm a5">TP</span>Tomás<span class="right pill p-ok">Entró 09:03</span></div>
-      <div class="row"><span class="av sm a4">JM</span>Joaquín<span class="right pill p-wait">En descanso</span></div>
+    <div class="panel"><div class="title" style="margin-bottom:24px">${T('Hoy', 'Today')[l]}</div><div class="rows">
+      <div class="row"><span class="av sm a3">CL</span>Camila<span class="right pill p-ok">${T('Entró 08:58', 'In at 8:58')[l]}</span></div>
+      <div class="row"><span class="av sm a5">TP</span>Tomás<span class="right pill p-ok">${T('Entró 09:03', 'In at 9:03')[l]}</span></div>
+      <div class="row"><span class="av sm a4">JM</span>Joaquín<span class="right pill p-wait">${T('En descanso', 'On a break')[l]}</span></div>
     </div></div></div>
-    <div class="sub">Un QR impreso por sede. Sin reloj, sin tablet, sin instalar nada.</div>${foot}` },
+    <div class="sub">${T('Un QR impreso por sede. Sin reloj, sin tablet, sin instalar nada.', 'One printed QR per site. No time clock, no tablet, nothing to install.')[l]}</div>${foot(l)}` },
 
-  { name: '06-horas', violet: true, html: () => `${head('Horas', 'Las horas <em>se cargan solas</em>')}
+  { name: '06-horas', violet: true, html: (l) => `${head(T('Horas', 'Timesheets')[l], T('Las horas <em>se cargan solas</em>', 'Hours that <em>fill themselves in</em>')[l])}
     <div class="mock"><div class="panel">
-      <div class="row" style="margin-bottom:26px"><div class="title">Semana del 20/10</div><span class="right muted small">Sugerencias</span></div>
+      <div class="row" style="margin-bottom:26px"><div class="title">${T('Semana del 19/10', 'Week of Oct 19')[l]}</div><span class="right muted small">${T('Sugerencias', 'Suggestions')[l]}</span></div>
       <div class="rows">
-        <div class="row"><span class="ic">🗓️</span><div>Turno Sede Palermo<div class="muted small">lun 20</div></div><span class="right b">8 h</span></div>
-        <div class="row"><span class="ic">✅</span><div>Tarea: cierre de mes<div class="muted small">mar 21</div></div><span class="right b">2,5 h</span></div>
-        <div class="row"><span class="ic">📞</span><div>Reunión con cliente<div class="muted small">Google Calendar · mié 22</div></div><span class="right b">1 h</span></div>
+        <div class="row"><span class="ic">🗓️</span><div>${T('Turno Sede Palermo', 'Shift at Palermo site')[l]}<div class="muted small">${T('lun 19', 'Mon 19')[l]}</div></div><span class="right b">8 h</span></div>
+        <div class="row"><span class="ic">✅</span><div>${T('Tarea: cierre de mes', 'Task: month-end close')[l]}<div class="muted small">${T('mar 20', 'Tue 20')[l]}</div></div><span class="right b">${T('2,5 h', '2.5 h')[l]}</span></div>
+        <div class="row"><span class="ic">📞</span><div>${T('Reunión con cliente', 'Client meeting')[l]}<div class="muted small">${T('Google Calendar · mié 21', 'Google Calendar · Wed 21')[l]}</div></div><span class="right b">1 h</span></div>
       </div>
-      <div class="btns"><span class="btn pri">Enviar semana para aprobar</span></div>
+      <div class="btns"><span class="btn pri">${T('Enviar semana para aprobar', 'Submit week for approval')[l]}</span></div>
     </div></div>
-    <div class="sub">Te sugiere horas de turnos, tareas y reuniones. Tú confirmas, tu líder aprueba.</div>${foot}` },
+    <div class="sub">${T('Te sugiere horas de turnos, tareas y reuniones. Tú confirmas, tu líder aprueba.', 'Hours suggested from shifts, tasks and meetings. You confirm, your manager approves.')[l]}</div>${foot(l)}` },
 
-  { name: '07-reporte-cliente', html: () => `${head('Reporte de horas', 'Las horas al cliente, <em>en un clic</em>')}
+  { name: '07-reporte-cliente', html: (l) => `${head(T('Reporte de horas', 'Hours report')[l], T('Las horas al cliente, <em>en un clic</em>', 'Client hours, <em>in one click</em>')[l])}
     <div class="mock"><div class="panel">
-      <div class="muted small">REPORTE DE HORAS · OCTUBRE 2026</div>
-      <div class="title" style="margin-top:8px;font-size:42px">Estudio Pérez & Asociados</div>
+      <div class="muted small">${T('REPORTE DE HORAS · OCTUBRE 2026', 'HOURS REPORT · OCTOBER 2026')[l]}</div>
+      <div class="title" style="margin-top:8px;font-size:42px">${T('Estudio Pérez & Asociados', 'Pérez & Partners')[l]}</div>
       <div class="rows" style="margin-top:30px">
-        <div class="row">Cierre de mes<span class="right b">18 h</span></div>
-        <div class="row">Liquidación de impuestos<span class="right b">14,5 h</span></div>
-        <div class="row">Reuniones<span class="right b">10 h</span></div>
-        <div class="row b">Total aprobado<span class="right" style="color:#5b21e6;font-size:40px">42,5 h</span></div>
+        <div class="row">${T('Cierre de mes', 'Month-end close')[l]}<span class="right b">18 h</span></div>
+        <div class="row">${T('Liquidación de impuestos', 'Tax filing')[l]}<span class="right b">${T('14,5 h', '14.5 h')[l]}</span></div>
+        <div class="row">${T('Reuniones', 'Meetings')[l]}<span class="right b">10 h</span></div>
+        <div class="row b">${T('Total aprobado', 'Total approved')[l]}<span class="right" style="color:#5b21e6;font-size:40px">${T('42,5 h', '42.5 h')[l]}</span></div>
       </div>
-      <div class="btns"><span class="btn">📄 PDF</span><span class="btn">🔗 Link</span><span class="btn pri">✉️ Enviar</span></div>
+      <div class="btns"><span class="btn">📄 PDF</span><span class="btn">🔗 Link</span><span class="btn pri">✉️ ${T('Enviar', 'Send')[l]}</span></div>
     </div></div>
-    <div class="sub">Solo horas aprobadas. Por PDF, link privado o email directo al cliente.</div>${foot}` },
+    <div class="sub">${T('Solo horas aprobadas. Por PDF, link privado o email directo al cliente.', 'Approved hours only. As a PDF, a private link or straight to your client’s inbox.')[l]}</div>${foot(l)}` },
 
-  { name: '08-proyectos', violet: true, html: () => `${head('Proyectos', 'Tu próximo proyecto <em>ya tiene plantilla</em>')}
+  { name: '08-proyectos', violet: true, html: (l) => `${head(T('Proyectos', 'Projects')[l], T('Tu próximo proyecto <em>ya tiene plantilla</em>', 'Your next project <em>already has a template</em>')[l])}
     <div class="mock"><div class="panel"><div class="rows">
-      <div class="row" style="display:block"><div style="display:flex"><span class="b">🧾 Cierre de mes · 10/2026</span><span class="right muted">72%</span></div><div class="bar"><i style="width:72%"></i></div></div>
-      <div class="row" style="display:block"><div style="display:flex"><span class="b">📣 Lanzamiento de campaña</span><span class="right muted">40%</span></div><div class="bar"><i style="width:40%"></i></div></div>
-      <div class="row" style="display:block"><div style="display:flex"><span class="b">🤝 Alta de cliente nuevo</span><span class="right muted">15%</span></div><div class="bar"><i style="width:15%"></i></div></div>
+      <div class="row" style="display:block"><div style="display:flex"><span class="b">🧾 ${T('Cierre de mes · 10/2026', 'Month-end close · 10/2026')[l]}</span><span class="right muted">72%</span></div><div class="bar"><i style="width:72%"></i></div></div>
+      <div class="row" style="display:block"><div style="display:flex"><span class="b">📣 ${T('Lanzamiento de campaña', 'Campaign launch')[l]}</span><span class="right muted">40%</span></div><div class="bar"><i style="width:40%"></i></div></div>
+      <div class="row" style="display:block"><div style="display:flex"><span class="b">🤝 ${T('Alta de cliente nuevo', 'New client onboarding')[l]}</span><span class="right muted">15%</span></div><div class="bar"><i style="width:15%"></i></div></div>
     </div>
-    <div class="btns"><span class="btn">En blanco</span><span class="btn pri">Usar plantilla</span></div>
+    <div class="btns"><span class="btn">${T('En blanco', 'Blank')[l]}</span><span class="btn pri">${T('Usar plantilla', 'Use template')[l]}</span></div>
     </div></div>
-    <div class="sub">Fases, tareas asignadas por rol y avance. Empieza de cero o con la plantilla de tu rubro.</div>${foot}` },
+    <div class="sub">${T('Fases, tareas asignadas por rol y avance. Empieza de cero o con la plantilla de tu rubro.', 'Phases, tasks assigned by role and progress. Start from scratch or from your industry’s template.')[l]}</div>${foot(l)}` },
 
-  { name: '09-tareas', html: () => `${head('Tareas', 'Cada tarea con <em>dueño, fecha</em> y su chat')}
+  { name: '09-tareas', html: (l) => `${head(T('Tareas', 'Tasks')[l], T('Cada tarea con <em>dueño, fecha</em> y su chat', 'Every task with <em>an owner, a date</em> and its own chat')[l])}
     <div class="mock"><div class="panel">
-      <div class="row"><span class="ic">✅</span><div><div class="title">Conciliar bancos</div><div class="muted small">Vence vie 31/10 · Lucía Gómez</div></div><span class="right pill p-v">⏱ 1:24</span></div>
+      <div class="row"><span class="ic">✅</span><div><div class="title">${T('Conciliar bancos', 'Bank reconciliation')[l]}</div><div class="muted small">${T('Vence vie 30/10 · Lucía Gómez', 'Due Fri Oct 30 · Lucía Gómez')[l]}</div></div><span class="right pill p-v">⏱ 1:24</span></div>
       <div style="margin-top:20px">
-        <div class="bubble them"><span class="who">Lucía</span><span class="mention">@Diego</span> ¿me pasas el extracto de octubre?</div>
-        <div class="bubble me"><span class="who">Diego</span>Listo, ya está subido 👍</div>
+        <div class="bubble them"><span class="who">Lucía</span><span class="mention">@Diego</span> ${T('¿me pasas el extracto de octubre?', 'can you send me the October statement?')[l]}</div>
+        <div class="bubble me"><span class="who">Diego</span>${T('Listo, ya está subido 👍', 'Done, it’s uploaded 👍')[l]}</div>
       </div>
     </div></div>
-    <div class="sub">Menciones con aviso, recordatorios y cuánto tiempo llevó cada tarea.</div>${foot}` },
+    <div class="sub">${T('Menciones con aviso, recordatorios y cuánto tiempo llevó cada tarea.', 'Mentions that notify, reminders and how long each task took.')[l]}</div>${foot(l)}` },
 
-  { name: '10-ventas', violet: true, html: () => `${head('CRM de ventas', '¿Dónde viven tus <em>oportunidades?</em>')}
+  { name: '10-ventas', violet: true, html: (l) => `${head(T('CRM de ventas', 'Sales CRM')[l], T('¿Dónde viven tus <em>oportunidades?</em>', 'Where do your <em>deals</em> live?')[l])}
     <div class="mock"><div class="panel kan">
-      <div class="col"><h4>Contacto</h4><div class="deal">Clínica Norte<span>Diego · hoy</span></div><div class="deal">Ferretería Sur<span>Camila · mañana</span></div></div>
-      <div class="col"><h4>Propuesta</h4><div class="deal hot">Estudio Vidal<span>Enviar propuesta</span></div><div class="deal">Lab Andino<span>Llamar el jueves</span></div></div>
-      <div class="col"><h4>Cierre</h4><div class="deal">Café Central<span>✓ Ganada</span></div></div>
+      <div class="col"><h4>${T('Contacto', 'Lead')[l]}</h4><div class="deal">${T('Clínica Norte', 'North Clinic')[l]}<span>${T('Diego · hoy', 'Diego · today')[l]}</span></div><div class="deal">${T('Ferretería Sur', 'South Hardware')[l]}<span>${T('Camila · mañana', 'Camila · tomorrow')[l]}</span></div></div>
+      <div class="col"><h4>${T('Propuesta', 'Proposal')[l]}</h4><div class="deal hot">${T('Estudio Vidal', 'Vidal Studio')[l]}<span>${T('Enviar propuesta', 'Send proposal')[l]}</span></div><div class="deal">${T('Lab Andino', 'Andes Lab')[l]}<span>${T('Llamar el jueves', 'Call on Thursday')[l]}</span></div></div>
+      <div class="col"><h4>${T('Cierre', 'Closed')[l]}</h4><div class="deal">${T('Café Central', 'Central Café')[l]}<span>✓ ${T('Ganada', 'Won')[l]}</span></div></div>
     </div></div>
-    <div class="sub">Un embudo con tus etapas, tareas y próximos pasos. No en el correo de cada vendedor.</div>${foot}` },
+    <div class="sub">${T('Un embudo con tus etapas, tareas y próximos pasos. No en el correo de cada vendedor.', 'A pipeline with your stages, tasks and next steps. Not in each rep’s inbox.')[l]}</div>${foot(l)}` },
 
-  { name: '11-nomina', html: () => `${head('Nómina', 'Sueldos y recibos, <em>ordenados</em>')}
+  { name: '11-nomina', html: (l) => `${head(T('Nómina', 'Payroll')[l], T('Sueldos y recibos, <em>ordenados</em>', 'Salaries and pay stubs, <em>organized</em>')[l])}
     <div class="mock"><div class="panel">
-      <div class="row"><span class="ic">🧾</span><div><div class="title">Liquidación octubre</div><div class="muted small">12 personas</div></div><span class="right pill p-ok">Cerrada</span></div>
+      <div class="row"><span class="ic">🧾</span><div><div class="title">${T('Liquidación octubre', 'October pay run')[l]}</div><div class="muted small">${T('12 personas', '12 people')[l]}</div></div><span class="right pill p-ok">${T('Cerrada', 'Closed')[l]}</span></div>
       <div class="rows" style="margin-top:28px">
-        <div class="row"><span class="av sm a1">LG</span>Lucía Gómez<span class="right pill p-ok">Recibo enviado</span></div>
-        <div class="row"><span class="av sm a3">CL</span>Camila López<span class="right pill p-ok">Recibo enviado</span></div>
-        <div class="row"><span class="av sm a5">TP</span>Tomás Paz<span class="right pill p-v">Contrato confirmado</span></div>
+        <div class="row"><span class="av sm a1">LG</span>Lucía Gómez<span class="right pill p-ok">${T('Recibo enviado', 'Stub sent')[l]}</span></div>
+        <div class="row"><span class="av sm a3">CL</span>Camila López<span class="right pill p-ok">${T('Recibo enviado', 'Stub sent')[l]}</span></div>
+        <div class="row"><span class="av sm a5">TP</span>Tomás Paz<span class="right pill p-v">${T('Contrato confirmado', 'Contract confirmed')[l]}</span></div>
       </div>
     </div></div>
-    <div class="sub">Liquidaciones, recibos y contratos confirmados por cada persona. Northstack lleva el registro: no paga ni mueve dinero.</div>${foot}` },
+    <div class="sub">${T('Liquidaciones, recibos y contratos confirmados por cada persona. Northstack lleva el registro: no paga ni mueve dinero.', 'Pay runs, pay stubs and contracts each person confirms. Northstack keeps the records: it never pays anyone or moves money.')[l]}</div>${foot(l)}` },
 
-  { name: '12-roles', violet: true, html: () => `${head('Roles y permisos', 'No todos tienen que ver <em>los sueldos</em>')}
+  { name: '12-roles', violet: true, html: (l) => `${head(T('Roles y permisos', 'Roles and permissions')[l], T('No todos tienen que ver <em>los sueldos</em>', 'Not everyone needs to see <em>salaries</em>')[l])}
     <div class="mock"><div class="panel"><div class="rows">
-      <div class="row"><span class="ic">🧾</span>Gestionar nómina<span class="right pill p-v">RR. HH.</span></div>
-      <div class="row"><span class="ic">🌴</span>Aprobar vacaciones<span class="right pill p-v">Líderes</span></div>
-      <div class="row"><span class="ic">📊</span>Ver paneles<span class="right pill p-v">Dirección</span></div>
-      <div class="row"><span class="ic">👤</span>Ver sus propios datos<span class="right pill p-ok">Todos</span></div>
+      <div class="row"><span class="ic">🧾</span>${T('Gestionar nómina', 'Manage payroll')[l]}<span class="right pill p-v">${T('RR. HH.', 'HR')[l]}</span></div>
+      <div class="row"><span class="ic">🌴</span>${T('Aprobar vacaciones', 'Approve time off')[l]}<span class="right pill p-v">${T('Líderes', 'Managers')[l]}</span></div>
+      <div class="row"><span class="ic">📊</span>${T('Ver paneles', 'View dashboards')[l]}<span class="right pill p-v">${T('Dirección', 'Leadership')[l]}</span></div>
+      <div class="row"><span class="ic">👤</span>${T('Ver sus propios datos', 'See their own data')[l]}<span class="right pill p-ok">${T('Todos', 'Everyone')[l]}</span></div>
     </div></div></div>
-    <div class="sub">Crea los roles que tu empresa necesita y decide qué ve y qué hace cada uno.</div>${foot}` },
+    <div class="sub">${T('Crea los roles que tu empresa necesita y decide qué ve y qué hace cada uno.', 'Create the roles your company needs and decide what each one sees and does.')[l]}</div>${foot(l)}` },
 
-  { name: '13-asistente-ia', html: () => `${head('Asistente de IA', 'Pregúntale a <em>tu IA</em> por tu equipo')}
+  { name: '13-asistente-ia', html: (l) => `${head(T('Asistente de IA', 'AI assistant')[l], T('Pregúntale a <em>tu IA</em> por tu equipo', 'Ask <em>your AI</em> about your team')[l])}
     <div class="mock"><div class="panel">
-      <div class="bubble me" style="margin-top:0">¿Quién está de vacaciones la semana que viene?</div>
-      <div class="bubble them">Martina (10 al 14/11) y Tomás (viernes 14). Además, el sábado queda 1 turno sin cubrir en Sede Palermo. ¿Te sugiero quién puede tomarlo?</div>
-      <div class="bubble me">Sí, dale</div>
+      <div class="bubble me" style="margin-top:0">${T('¿Quién está de vacaciones la semana que viene?', 'Who’s off next week?')[l]}</div>
+      <div class="bubble them">${T('Martina (9 al 13/11) y Tomás (viernes 13). Además, el sábado queda 1 turno sin cubrir en Sede Palermo. ¿Te sugiero quién puede tomarlo?', 'Martina (Nov 9–13) and Tomás (Friday 13th). Also, there’s 1 uncovered shift on Saturday at the Palermo site. Want me to suggest who could take it?')[l]}</div>
+      <div class="bubble me">${T('Sí, dale', 'Yes, please')[l]}</div>
     </div></div>
-    <div class="sub">Conecta tu propio asistente (Claude, ChatGPT…). Solo puede hacer lo que tú puedes.</div>${foot}` },
+    <div class="sub">${T('Conecta tu propio asistente (Claude, ChatGPT…). Solo puede hacer lo que tú puedes.', 'Connect your own assistant (Claude, ChatGPT…). It can only do what you can.')[l]}</div>${foot(l)}` },
 
-  { name: '14-seguridad', violet: true, html: () => `${head('Seguridad', 'Verificación <em>en dos pasos</em>')}
+  { name: '14-seguridad', violet: true, html: (l) => `${head(T('Seguridad', 'Security')[l], T('Verificación <em>en dos pasos</em>', 'Two-step <em>verification</em>')[l])}
     <div class="mock"><div class="panel" style="text-align:center">
       <div style="font-size:72px">🔐</div>
-      <div class="title" style="margin-top:12px">Ingresa el código de tu app</div>
+      <div class="title" style="margin-top:12px">${T('Ingresa el código de tu app', 'Enter the code from your app')[l]}</div>
       <div class="muted small" style="margin-top:8px">Google Authenticator, Microsoft Authenticator…</div>
       <div class="code"><span>4</span><span>8</span><span>2</span><span>9</span><span>1</span><span class="on">3</span></div>
-      <div class="row" style="justify-content:center;margin-top:30px;font-size:28px"><span class="pill p-ok">✓ Recordar este dispositivo 30 días</span></div>
+      <div class="row" style="justify-content:center;margin-top:30px;font-size:28px"><span class="pill p-ok">✓ ${T('Recordar este dispositivo 30 días', 'Remember this device for 30 days')[l]}</span></div>
     </div></div>
-    <div class="sub">En todos los planes, sin costo extra. Porque ahí están los datos de tu equipo.</div>${foot}` },
+    <div class="sub">${T('En todos los planes, sin costo extra. Porque ahí están los datos de tu equipo.', 'On every plan, at no extra cost. Because that’s where your team’s data lives.')[l]}</div>${foot(l)}` },
 ];
 
 fs.mkdirSync(OUT, { recursive: true });
 const browser = await chromium.launch({ executablePath: process.env.CHROME });
 const page = await browser.newPage({ viewport: { width: 1080, height: 1920 } });
-for (const e of ESTADOS) {
-  await page.setContent(`<!doctype html><html><head><meta charset="utf-8"><style>${CSS}</style></head><body><div class="s${e.violet ? ' violet' : ''}">${e.html()}</div></body></html>`, { waitUntil: 'networkidle' });
-  await page.evaluate(() => document.fonts.ready);
-  // Flag anything that spills past the bottom safe zone.
-  const over = await page.evaluate(() => document.querySelector('.foot').getBoundingClientRect().top < document.querySelector('.sub').getBoundingClientRect().bottom + 20);
-  const out = path.join(OUT, `${e.name}.png`);
-  await page.screenshot({ path: out, clip: { x: 0, y: 0, width: 1080, height: 1920 } });
-  console.log(over ? 'OVERFLOW' : 'ok', path.relative(ROOT, out));
+for (const l of ['es', 'en']) {
+  for (const e of ESTADOS) {
+    await page.setContent(`<!doctype html><html lang="${l}"><head><meta charset="utf-8"><style>${CSS}</style></head><body><div class="s${e.violet ? ' violet' : ''}">${e.html(l)}</div></body></html>`, { waitUntil: 'networkidle' });
+    await page.evaluate(() => document.fonts.ready);
+    // Flag anything that spills past the bottom safe zone.
+    const over = await page.evaluate(() => document.querySelector('.foot').getBoundingClientRect().top < document.querySelector('.sub').getBoundingClientRect().bottom + 20);
+    const out = path.join(OUT, `${e.name}-${l}.png`);
+    await page.screenshot({ path: out, clip: { x: 0, y: 0, width: 1080, height: 1920 } });
+    console.log(over ? 'OVERFLOW' : 'ok', path.relative(ROOT, out));
+  }
 }
 await browser.close();

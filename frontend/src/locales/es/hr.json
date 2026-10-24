@@ -761,7 +761,8 @@
       "kind": {
         "hours": "Horas",
         "contract": "Contrato",
-        "draft": "Borrador"
+        "draft": "Borrador",
+        "taxId": "{{label}}"
       },
       "unapprovedWeek": "La semana del {{date}} de {{name}} no está aprobada: todavía no se pueden traer sus horas",
       "missingHours": "{{name}} cobra por hora y no tiene horas en la liquidación en curso",
@@ -779,7 +780,8 @@
         "people": "Personas",
         "total": "Total",
         "status": "Estado"
-      }
+      },
+      "missingTaxId": "A {{name}} le falta el {{label}}: va impreso en su recibo"
     },
     "payslips": {
       "subtitle": "Todos los recibos emitidos. Cada uno tiene número y se puede verificar con su código.",
@@ -812,7 +814,7 @@
     "verify": {
       "title": "Verificación de recibo",
       "loading": "Verificando…",
-      "valid": "Este recibo es auténtico",
+      "valid": "Este recibo fue emitido con Northstack",
       "invalid": "No hay ningún recibo con el código {{code}}",
       "invalidBody": "Revisá el código impreso al pie del recibo.",
       "company": "Emitido por",
@@ -821,7 +823,7 @@
       "period": "Período",
       "paymentDate": "Fecha de pago",
       "issued": "Emitido el",
-      "note": "Por privacidad, acá nunca se muestran montos."
+      "note": "No válido como documento legal: es un registro interno de seguimiento, hasta su certificación según las normas de cada país. Por privacidad, acá nunca se muestran montos."
     },
     "methods": {
       "lead": "Activá los métodos con los que paga tu empresa. Cada persona elige uno al confirmar su contrato.",

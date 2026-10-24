@@ -4,6 +4,7 @@ import { isPhoneValid, PHONE_POLICY_MESSAGE } from '../auth/authService.js';
 import { recordActivity } from '../activity/activityLogService.js';
 import { tenantActivityFieldConfig } from '../activity/fieldConfigs/tenantFieldConfig.js';
 import { TENANT_SUMMARY_SELECT, type TenantSummary } from './tenantSummary.js';
+import { companyTaxIdKind, companyTaxIdRequired, taxIdLabel, validateTaxId } from '../../lib/taxId.js';
 
 // Settings → Company (2026-09-25). Company profile fields + logo, edited by anyone with
 // manage_tenant_settings. Deliberately no tax ID field — collecting one is ruled out by the
@@ -38,6 +39,7 @@ export interface TenantProfileInput {
   industry?: unknown;
   country?: unknown;
   currency?: unknown;
+  taxId?: unknown;
 }
 
 export interface TenantProfileResult {
@@ -57,6 +59,7 @@ type ProfileData = {
   industry?: string | null;
   country?: string | null;
   currency?: string;
+  taxId?: string | null;
 };
 
 // Accepts "acme.com" as well as "https://acme.com" — people rarely type the scheme — but only
@@ -132,11 +135,25 @@ export async function updateTenantProfile(
   if ('error' in validated) {
     return { success: false, error: validated.error, field: validated.field };
   }
-  if (Object.keys(validated.data).length === 0) {
+  if (Object.keys(validated.data).length === 0 && input.taxId === undefined) {
     return { success: false, error: 'Nothing to update' };
   }
 
   const existing = await prisma.tenant.findUnique({ where: { id: tenantId }, select: TENANT_SUMMARY_SELECT });
+  // CUIT / EIN / other (src/lib/taxId.ts), checked against the country being saved.
+  const country = validated.data.country !== undefined ? validated.data.country : existing?.country;
+  if (input.taxId !== undefined) {
+    const raw = typeof input.taxId === 'string' ? input.taxId.trim() : '';
+    if (raw) {
+      const check = validateTaxId(companyTaxIdKind(country), raw);
+      if (!check.ok) return { success: false, error: check.error, field: 'taxId' };
+      validated.data.taxId = check.value;
+    } else if (companyTaxIdRequired(country)) {
+      return { success: false, error: `${taxIdLabel(companyTaxIdKind(country))} is required`, field: 'taxId' };
+    } else {
+      validated.data.taxId = null;
+    }
+  }
   const tenant = await prisma.tenant.update({
     where: { id: tenantId },
     data: validated.data,

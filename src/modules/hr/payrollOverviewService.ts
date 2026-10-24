@@ -58,6 +58,8 @@ export async function getPayrollOverview(tenantId: string, now = new Date()) {
   const status = await getCompensationStatus(tenantId);
   const inPayroll = status.filter((s) => s.currentCompensation).length;
   const unconfirmed = status.filter((s) => s.currentCompensation && !s.isConfirmed).map((s) => ({ employeeId: s.employeeId, name: `${s.employeeFirstName} ${s.employeeLastName}`.trim() }));
+  // Employees in Argentina / the US still without their CUIL / SSN (asked when they're added).
+  const missingTaxIds = status.filter((s) => s.taxIdRequired && !s.taxIdMasked).map((s) => ({ employeeId: s.employeeId, name: `${s.employeeFirstName} ${s.employeeLastName}`.trim() }));
 
   const drafts = runs.filter((r) => r.status === 'draft');
   const staleDrafts = drafts.filter((r) => now.getTime() - r.createdAt.getTime() > STALE_DRAFT_DAYS * DAY_MS).map((r) => ({ id: r.id, periodLabel: r.periodLabel, days: Math.floor((now.getTime() - r.createdAt.getTime()) / DAY_MS) }));
@@ -99,6 +101,7 @@ export async function getPayrollOverview(tenantId: string, now = new Date()) {
     pending: {
       unapprovedWeeks: openWeeks.map((w) => ({ employeeId: w.employeeId, name: `${w.employee.firstName} ${w.employee.lastName}`.trim(), weekStart: w.weekStart.toISOString().slice(0, 10), status: w.status })),
       unconfirmedContracts: unconfirmed,
+      missingTaxIds,
       staleDrafts,
       missingHours: missingHours.map((m) => ({ runId: m.runId!, employeeId: m.employee.id, name: `${m.employee.firstName} ${m.employee.lastName}`.trim() })),
     },

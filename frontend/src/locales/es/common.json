@@ -461,5 +461,36 @@
       "is": "es",
       "is_not": "no es"
     }
+  },
+  "taxId": {
+    "label": {
+      "cuit": "CUIT",
+      "cuil": "CUIL",
+      "ein": "EIN",
+      "ssn": "SSN",
+      "other": "Identificación fiscal"
+    },
+    "hint": {
+      "cuit": "11 dígitos, con o sin guiones.",
+      "cuil": "11 dígitos, con o sin guiones. Se imprime en sus recibos.",
+      "ein": "9 dígitos, por ejemplo 12-3456789.",
+      "ssn": "9 dígitos. En pantalla y en el recibo solo se ven los últimos 4.",
+      "other": "Opcional."
+    },
+    "invalid": {
+      "cuit": "El CUIT no es válido (revisá los 11 dígitos).",
+      "cuil": "El CUIL no es válido (revisá los 11 dígitos).",
+      "ein": "El EIN tiene 9 dígitos.",
+      "ssn": "El SSN tiene 9 dígitos.",
+      "other": "Usá de 3 a 30 letras, números, puntos, guiones o barras."
+    },
+    "requiredEmployee": "Obligatorio para empleados en {{country}}.",
+    "edit": "Editar {{label}}",
+    "editTitle": "{{label}} de {{name}}",
+    "saved": "{{label}} guardado",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "missing": "Falta",
+    "optional": "(opcional)"
   }
 }

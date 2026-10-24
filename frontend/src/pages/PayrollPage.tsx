@@ -32,6 +32,9 @@ import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar'
 import { CURRENCY_CODES, currencyLabel, formatMoney } from '../lib/currencies';
 import { CalendarIcon, EyeIcon, PencilIcon, PlusIcon, TeamIcon } from '../components/common/Icons';
 import PayslipPreviewModal from '../components/payroll/PayslipPreviewModal';
+import TaxIdModal from '../components/payroll/TaxIdModal';
+import { personTaxIdKind } from '../lib/taxId';
+import { currentTenantCountry } from '../lib/countries';
 
 // Payroll v2 (spec-payroll-v2.md §1): no tab bar anymore — each part has its own route and an
 // entry in the Payroll sidebar: pay runs, one-off payments, people; the policies (frequencies,
@@ -210,6 +213,8 @@ export default function PayrollPage({ token, section }: PayrollPageProps) {
   const [frequencies, setFrequencies] = useState<PayFrequency[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [compensationStatus, setCompensationStatus] = useState<CompensationStatusEntry[]>([]);
+  const [taxIdEditing, setTaxIdEditing] = useState<{ employeeId: string; name: string } | null>(null);
+  const taxIdKind = personTaxIdKind(currentTenantCountry());
   const [terminatedCompensations, setTerminatedCompensations] = useState<TerminatedCompensationEntry[]>([]);
   const [assignmentSubTab, setAssignmentSubTab] = useState<'draft' | 'confirmed' | 'terminated'>('draft');
   const [payrollRuns, setPayrollRuns] = useState<PayrollRun[]>([]);
@@ -880,12 +885,13 @@ export default function PayrollPage({ token, section }: PayrollPageProps) {
                             )}
                             <th>{t('payroll.page.assignments.columns.name')}</th>
                             <th>{t('payroll.people.fileNumber')}</th>
+                            <th>{t(`common:taxId.label.${taxIdKind}`)}</th>
                             <th>{t('payroll.page.assignments.columns.email')}</th>
                             <th>{t('payroll.page.assignments.columns.currentPolicy')}</th>
                             <th>{t('payroll.page.assignments.columns.status')}</th>
                           </tr>
                         </thead>
-                        <TableBody colSpan={6} isEmpty={visibleAssignments.length === 0} empty={compensationStatus.length === 0
+                        <TableBody colSpan={7} isEmpty={visibleAssignments.length === 0} empty={compensationStatus.length === 0
                             ? {
                                 icon: <TeamIcon />,
                                 title: t('payroll.page.assignments.emptyTitle'),
@@ -913,6 +919,28 @@ export default function PayrollPage({ token, section }: PayrollPageProps) {
                               </td>
                               {/* Payroll v2: file number ("legajo"), assigned automatically when the person is created. */}
                               <td className="tabular-nums">{entry.fileNumber ?? '—'}</td>
+                              {/* Payroll v2: tax ID (CUIL / SSN / other), only ever its last 4. */}
+                              <td>
+                                <span className="inline-flex items-center gap-1.5">
+                                  {entry.taxIdMasked ? (
+                                    <span className="tabular-nums">{entry.taxIdMasked}</span>
+                                  ) : entry.taxIdRequired ? (
+                                    <StatusChip color="#d97706" label={t('common:taxId.missing')} />
+                                  ) : (
+                                    '—'
+                                  )}
+                                  {canManagePayroll && (
+                                    <button
+                                      type="button"
+                                      className="icon-btn"
+                                      aria-label={t('common:taxId.edit', { label: t(`common:taxId.label.${taxIdKind}`) })}
+                                      onClick={() => setTaxIdEditing({ employeeId: entry.employeeId, name: `${entry.employeeFirstName} ${entry.employeeLastName}`.trim() })}
+                                    >
+                                      <PencilIcon />
+                                    </button>
+                                  )}
+                                </span>
+                              </td>
                               <td>{entry.employeeEmail}</td>
                               <td>
                                 {entry.currentCompensation ? (
@@ -1649,6 +1677,19 @@ export default function PayrollPage({ token, section }: PayrollPageProps) {
           </div>
         </form>
       </Modal>
+      {taxIdEditing && (
+        <TaxIdModal
+          token={token}
+          employeeId={taxIdEditing.employeeId}
+          name={taxIdEditing.name}
+          kind={taxIdKind}
+          onClose={() => setTaxIdEditing(null)}
+          onSaved={(masked) => {
+            setCompensationStatus((prev) => prev.map((x) => (x.employeeId === taxIdEditing.employeeId ? { ...x, taxIdMasked: masked } : x)));
+            setTaxIdEditing(null);
+          }}
+        />
+      )}
       {payslipEntryId && (
         <PayslipPreviewModal
           open={payslipEntryId !== null}

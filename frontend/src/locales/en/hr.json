@@ -761,7 +761,8 @@
       "kind": {
         "hours": "Hours",
         "contract": "Contract",
-        "draft": "Draft"
+        "draft": "Draft",
+        "taxId": "{{label}}"
       },
       "unapprovedWeek": "{{name}}'s week of {{date}} isn't approved: its hours can't be brought in yet",
       "missingHours": "{{name}} is paid by the hour and has no hours in the pay run in progress",
@@ -779,7 +780,8 @@
         "people": "People",
         "total": "Total",
         "status": "Status"
-      }
+      },
+      "missingTaxId": "{{name}} has no {{label}}: it's printed on their payslip"
     },
     "payslips": {
       "subtitle": "Every issued payslip. Each is numbered and can be verified with its code.",
@@ -812,7 +814,7 @@
     "verify": {
       "title": "Payslip verification",
       "loading": "Checking…",
-      "valid": "This payslip is genuine",
+      "valid": "This payslip was issued by Northstack",
       "invalid": "No payslip with the code {{code}}",
       "invalidBody": "Check the code printed at the bottom of the payslip.",
       "company": "Issued by",
@@ -821,7 +823,7 @@
       "period": "Period",
       "paymentDate": "Payment date",
       "issued": "Issued on",
-      "note": "For privacy, amounts are never shown here."
+      "note": "Not valid as a legal document: an internal tracking record, until certified under each country's rules. For privacy, amounts are never shown here."
     },
     "methods": {
       "lead": "Turn on the methods your company pays with. People pick one when they confirm their contract.",

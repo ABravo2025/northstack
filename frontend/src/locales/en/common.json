@@ -461,5 +461,36 @@
       "is": "is",
       "is_not": "is not"
     }
+  },
+  "taxId": {
+    "label": {
+      "cuit": "CUIT",
+      "cuil": "CUIL",
+      "ein": "EIN",
+      "ssn": "SSN",
+      "other": "Tax ID"
+    },
+    "hint": {
+      "cuit": "11 digits, with or without dashes.",
+      "cuil": "11 digits, with or without dashes. Printed on their payslips.",
+      "ein": "9 digits, e.g. 12-3456789.",
+      "ssn": "9 digits. Only the last 4 are shown on screen and on pay stubs.",
+      "other": "Optional."
+    },
+    "invalid": {
+      "cuit": "That CUIT isn't valid (check the 11 digits).",
+      "cuil": "That CUIL isn't valid (check the 11 digits).",
+      "ein": "An EIN has 9 digits.",
+      "ssn": "An SSN has 9 digits.",
+      "other": "Use 3 to 30 letters, numbers, dots, dashes or slashes."
+    },
+    "requiredEmployee": "Required for employees in {{country}}.",
+    "edit": "Edit {{label}}",
+    "editTitle": "{{label}} of {{name}}",
+    "saved": "{{label}} saved",
+    "save": "Save",
+    "cancel": "Cancel",
+    "missing": "Missing",
+    "optional": "(optional)"
   }
 }

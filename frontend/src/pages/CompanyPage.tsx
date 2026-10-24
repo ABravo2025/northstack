@@ -5,13 +5,14 @@ import { useToast } from '../components/common/ToastProvider';
 import { CURRENCY_CODES, currencyLabel } from '../lib/currencies';
 import { COMPANY_SIZE_OPTIONS } from '../lib/companySize';
 import { COUNTRIES } from '../lib/countries';
+import { companyTaxIdKind, companyTaxIdRequired } from '../lib/taxId';
 import { resizeLogoFile, tenantLogoUrl } from '../lib/tenantLogo';
 import DeleteCompanyAccount from '../components/settings/DeleteCompanyAccount';
 
 // Settings → Company (2026-09-25) — replaces the old Settings → Appearance page, which only held
 // currency + the theme picker. The theme moved to Settings → Profile, since it's a per-device
 // preference every user should reach, not a tenant setting behind manage_tenant_settings.
-// Deliberately no tax ID field (privacy policy).
+// Tax ID (CUIT / EIN / other) since 2026-10-24, printed on payslips — lib/taxId.ts.
 
 type ProfileForm = Required<Omit<TenantProfileUpdate, 'currency'>>;
 
@@ -25,6 +26,7 @@ function toForm(tenant: Tenant): ProfileForm {
     companySize: tenant.companySize ?? '',
     industry: tenant.industry ?? '',
     country: tenant.country ?? '',
+    taxId: tenant.taxId ?? '',
   };
 }
 
@@ -189,6 +191,15 @@ export default function CompanyPage({ token, onTenantUpdated }: CompanyPageProps
                   ))}
                 </select>
                 {errorFor('country')}
+              </div>
+              <div className="form-group">
+                <label htmlFor="company-taxId">
+                  {t(`common:taxId.label.${companyTaxIdKind(form.country)}`)}
+                  {!companyTaxIdRequired(form.country) && <span className="text-ink-faint dark:text-dark-ink-faint"> {t('common:taxId.optional')}</span>}
+                </label>
+                <input id="company-taxId" value={form.taxId} onChange={(e) => setField('taxId', e.target.value)} maxLength={30} autoComplete="off" />
+                <small className="text-ink-faint dark:text-dark-ink-faint">{t(`common:taxId.hint.${companyTaxIdKind(form.country)}`)}</small>
+                {errorFor('taxId')}
               </div>
               <div className="form-group">
                 <label htmlFor="company-phone">{t('company.phone')}</label>

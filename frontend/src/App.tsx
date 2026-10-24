@@ -79,6 +79,7 @@ import { clearReturnTo, peekReturnTo, rememberReturnTo } from './lib/returnTo';
 import OAuthConsentPage from './pages/OAuthConsentPage';
 import './App.css';
 import { setNumberCountry } from './lib/currencies';
+import { setTenantCountry } from './lib/countries';
 
 export default function App() {
   const toast = useToast();
@@ -320,6 +321,7 @@ export default function App() {
   // Money and hours follow the company's country (lib/currencies.ts). Set during render, not in an
   // effect, so the first paint after the tenant loads already uses it.
   setNumberCountry(tenant?.country);
+  setTenantCountry(tenant?.country);
   const growthPlan = isGrowthFeatureEnabled(tenant);
   // Per module since 2026-10-03 (plan + Admin Center agreement, from GET /api/auth/me).
   const features = planFeaturesFor(tenant, permissions);

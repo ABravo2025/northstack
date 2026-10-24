@@ -51,6 +51,8 @@ import { exportEmployeesToCsv, getEmployeesCsvTemplate, importEmployeesFromCsv }
 import { validateSession } from '../lib/httpAuth.js';
 import type { AuthenticatedUser } from '../modules/auth/authService.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
+import { checkTaxIdForTenant, setEmployeeTaxId } from '../modules/hr/employeeTaxIdService.js';
+import { getPlanLimits } from '../modules/tenant/planLimits.js';
 
 // Exported for routes/externalApi.ts (Private API + Webhooks, Unit 3) — one source of truth for
 // the same enum check both surfaces need to make on Employee create/update.
@@ -211,7 +213,12 @@ employeesRouter.post('/api/hr/employees', async (req, res) => {
     }
   }
 
-  const employee = await createEmployee({ ...req.body, tenantId: user.tenantId! }, user.id);
+  // Payroll v2: CUIL / SSN — required in Argentina and the US for employees (src/lib/taxId.ts).
+  const taxIdCheck = await checkTaxIdForTenant(user.tenantId!, req.body.taxId, req.body.personType, getPlanLimits(user.tenant).payrollEnabled);
+  if (!taxIdCheck.ok) return res.status(400).json({ error: taxIdCheck.error, field: 'taxId' });
+  const { taxId, ...body } = req.body;
+  const employee = await createEmployee({ ...body, tenantId: user.tenantId! }, user.id);
+  if (taxIdCheck.provided) await setEmployeeTaxId(user.tenantId!, employee.id, taxId, user.id);
   return res.status(201).json(redactEntityFields(employee, 'employee', user.roleContext));
 });
 

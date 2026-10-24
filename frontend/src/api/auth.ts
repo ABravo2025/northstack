@@ -37,6 +37,7 @@ export const authApi = {
     companySize: string;
     industry: string;
     country: string;
+    taxId?: string;
     acquisitionChannel?: string;
     jobFunction?: string;
     verificationToken: string;

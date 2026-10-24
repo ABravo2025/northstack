@@ -8,6 +8,8 @@ import TableSkeleton from '../../components/common/TableSkeleton';
 import { BriefcaseIcon, CheckIcon } from '../../components/common/Icons';
 import { useToast } from '../../components/common/ToastProvider';
 import { formatMoney, formatNumber } from '../../lib/currencies';
+import { personTaxIdKind } from '../../lib/taxId';
+import { currentTenantCountry } from '../../lib/countries';
 
 // Payroll v2 (spec-payroll-v2.md, unit 2): the Payroll overview, for whoever runs payroll — the
 // latest pay run in numbers (one figure per currency), what's blocking the next close, recent runs.
@@ -32,7 +34,8 @@ export default function PayrollOverviewPage({ token }: { token: string }) {
 
   if (!data) return <div className="container"><TableSkeleton /></div>;
   const p = data.pending;
-  const pendingCount = p.unapprovedWeeks.length + p.unconfirmedContracts.length + p.staleDrafts.length + p.missingHours.length;
+  const pendingCount = p.unapprovedWeeks.length + p.unconfirmedContracts.length + (p.missingTaxIds?.length ?? 0) + p.staleDrafts.length + p.missingHours.length;
+  const taxIdLabel = t(`common:taxId.label.${personTaxIdKind(currentTenantCountry())}`);
   const last = data.lastRun;
 
   return (
@@ -110,6 +113,13 @@ export default function PayrollOverviewPage({ token }: { token: string }) {
                 <tr key={`c-${c.employeeId}`}>
                   <td><span className="to-chip to-chip-rejected">{t('payroll.overview.kind.contract')}</span></td>
                   <td className="!whitespace-normal">{t('payroll.overview.unconfirmed', { name: c.name })}</td>
+                  <td className="text-right"><button type="button" className="to-link text-xs" onClick={() => navigate('/payroll/people')}>{t('payroll.overview.goPeople')}</button></td>
+                </tr>
+              ))}
+              {(p.missingTaxIds ?? []).map((c) => (
+                <tr key={`t-${c.employeeId}`}>
+                  <td><span className="to-chip to-chip-pending">{t('payroll.overview.kind.taxId', { label: taxIdLabel })}</span></td>
+                  <td className="!whitespace-normal">{t('payroll.overview.missingTaxId', { name: c.name, label: taxIdLabel })}</td>
                   <td className="text-right"><button type="button" className="to-link text-xs" onClick={() => navigate('/payroll/people')}>{t('payroll.overview.goPeople')}</button></td>
                 </tr>
               ))}

@@ -42,8 +42,9 @@ import { isLikelyValidEmail } from '../lib/validation';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { usePrimaryAction } from '../contexts/PrimaryActionContext';
 import { useAutoCreateGuard } from '../hooks/useAutoCreateGuard';
-import { COUNTRIES } from '../lib/countries';
+import { COUNTRIES, currentTenantCountry } from '../lib/countries';
 import { CURRENCY_CODES, currencyLabel } from '../lib/currencies';
+import { isTaxIdValid, personTaxIdKind, personTaxIdRequired } from '../lib/taxId';
 
 // Still keyed by the literal English label text on purpose — Kanban's grouped columns for
 // "Contract Type" get their key/label straight from viewFields.ts's buildEmployeeFields (out of
@@ -233,6 +234,8 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     contractType: '',
     personType: '',
     nationality: '',
+    // Payroll v2 (2026-10-24): CUIL / SSN / other — lib/taxId.ts.
+    taxId: '',
     // Initial contract (Payroll Unidad 5) — only used/required when personType
     // is contractor/employee.
     compensationType: '',
@@ -254,6 +257,15 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   // 403ing on the compensation half (2026-10-01).
   const needsInitialCompensation =
     canManagePayroll && (employeeForm.personType === 'contractor' || employeeForm.personType === 'employee');
+  // Tax ID (CUIL / SSN / other): asked for Contractors and Employees when the company has Payroll —
+  // required for Employees in Argentina and the US. Only filled in here; payroll managers change it
+  // later from Payroll → People.
+  const tenantCountry = currentTenantCountry();
+  const taxIdKind = personTaxIdKind(tenantCountry);
+  const showTaxId = permissions.features.payroll && (employeeForm.personType === 'contractor' || employeeForm.personType === 'employee');
+  const taxIdRequired = showTaxId && personTaxIdRequired(tenantCountry, employeeForm.personType);
+  const taxIdInvalid = showTaxId && employeeForm.taxId.trim() !== '' && !isTaxIdValid(taxIdKind, employeeForm.taxId);
+  const taxIdSaved = useRef(false);
   const autoCreateGuard = useAutoCreateGuard();
   const [createdEmployeeId, setCreatedEmployeeId] = useState<string | null>(null);
   const sentEmployeeCustomFieldIds = useRef<Set<string>>(new Set());
@@ -482,6 +494,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     if (!employeeForm.managerId) return false;
     if (!employeeForm.startDate) return false;
     if (!employeeForm.contractType) return false;
+    if (taxIdInvalid || (taxIdRequired && !employeeForm.taxId.trim())) return false;
     // Contractor/Employee can't be saved without a complete initial contract
     // (docs/spec-payroll.md Unidad 4/5) — Profile never shows or needs this. Only when the
     // initial-compensation block is actually shown (needsInitialCompensation below).
@@ -571,7 +584,9 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       contractType: (employeeForm.contractType || null) as 'part_time' | 'full_time' | null,
       personType: (employeeForm.personType || null) as 'profile' | 'contractor' | 'employee' | null,
       nationality: employeeForm.nationality || undefined,
+      taxId: showTaxId && employeeForm.taxId.trim() ? employeeForm.taxId.trim() : undefined,
     });
+    taxIdSaved.current = showTaxId && employeeForm.taxId.trim() !== '';
 
     if (needsInitialCompensation) {
       await createInitialCompensation(employee.id);
@@ -620,6 +635,12 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       personType: (employeeForm.personType || null) as 'profile' | 'contractor' | 'employee' | null,
       nationality: employeeForm.nationality || undefined,
     } as any);
+
+    // Same for the tax ID: typed after the record was auto-created (e.g. as a Profile).
+    if (showTaxId && employeeForm.taxId.trim() && !taxIdSaved.current) {
+      await api.setEmployeeTaxId(token, employeeId, employeeForm.taxId.trim());
+      taxIdSaved.current = true;
+    }
 
     // Auto-create may have fired while the Type was still Profile; switching to Contractor/Employee
     // afterward must still create the contract, or the person never gets their invitation.
@@ -1282,6 +1303,23 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                     ))}
                   </select>
                 </Field>
+                {showTaxId && (
+                  <Field label={t(`common:taxId.label.${taxIdKind}`)} required={taxIdRequired}>
+                    <input
+                      id="emp-taxId"
+                      className="overview-field-input"
+                      value={employeeForm.taxId}
+                      maxLength={30}
+                      autoComplete="off"
+                      aria-invalid={taxIdInvalid || undefined}
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, taxId: e.target.value })}
+                      onBlur={() => attemptAutoCreateEmployee()}
+                    />
+                    <small className={taxIdInvalid ? 'field-error' : 'text-ink-faint dark:text-dark-ink-faint'}>
+                      {taxIdInvalid ? t(`common:taxId.invalid.${taxIdKind}`) : t(`common:taxId.hint.${taxIdKind}`)}
+                    </small>
+                  </Field>
+                )}
               </div>
             </div>
 

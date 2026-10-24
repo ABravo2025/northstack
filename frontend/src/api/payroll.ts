@@ -282,6 +282,15 @@ export const payrollApi = {
     });
     if (!res.ok) await throwApiError(res);
   },
+  setEmployeeTaxId: async (token: string, employeeId: string, taxId: string): Promise<{ taxIdMasked: string }> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/people/${employeeId}/tax-id`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ taxId }),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
   getPaymentMethodCatalog: async (token: string): Promise<PaymentMethodCatalog> => {
     const res = await apiFetch(`${API_BASE_URL}/api/hr/payment-methods/catalog`, { headers: { Authorization: `Bearer ${token}` } });
     if (!res.ok) await throwApiError(res);

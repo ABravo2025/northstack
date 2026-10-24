@@ -77,8 +77,10 @@ export interface Tenant {
   companySize: string | null;
   industry: string | null;
   country: string | null;
-  // Company profile (Settings → Company). No tax ID by design — ruled out by the privacy policy.
+  // Company profile (Settings → Company).
   legalName: string | null;
+  // CUIT / EIN / other (lib/taxId.ts) — asked at signup, required in Argentina and the US.
+  taxId: string | null;
   address: string | null;
   phone: string | null;
   website: string | null;
@@ -99,6 +101,7 @@ export type TenantProfileUpdate = Partial<
     companySize: string;
     industry: string;
     country: string;
+    taxId: string;
   }
 >;
 
@@ -1143,6 +1146,8 @@ export interface CompensationStatusEntry {
   employeeLastName: string;
   employeeEmail: string;
   fileNumber?: string | null;
+  taxIdMasked?: string | null;
+  taxIdRequired?: boolean;
   // Whether this person has ever confirmed a first-ever contract (linked
   // User) — reassignments never re-trigger confirmation, so this is the
   // right Draft/Confirmed signal, not a field on currentCompensation itself.
@@ -1313,6 +1318,7 @@ export interface PayrollOverview {
   pending: {
     unapprovedWeeks: { employeeId: string; name: string; weekStart: string; status: string }[];
     unconfirmedContracts: { employeeId: string; name: string }[];
+    missingTaxIds: { employeeId: string; name: string }[];
     staleDrafts: { id: string; periodLabel: string; days: number }[];
     missingHours: { runId: string; employeeId: string; name: string }[];
   };

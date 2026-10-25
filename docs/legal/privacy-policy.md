@@ -234,6 +234,33 @@ substantive passes, one day). Mirrored to landing/privacy.html and landing/terms
 [[feedback_feature_announcement_drafting]] that's the development agent's job once it
 promotes the release, per Alejandro's own routing instruction in the brief ("let the
 development agent know... it will draft the announcement").
+
+2026-10-25 (still later same day) — Alejandro: "dije que estaba en uso GA," correcting the
+"Coming... not yet in use" paragraph above. Checked git log, not just re-running the same
+grep: at the time that paragraph was written, GA genuinely had zero code anywhere (verified
+across main/staging/landing) — the grep wasn't broken, reality changed concurrently.
+`origin/landing`'s tip is now e721e74, pushed by another session AFTER my own GA commit
+(fa8c59a) and tax-ID commit (0e9683e): real GTM (GTM-TJHVX9R4) + GA4 (G-DQJ1K0FVJ5) on every
+website page behind Google Consent Mode v2, a cookie banner (consent.js, decline clears _ga
+cookies), and a new Cookie Policy (landing/cookies.html + es/cookies.html, linked from every
+footer, the static-site's own legal-modal.js, and the sitemap) — already live, already
+verified against the actual deployed site. That commit rewrote landing/privacy.html's
+Section 2.3/2.4 and added a Google row to 4.1, correctly split by surface: website analytics
+is live, in-app analytics (the thing I'd actually been asked about originally) still isn't —
+confirmed zero gtag/GTM code anywhere in main's frontend/backend. That commit touched
+`landing` only, not this file, so this file was now the stale one, not the website. Replaced
+this section with that exact wording verbatim (not a paraphrase) so the internal master and
+the public page say the same thing word for word, and ported the same Section 4.1 row.
+Checked LegalDocumentModal.tsx (the in-app React modal) for a 'cookies' doc type: none, but
+that's not a gap — the static landing site has its own separate legal-modal.js, already
+wired for /cookies.html, and Cookie Policy's audience (anonymous website visitors) doesn't
+overlap with the authenticated app the React modal serves. Did not add Cookie Policy to
+terms-of-service.md's "Entire agreement" clause either: that clause lists documents
+governing a Tenant's use of the Service (Privacy Policy always, Refund/Referral "if
+applicable"); Cookie Policy governs the public marketing website, a different audience,
+already cross-referenced from Privacy Policy §2.4 instead — same scoping logic as Section 7
+not needing a touch for this. No Effective Date change needed beyond what's already here
+(still October 25) — same day, third substantive pass.
 -->
 
 
@@ -329,17 +356,33 @@ such requests if they reach us directly.
   (for example, your dark/light mode preference) to remember settings on that device. This
   data stays on your device and is not transmitted to us as tracking data.
 
-We do not currently use third-party advertising or analytics trackers, and we do not use
-cookies for cross-site tracking or advertising purposes.
+We do not use third-party advertising trackers, and we do not use cookies for cross-site
+tracking or advertising purposes. Google Analytics is described in Section 2.4.
 
-**Coming: Google Analytics.** We are adding Google Analytics to measure how the Service is
-used — such as pages visited, sessions, and in-product usage events — across both our
-public website and the authenticated application. As planned, it will not enable Google
-Signals, cross-device tracking, or any advertising/remarketing feature, and it will not
-change what the paragraph above says about advertising trackers: it is a usage-analytics
-tool, not an advertising one. **This is not yet in use.** Once it is, we will update this
-Section and Section 4.1 (Subprocessors) with the details — what it collects, how long
-Google retains it, and how to opt out — and post a new effective date.
+### 2.4 Google Analytics
+
+**On our public website (joinnorthstack.com): in use.** We use Google Analytics, loaded
+through Google Tag Manager, to understand how visitors find and use the site: which pages
+are visited, which site you came from, your approximate location (derived from your IP
+address), and your device and browser type.
+
+- **Only with your consent**: analytics cookies are set and Google Analytics runs only if
+  you choose *Accept* in the cookie banner. If you choose *Decline*, Google Analytics does
+  not run. Google Tag Manager itself is loaded on every page to read your choice, and it
+  does not set cookies.
+- **Change your choice anytime** from the *Cookie settings* link at the bottom of every
+  page of the website. The cookies involved and their duration are listed in our
+  [Cookie Policy](https://joinnorthstack.com/cookies.html).
+- **No advertising**: we do not enable Google Signals, cross-device tracking, or any
+  advertising or remarketing feature, and advertising storage is always disabled.
+- **Retention**: Google keeps this analytics data for the retention period set in our
+  Google Analytics account (currently 2 months).
+
+**Inside the Northstack application: not yet in use.** We plan to add Google Analytics to
+the authenticated application too, to measure usage such as pages visited, sessions and
+in-product usage events, with the same commitments: no Google Signals, no cross-device
+tracking, and no advertising or remarketing features. Once it is in use, we will update
+this section, our Cookie Policy, and Section 4.1, and post a new effective date.
 
 ---
 
@@ -377,6 +420,7 @@ obligations consistent with the purpose for which we share data with them:
 | Provider | Purpose | Data involved |
 |---|---|---|
 | Vercel | Application hosting (frontend and backend) | All data transmitted through the Service |
+| Google (Google Analytics, Google Tag Manager) | Analytics on our public website, only after the visitor accepts analytics cookies (Section 2.4) | Pages visited, referring site, approximate location derived from IP address, device and browser type, and analytics cookie identifiers |
 | Neon | Database hosting (PostgreSQL) | All Account Data and Processed Data at rest |
 | Zoho Mail | Transactional email delivery (e.g., invitations) | Recipient email address, name, and email content, including a payslip PDF attachment, which on an Argentine payslip carries the person's full tax identification number |
 | Dodo Payments | Payment processing for Tenants billed internationally in USD | Billing contact information, plan/subscription data, and transaction data. Dodo Payments collects and stores full payment card details directly — we do not store your full card number. |

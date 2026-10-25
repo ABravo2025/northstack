@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Consent defaults (Google Consent Mode v2), before GTM: analytics only after the visitor accepts in the
+         cookie banner (consent.js); advertising storage is never granted. -->
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('consent','default',{ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',analytics_storage:'denied'});try{if(localStorage.getItem('ns-consent')==='granted')gtag('consent','update',{analytics_storage:'granted'});}catch(e){}</script>
+    <!-- Google Tag Manager -->
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-TJHVX9R4');</script>
+    <!-- End Google Tag Manager -->
+    <script src="/consent.js" defer></script>
+    <title>Política de Cookies — Northstack</title>
+    <meta name="description" content="Qué cookies y tecnologías similares usa Northstack en su sitio web y en la app, y cómo controlarlas." />
+    <link rel="canonical" href="https://joinnorthstack.com/es/cookies.html" />
+    <link rel="alternate" hreflang="en" href="https://joinnorthstack.com/cookies.html" />
+    <link rel="alternate" hreflang="es" href="https://joinnorthstack.com/es/cookies.html" />
+    <link rel="alternate" hreflang="x-default" href="https://joinnorthstack.com/cookies.html" />
+
+    <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" />
+    <meta name="theme-color" content="#5b21e6" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@1&display=swap" rel="stylesheet" />
+
+    <style>
+/* Landing v2 look (2026-10-02) — same tokens as index.html. */
+:root {
+  --violet: #5b21e6; --violet-deep: #3d12a8; --lilac: #a98bff; --lilac-soft: #efe9ff;
+  --ink: #14102b; --ink-2: #4a4566; --ink-3: #6f6a8a;
+  --page: #fbfaff; --surface: #ffffff; --surface-2: #f4f1fd; --line: #e6e1f5;
+  --shadow: 0 1px 2px rgba(30,14,80,.06), 0 12px 32px -12px rgba(40,18,110,.18);
+  --font: "Instrument Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --serif: "Instrument Serif", Georgia, "Times New Roman", serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root { color-scheme: dark;
+    --violet: #7c4dff; --violet-deep: #5b21e6; --lilac: #b9a1ff; --lilac-soft: #241a45;
+    --ink: #f1eeff; --ink-2: #bdb6da; --ink-3: #958fb3;
+    --page: #0c0a16; --surface: #16121f; --surface-2: #1d1830; --line: #2b2542;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 32px -12px rgba(0,0,0,.6); }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 16px/1.65 var(--font); -webkit-font-smoothing: antialiased; }
+a { color: var(--violet); }
+h1, h2, h3 { text-wrap: balance; letter-spacing: -0.02em; line-height: 1.15; color: var(--ink); }
+.container { max-width: 1180px; margin: 0 auto; padding-inline: 20px; }
+.brand { display: inline-flex; align-items: center; gap: 9px; font-weight: 700; font-size: 18px; color: var(--ink); text-decoration: none; }
+.brand img { width: 28px; height: 28px; display: block; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font: 600 15px/1 var(--font); padding: 13px 20px; border-radius: 12px; text-decoration: none; border: 1px solid transparent; transition: transform .15s, background .15s, border-color .15s; }
+.btn:focus-visible, a:focus-visible { outline: 3px solid var(--lilac); outline-offset: 2px; }
+.btn-primary { background: var(--violet); color: #fff; box-shadow: 0 8px 22px -8px rgba(91,33,230,.7), inset 0 1px 0 rgba(255,255,255,.2); }
+.btn-primary:hover { background: var(--violet-deep); transform: translateY(-1px); }
+.btn-secondary { background: var(--surface); color: var(--ink); border-color: var(--line); }
+.btn-secondary:hover { border-color: var(--lilac); }
+.btn-sm { padding: 10px 14px; font-size: 14px; }
+.eyebrow { font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--violet); }
+.nav-lang { font-size: 14px; color: var(--ink-3); }
+.nav-lang a { color: var(--ink-3); margin: 0 4px; }
+.nav-lang a.active { color: var(--violet); font-weight: 600; }
+
+header { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: color-mix(in srgb, var(--page) 82%, transparent); backdrop-filter: saturate(1.4) blur(12px); border-bottom: 1px solid var(--line); }
+header .container { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+header a { text-decoration: none; }
+main { max-width: 760px; margin: 0 auto; padding: 56px 20px 80px; }
+main h1 { font-size: clamp(32px, 4.6vw, 44px); margin: 0 0 6px; }
+.effective-date { color: var(--ink-3); font-size: 14.5px; margin: 0 0 28px; display: inline-block; padding: 4px 12px; border-radius: 99px; background: var(--lilac-soft); color: var(--violet); font-weight: 600; }
+main h2 { font-size: 23px; margin: 40px 0 10px; scroll-margin-top: 80px; }
+main h3 { font-size: 18px; margin: 26px 0 8px; }
+main p, main li { color: var(--ink-2); }
+main strong { color: var(--ink); }
+main ul, main ol { padding-left: 22px; } main li { margin: 4px 0; }
+main hr { border: 0; border-top: 1px solid var(--line); margin: 36px 0; }
+main table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14.5px; display: block; overflow-x: auto; }
+main th, main td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+main th { background: var(--surface-2); color: var(--ink); font-weight: 600; }
+main code { font-size: .92em; background: var(--surface-2); padding: 1px 5px; border-radius: 5px; }
+footer { border-top: 1px solid var(--line); padding: 28px 20px; text-align: center; color: var(--ink-3); font-size: 14px; }
+footer a { color: var(--ink-3); }
+</style>
+      <script src="/legal-modal.js" defer></script>
+  </head>
+  <body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-TJHVX9R4"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+    <header>
+      <div class="container">
+        <a href="/es/"><span class="brand"><img src="/icon-color.svg" alt="" width="28" height="28" />Northstack</span></a>
+        <span class="nav-lang"><a href="/cookies.html">EN</a> · <a class="active" href="/es/cookies.html">ES</a></span>
+      </div>
+    </header>
+
+    <main>
+      <h1>Política de Cookies de Northstack</h1>
+      <p class="effective-date">Fecha de vigencia: 25 de octubre de 2026</p>
+
+      <p>
+        Esta Política de Cookies explica qué cookies y tecnologías similares usa Northstack
+        ("<strong>Northstack</strong>", "<strong>nosotros</strong>") en nuestro sitio web
+        público (<strong>joinnorthstack.com</strong>) y en la aplicación de Northstack
+        (<strong>app.joinnorthstack.com</strong>), para qué sirven y cómo podés controlarlas.
+        Complementa nuestra <a href="/es/privacy.html">Política de Privacidad</a>, en especial
+        la Sección 2.4.
+      </p>
+
+      <hr />
+
+      <h2>1. Qué son las cookies y el almacenamiento local</h2>
+      <p>
+        Las <strong>cookies</strong> son pequeños archivos de texto que un sitio web guarda en
+        tu navegador. El <strong>almacenamiento local</strong> es una función similar del
+        navegador que guarda pequeños datos en tu dispositivo. Usamos ambos solo como se
+        describe a continuación.
+      </p>
+
+      <hr />
+
+      <h2>2. En nuestro sitio web público (joinnorthstack.com)</h2>
+
+      <h3>2.1 Estrictamente necesarias</h3>
+      <p>Están siempre activas, porque el sitio las necesita para respetar tu elección.</p>
+      <table>
+        <thead><tr><th>Nombre</th><th>Tipo</th><th>Finalidad</th><th>Duración</th></tr></thead>
+        <tbody>
+          <tr><td><code>ns-consent</code></td><td>Almacenamiento local (propio)</td><td>Recuerda si aceptaste o rechazaste las cookies de analítica, para no preguntarte en cada página.</td><td>Hasta que borres los datos del navegador o cambies tu elección</td></tr>
+        </tbody>
+      </table>
+
+      <h3>2.2 Analítica (solo si las aceptás)</h3>
+      <p>
+        Usamos Google Analytics, cargado a través de Google Tag Manager, para entender cómo los
+        visitantes encuentran y usan el sitio (páginas visitadas, sitio desde el que llegaste,
+        ubicación aproximada derivada de tu dirección IP, tipo de dispositivo y navegador).
+        Estas cookies se guardan <strong>solo si elegís <em>Aceptar</em></strong> en el aviso
+        de cookies.
+      </p>
+      <table>
+        <thead><tr><th>Nombre</th><th>Proveedor</th><th>Finalidad</th><th>Duración</th></tr></thead>
+        <tbody>
+          <tr><td><code>_ga</code></td><td>Google Analytics</td><td>Distingue un navegador de otro para contar visitantes únicos.</td><td>2 años</td></tr>
+          <tr><td><code>_ga_DQJ1K0FVJ5</code></td><td>Google Analytics</td><td>Guarda el estado de tu visita actual (sesión) en nuestro sitio.</td><td>2 años</td></tr>
+        </tbody>
+      </table>
+      <p>
+        Google Tag Manager se carga en todas las páginas para leer tu elección y no guarda
+        cookies. No activamos Google Signals, el seguimiento entre dispositivos ni ninguna
+        función de publicidad o remarketing, y el almacenamiento publicitario está siempre
+        desactivado.
+      </p>
+
+      <h3>2.3 Cookies de publicidad</h3>
+      <p>No usamos cookies de publicidad ni de seguimiento entre sitios.</p>
+
+      <hr />
+
+      <h2>3. En la aplicación de Northstack (app.joinnorthstack.com)</h2>
+      <p>
+        La aplicación no usa cookies. Guarda en el almacenamiento local de tu navegador una
+        pequeña cantidad de datos que necesita para funcionar: tu sesión iniciada (para que no
+        tengas que volver a entrar) y preferencias como el modo oscuro o claro. Estos datos se
+        quedan en tu dispositivo.
+      </p>
+      <p>
+        La aplicación todavía no usa Google Analytics. Como se describe en la Sección 2.4 de
+        nuestra Política de Privacidad, planeamos incorporar analítica de uso en la
+        aplicación; cuando lo hagamos, vamos a actualizar esta política y publicar una nueva
+        fecha de vigencia.
+      </p>
+
+      <hr />
+
+      <h2>4. Cómo controlar las cookies</h2>
+      <ul>
+        <li>
+          <strong>En nuestro sitio</strong>: usá el aviso de cookies, o el link
+          <em>Preferencias de cookies</em> al pie de todas las páginas, para aceptar o rechazar
+          las cookies de analítica cuando quieras. Si rechazás después de haber aceptado,
+          borramos las cookies de Google Analytics de tu navegador.
+          <br /><a href="#" data-ns-cookie-settings>Abrir preferencias de cookies</a>
+        </li>
+        <li>
+          <strong>En tu navegador</strong>: podés bloquear o borrar las cookies y el
+          almacenamiento local desde la configuración del navegador. Si bloqueás el
+          almacenamiento local en la aplicación, se va a cerrar tu sesión.
+        </li>
+        <li>
+          <strong>Herramientas de Google</strong>: también podés instalar el
+          <a href="https://tools.google.com/dlpage/gaoptout" rel="noopener" target="_blank">complemento de inhabilitación de Google Analytics</a>.
+        </li>
+      </ul>
+
+      <hr />
+
+      <h2>5. Cambios en esta política</h2>
+      <p>
+        Si cambiamos las cookies o tecnologías similares que usamos, vamos a actualizar esta
+        página y su fecha de vigencia.
+      </p>
+
+      <hr />
+
+      <h2>6. Contacto</h2>
+      <p>
+        Consultas sobre esta política: <a href="mailto:info@joinnorthstack.com">info@joinnorthstack.com</a>.
+      </p>
+    </main>
+
+    <footer>
+      <a href="/es/">Inicio</a> · <a href="/es/terms.html">Términos de Servicio</a> ·
+      <a href="/es/privacy.html">Política de Privacidad</a> ·
+      <a href="/es/refund.html">Política de Reembolsos</a> ·
+      <a href="/es/cookies.html">Política de Cookies</a>
+      <p>© 2026 Northstack. Todos los derechos reservados.</p>
+    </footer>
+  </body>
+</html>

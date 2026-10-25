@@ -3,6 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Consent defaults (Google Consent Mode v2), before GTM: analytics only after the visitor accepts in the
+         cookie banner (consent.js); advertising storage is never granted. -->
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('consent','default',{ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',analytics_storage:'denied'});try{if(localStorage.getItem('ns-consent')==='granted')gtag('consent','update',{analytics_storage:'granted'});}catch(e){}</script>
+    <!-- Google Tag Manager -->
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-TJHVX9R4');</script>
+    <!-- End Google Tag Manager -->
+    <script src="/consent.js" defer></script>
     <title>Sobre Northstack — Misión, visión y la historia hasta ahora</title>
     <meta
       name="description"
@@ -155,6 +166,10 @@ section { padding-block: 72px; }
       <script src="/legal-modal.js" defer></script>
   </head>
   <body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-TJHVX9R4"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
     <header class="nav">
       <div class="container">
         <div class="nav-left">
@@ -351,7 +366,8 @@ section { padding-block: 72px; }
               <div class="heading">Legal</div>
               <a href="/terms.html">Términos de Servicio</a>
               <a href="/privacy.html">Política de Privacidad</a>
-              <a href="/refund.html">Política de Reembolsos</a>
+              <a href="/refund.html">Política de Reembolsos</a> ·
+      <a href="/es/cookies.html">Política de Cookies</a>
             </div>
             <div class="footer-col">
               <div class="heading">Contacto</div>

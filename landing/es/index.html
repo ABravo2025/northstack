@@ -3,6 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- Consent defaults (Google Consent Mode v2), before GTM: analytics only after the visitor accepts in the
+         cookie banner (consent.js); advertising storage is never granted. -->
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('consent','default',{ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',analytics_storage:'denied'});try{if(localStorage.getItem('ns-consent')==='granted')gtag('consent','update',{analytics_storage:'granted'});}catch(e){}</script>
+    <!-- Google Tag Manager -->
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-TJHVX9R4');</script>
+    <!-- End Google Tag Manager -->
+    <script src="/consent.js" defer></script>
     <title>Software de RR.HH., vacaciones y CRM para pymes — Northstack</title>
     <meta name="description" content="Software de RR.HH., vacaciones, CRM y seguimiento de nómina para pymes de 5 a 50 personas. Probalo gratis 15 días, sin tarjeta." />
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
@@ -349,6 +360,10 @@ footer a { display: block; text-decoration: none; padding: 3px 0; } footer a:hov
     <script src="/legal-modal.js" defer></script>
   </head>
   <body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-TJHVX9R4"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
 <nav class="top" aria-label="Main">
   <div class="wrap">
     <a class="brand" href="/es/"><img class="mark" src="/icon-color.svg" alt="" width="28" height="28">Northstack</a>
@@ -552,7 +567,7 @@ footer a { display: block; text-decoration: none; padding: 3px 0; } footer a:hov
     <div><a class="brand" href="/es/"><img class="mark" src="/icon-color.svg" alt="" width="28" height="28">Northstack</a><p style="margin:10px 0 0;max-width:34ch">Personas, ausencias, ventas y seguimiento de nómina — una plataforma para equipos que crecen.</p></div>
     <div><b>Producto</b><a href="#product">Funciones</a><a href="/es/software-vacaciones">Software de vacaciones</a><a href="#pricing">Precios</a><a href="#faq">Preguntas</a></div>
     <div><b>Empresa</b><a href="/es/about.html">Nosotros</a><a href="mailto:info@joinnorthstack.com">info@joinnorthstack.com</a></div>
-    <div><b>Legal</b><a href="/terms.html">Términos de Servicio</a><a href="/privacy.html">Política de Privacidad</a><a href="/refund.html">Política de Reembolsos</a></div>
+    <div><b>Legal</b><a href="/terms.html">Términos de Servicio</a><a href="/privacy.html">Política de Privacidad</a><a href="/refund.html">Política de Reembolsos</a><a href="/es/cookies.html">Política de Cookies</a></div>
     <div class="copy">© 2026 Northstack. Todos los derechos reservados.</div>
   </div>
 </footer>

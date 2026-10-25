@@ -3,6 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Consent defaults (Google Consent Mode v2), before GTM: analytics only after the visitor accepts in the
+         cookie banner (consent.js); advertising storage is never granted. -->
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('consent','default',{ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',analytics_storage:'denied'});try{if(localStorage.getItem('ns-consent')==='granted')gtag('consent','update',{analytics_storage:'granted'});}catch(e){}</script>
+    <!-- Google Tag Manager -->
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-TJHVX9R4');</script>
+    <!-- End Google Tag Manager -->
+    <script src="/consent.js" defer></script>
     <title>Política de Privacidad — Northstack</title>
     <meta name="description" content="Política de Privacidad de Northstack." />
     <link rel="canonical" href="https://joinnorthstack.com/es/privacy.html" />
@@ -79,6 +90,10 @@ footer a { color: var(--ink-3); }
       <script src="/legal-modal.js" defer></script>
   </head>
   <body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-TJHVX9R4"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
     <header>
       <div class="container">
         <a href="/es/"><span class="brand"><img src="/icon-color.svg" alt="" width="28" height="28" />Northstack</span></a>
@@ -228,21 +243,50 @@ footer a { color: var(--ink-3); }
         </li>
       </ul>
       <p>
-        Actualmente no usamos rastreadores de publicidad o analítica de terceros, y no
-        usamos cookies para seguimiento entre sitios ni con fines publicitarios.
+        No usamos rastreadores de publicidad de terceros, y no usamos cookies para
+        seguimiento entre sitios ni con fines publicitarios. Google Analytics se describe en
+        la Sección 2.4.
       </p>
+
+      <h3>2.4 Google Analytics</h3>
       <p>
-        <strong>Próximamente: Google Analytics.</strong> Vamos a incorporar Google
-        Analytics para medir cómo se usa el Servicio — por ejemplo, páginas visitadas,
-        sesiones y eventos de uso dentro del producto — tanto en nuestro sitio público
-        como en la aplicación autenticada. Según lo planeado, no va a habilitar Google
-        Signals, seguimiento entre dispositivos, ni ninguna función de
-        publicidad/remarketing, y no cambia lo que dice el párrafo anterior sobre
-        rastreadores de publicidad: es una herramienta de analítica de uso, no
-        publicitaria. <strong>Todavía no está en uso.</strong> Una vez que lo esté, vamos
-        a actualizar esta sección y la Sección 4.1 (Subprocesadores) con el detalle — qué
-        recolecta, cuánto tiempo lo retiene Google, y cómo optar por no participar — y
-        publicar una nueva fecha de vigencia.
+        <strong>En nuestro sitio web público (joinnorthstack.com): en uso.</strong> Usamos
+        Google Analytics, cargado a través de Google Tag Manager, para entender cómo los
+        visitantes encuentran y usan el sitio: qué páginas se visitan, desde qué sitio llegaste,
+        tu ubicación aproximada (derivada de tu dirección IP) y el tipo de dispositivo y
+        navegador.
+      </p>
+      <ul>
+        <li>
+          <strong>Solo con tu consentimiento</strong>: las cookies de analítica se guardan y
+          Google Analytics funciona solo si elegís <em>Aceptar</em> en el aviso de cookies. Si
+          elegís <em>Rechazar</em>, Google Analytics no funciona. Google Tag Manager se carga en
+          todas las páginas para leer tu elección, y no guarda cookies.
+        </li>
+        <li>
+          <strong>Podés cambiar tu elección cuando quieras</strong> desde el link
+          <em>Preferencias de cookies</em> al pie de todas las páginas del sitio. Las cookies
+          involucradas y su duración figuran en nuestra
+          <a href="/es/cookies.html">Política de Cookies</a>.
+        </li>
+        <li>
+          <strong>Sin publicidad</strong>: no activamos Google Signals, el seguimiento entre
+          dispositivos ni ninguna función de publicidad o remarketing, y el almacenamiento
+          publicitario está siempre desactivado.
+        </li>
+        <li>
+          <strong>Conservación</strong>: Google conserva estos datos de analítica durante el
+          plazo configurado en nuestra cuenta de Google Analytics (actualmente, 2 meses).
+        </li>
+      </ul>
+      <p>
+        <strong>Dentro de la aplicación de Northstack: todavía no está en uso.</strong>
+        Planeamos incorporar Google Analytics también en la aplicación autenticada, para medir
+        el uso, como páginas visitadas, sesiones y eventos de uso dentro del producto, con los
+        mismos compromisos: sin Google Signals, sin seguimiento entre dispositivos y sin
+        funciones de publicidad o remarketing. Una vez que esté en uso, vamos a actualizar esta
+        sección, nuestra Política de Cookies y la Sección 4.1, y publicar una nueva fecha de
+        vigencia.
       </p>
 
       <hr />
@@ -301,6 +345,11 @@ footer a { color: var(--ink-3); }
             <td>Vercel</td>
             <td>Hosting de la aplicación (frontend y backend)</td>
             <td>Todos los datos transmitidos a través del Servicio</td>
+          </tr>
+          <tr>
+            <td>Google (Google Analytics, Google Tag Manager)</td>
+            <td>Analítica en nuestro sitio web público, solo después de que el visitante acepta las cookies de analítica (Sección 2.4)</td>
+            <td>Páginas visitadas, sitio de origen, ubicación aproximada derivada de la dirección IP, tipo de dispositivo y navegador, e identificadores de cookies de analítica</td>
           </tr>
           <tr>
             <td>Neon</td>
@@ -649,7 +698,8 @@ footer a { color: var(--ink-3); }
     <footer>
       <a href="/es/">Inicio</a> · <a href="/es/terms.html">Términos de Servicio</a> ·
       <a href="/es/privacy.html">Política de Privacidad</a> ·
-      <a href="/es/refund.html">Política de Reembolsos</a>
+      <a href="/es/refund.html">Política de Reembolsos</a> ·
+      <a href="/es/cookies.html">Política de Cookies</a>
       <p>© 2026 Northstack. Todos los derechos reservados.</p>
     </footer>
   </body>

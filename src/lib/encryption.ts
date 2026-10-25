@@ -25,6 +25,17 @@ function getKey(): Buffer {
   return key;
 }
 
+// Whether the key is set and valid — callers that can live without encryption (Payroll v2 tax IDs)
+// check this instead of failing the whole request.
+export function isPaymentEncryptionConfigured(): boolean {
+  try {
+    getKey();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // Packs iv + authTag + ciphertext into one base64 string, self-contained so
 // decryptPaymentAccountData needs nothing but this string and the env key.
 export function encryptPaymentAccountData(plaintext: string): string {

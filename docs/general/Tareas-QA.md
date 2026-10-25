@@ -5234,7 +5234,7 @@ Resuelve el pendiente de agosto ("un área en el perfil de las notificaciones qu
 
 **Verificado** (servicios contra `staging`, 6/6): turno fichado 10 min tarde con 15 min de pausa → sugerencia 220 min (planificado 240); turno sin fichaje → 120 planificados; reporte: fichado 220, 1 tardanza, 1 ausencia; sin fichaje en el plan no hay columnas; resumen al Owner y no dos veces el mismo día. 790/790 tests.
 
-## QA-124 — Nómina v2: rediseño, recibos numerados y Mis recibos (2026-10-23, en `staging`, Growth)
+## QA-124 — Nómina v2: rediseño, recibos numerados y Mis recibos (2026-10-23; **en producción desde 2026-10-25**, main `9833988`, Growth)
 
 Spec: `docs/general/spec-payroll-v2.md` (propuesta aprobada por Alejandro en el artifact "Rediseño de Nómina").
 - **Navegación:** Nómina tiene barra lateral propia (`/payroll`): Resumen, Liquidaciones, Pagos únicos, Personas, Recibos, Mis recibos, Configuración (→ Configuración → Nómina). `/hr/payroll` y `/hr/payroll/runs/:id` redirigen. "Corrida" pasa a "Liquidación" en todo el español.

@@ -3,8 +3,9 @@
 **Estado:** aprobada por Alejandro el 2026-10-23 sobre la propuesta
 (artifact "Rediseño de Nómina", https://claude.ai/artifact/6xsUcHsZXwUjqHF84szouL). Unidades 1–7
 **construidas y probadas en `staging`** el 2026-10-23 (rama `feat/payroll-v2`, encima de "Traer horas
-aprobadas" y "Horas extra", también en staging) — QA-124 en `Tareas-QA.md`. Falta la revisión de
-Alejandro antes de producción; el anuncio se redacta al promover.
+aprobadas" y "Horas extra", también en staging) — QA-124 en `Tareas-QA.md`. **En producción desde
+2026-10-25** (main `9833988`, con los 6 SQL aplicados en la base de producción y los Términos/Privacidad
+actualizados el mismo día).
 
 Nómina sigue siendo **de seguimiento**: no mueve dinero ni reemplaza al recibo de sueldo legal.
 

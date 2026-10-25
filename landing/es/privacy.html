@@ -152,7 +152,11 @@ footer a { color: var(--ink-3); }
         <li>
           Información de registro: nombre de la empresa, tu nombre, dirección de email,
           número de teléfono, y contraseña (guardada como un hash criptográfico con salt,
-          nunca en texto plano).
+          nunca en texto plano), y, para empresas con base en Argentina o Estados Unidos,
+          el número de identificación tributaria propio de la empresa (un CUIT o un EIN) —
+          opcional, como texto libre, para empresas de otros países. Se puede editar
+          después en Configuración → Perfil de la empresa, y se guarda como un
+          identificador de negocio en texto plano, no encriptado.
         </li>
         <li>Información de perfil que actualizás después del registro.</li>
         <li>Contenido de las comunicaciones de soporte o contacto que nos enviás.</li>
@@ -185,7 +189,16 @@ footer a { color: var(--ink-3); }
           Registros de nómina y compensación que un Tenant ingresa para sus propios
           empleados/contratistas — frecuencia de pago, corridas de pago, recibos de sueldo, y
           los datos de cuenta de pago usados para indicarle al Tenant adónde depositarle el
-          sueldo a esa persona (guardados encriptados).
+          sueldo a esa persona (guardados encriptados). Para una persona contratada como
+          empleado en Argentina o Estados Unidos, si la empresa usa Nómina: su propio
+          número de identificación tributaria (un CUIL o un Social Security number),
+          guardado encriptado en una tabla separada del resto de sus registros — las
+          pantallas muestran solo sus últimos 4 dígitos. Un recibo de sueldo emitido se le
+          envía por email a esa persona como PDF adjunto: en un recibo argentino, tanto el
+          recibo como ese PDF enviado muestran el número de identificación tributaria
+          completo de la persona, igual que un recibo de sueldo local; en uno
+          estadounidense, ambos muestran solo los últimos 4 dígitos (por ejemplo,
+          XXX-XX-1234).
           <strong
             >Northstack no usa estos datos para ejecutar o transmitir ningún pago — el módulo
             de Nómina es solo una herramienta de registro; ver la Sección 1.3 de nuestros
@@ -297,7 +310,11 @@ footer a { color: var(--ink-3); }
           <tr>
             <td>Zoho Mail</td>
             <td>Entrega de email transaccional (ej. invitaciones)</td>
-            <td>Dirección de email, nombre, y contenido del email del destinatario</td>
+            <td>
+              Dirección de email, nombre, y contenido del email del destinatario, incluyendo
+              un PDF adjunto de recibo de sueldo, que en un recibo argentino lleva el número
+              de identificación tributaria completo de la persona
+            </td>
           </tr>
           <tr>
             <td>Dodo Payments</td>
@@ -427,6 +444,25 @@ footer a { color: var(--ink-3); }
         registrada junto con su motivo.
       </p>
 
+      <h3>4.7 Visibilidad de los recibos de sueldo y la página pública de verificación</h3>
+      <p>
+        Dentro de un Tenant, un recibo de sueldo emitido — y el número de identificación
+        tributaria que puede mostrar — es visible solo para la persona a la que se le
+        emitió, y para el owner del Tenant y cualquier rol con el permiso "Gestionar
+        nómina". El número de identificación tributaria de una persona puede ser
+        ingresado, una vez, por cualquiera que pueda gestionar el registro de esa persona,
+        pero solo puede ser modificado después por el owner o un rol de "Gestionar
+        nómina".
+      </p>
+      <p>
+        Cada recibo de sueldo emitido también tiene una página pública de verificación,
+        alcanzable solo con su propio código QR o código de verificación. Esa página
+        confirma que el recibo fue emitido por Northstack y muestra solo el nombre de la
+        empresa, el número del recibo, el nombre de pila y la inicial del apellido de la
+        persona, el período de pago, la fecha de pago, y cuándo fue emitido —
+        <strong>nunca un monto ni un número de identificación tributaria.</strong>
+      </p>
+
       <hr />
 
       <h2>5. Conservación de datos</h2>
@@ -454,6 +490,14 @@ footer a { color: var(--ink-3); }
         Tenant. Los registros de pago que tienen nuestros procesadores de pago (Dodo
         Payments, Mercado Pago) los conservan ellos según sus propias obligaciones,
         independientes de las nuestras.
+      </p>
+      <p>
+        El número de identificación tributaria de una persona se elimina cuando se elimina
+        su propio registro, o cuando se elimina la cuenta del Tenant, lo que ocurra
+        primero. Un recibo de sueldo emitido, incluyendo el número de identificación
+        tributaria que capturó en el momento en que se emitió, se elimina junto con el
+        registro de la persona — no se conserva de forma independiente después — o junto
+        con la cuenta del Tenant.
       </p>
       <p>
         Si sos Miembro del Programa de Referidos, eliminar o dar de baja tu cuenta no elimina en
@@ -549,10 +593,13 @@ footer a { color: var(--ink-3); }
         Usamos medidas técnicas y organizativas razonables diseñadas para proteger los
         Datos de Cuenta y los Datos Procesados, incluyendo encriptación de datos en
         tránsito (HTTPS/TLS), hash criptográfico de contraseñas con salt (scrypt), y
-        controles de acceso por tenant aplicados a nivel de la aplicación. También estamos
-        construyendo la autenticación de dos factores (2FA) como una función de seguridad
-        de cuenta adicional y opcional; <strong>todavía no está disponible</strong>, y la
-        vamos a anunciar cuando lo esté. Ningún método de transmisión o almacenamiento es
+        controles de acceso por tenant aplicados a nivel de la aplicación. La verificación
+        en dos pasos (2FA) está disponible para todos los usuarios y es obligatoria para el
+        owner de la cuenta, los usuarios con permisos de facturación o de pagos, y el staff
+        de Northstack (Sección 2.2 de nuestros Términos de Servicio); el secreto de la app
+        autenticadora se encripta en reposo, y los códigos de recuperación de un solo uso se
+        guardan como un hash de una sola vía, igual que tu contraseña, y se te muestran solo
+        una vez, cuando los generás. Ningún método de transmisión o almacenamiento es
         100% seguro, y no podemos garantizar seguridad absoluta. Si tomamos conocimiento de
         un incidente de seguridad que afecte tus datos y que la ley nos exija notificarte,
         lo vamos a hacer sin demora indebida.

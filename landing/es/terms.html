@@ -88,7 +88,7 @@ footer a { color: var(--ink-3); }
 
     <main>
       <h1>Términos de Servicio de Northstack</h1>
-      <p class="effective-date">Fecha de vigencia: 19 de octubre de 2026</p>
+      <p class="effective-date">Fecha de vigencia: 25 de octubre de 2026</p>
 
       <p>
         Bienvenido a Northstack. Estos Términos de Servicio ("<strong>Términos</strong>")
@@ -156,6 +156,14 @@ footer a { color: var(--ink-3); }
         pagarle efectivamente a sus propios empleados y contratistas, a través de sus
         propios medios bancarios, de nómina, u otros.
       </p>
+      <p>
+        Los recibos de sueldo que genera el módulo de Nómina son documentos internos de
+        seguimiento. Están marcados como "No válido como documento legal" y no reemplazan
+        ningún recibo, comprobante de pago, ni registro que exija la legislación laboral,
+        fiscal o de seguridad social, salvo y hasta que sean certificados según las normas
+        aplicables de cada país. El Tenant sigue siendo el único responsable de emitir
+        cualquier documento legalmente exigido.
+      </p>
 
       <hr />
 
@@ -179,10 +187,12 @@ footer a { color: var(--ink-3); }
         conocimiento de cualquier acceso o uso no autorizado de una cuenta.
       </p>
       <p>
-        También estamos construyendo la autenticación de dos factores (2FA) como una
-        función de seguridad de cuenta adicional y opcional.
-        <strong>Todavía no está disponible en el Servicio.</strong> La vamos a anunciar, y a
-        actualizar estos Términos si es necesario, una vez que lo esté.
+        La verificación en dos pasos (2FA), con una app autenticadora más códigos de
+        recuperación de un solo uso, está disponible para todos los usuarios y es
+        <strong>obligatoria</strong> para el owner de la cuenta, cualquier usuario con
+        permisos de facturación o de pagos, y el staff de Northstack; es opcional para
+        todos los demás. La configurás, y la administrás, desde tu propia configuración de
+        cuenta.
       </p>
 
       <h3>2.3 Exactitud</h3>
@@ -271,15 +281,22 @@ footer a { color: var(--ink-3); }
         Datos del Cliente enviados en violación de esta Sección.
       </p>
       <p>
-        <strong>Excepción — datos de cuenta para el desembolso de Nómina.</strong> Esta
-        restricción no aplica a los datos de cuenta de pago/bancaria propios de un empleado
-        o contratista, ingresados a través del módulo de Nómina incorporado en el Servicio,
-        con el único fin de registrar adónde se le debe pagar a esa persona (Sección 1.3).
-        Northstack encripta ese campo específico en reposo (AES-256-GCM) y no lo usa para
-        ningún otro fin más que guardarlo y mostrárselo de nuevo al Tenant. Esta excepción
-        es acotada: cubre únicamente ese campo nativo de Nómina, hecho a propósito para eso,
-        y no ningún otro número de cuenta bancaria o tarjeta de pago, y no se extiende a un
-        campo personalizado configurado por el Tenant, aunque se use con un fin similar.
+        <strong>Excepción — datos de Nómina.</strong> Esta restricción no aplica a lo
+        siguiente, ingresado a través del módulo de Nómina incorporado en el Servicio con
+        el único fin de registrar y documentar lo que se le paga a una persona: (a) los
+        datos de cuenta de pago/bancaria propios de un empleado o contratista (Sección
+        1.3); y (b) el número de identificación tributaria de una persona (como un CUIL en
+        Argentina o un Social Security number en Estados Unidos) y el número de
+        identificación tributaria propio del Tenant (como un CUIT o un EIN). Northstack
+        encripta en reposo los datos de cuenta de pago y el número de identificación
+        tributaria de una persona, muestra el número de identificación tributaria de una
+        persona solo parcialmente salvo cuando el formato de recibo del Tenant exige el
+        número completo, y no usa estos datos para ningún otro fin más que guardarlos y
+        mostrárselos de nuevo al Tenant y a esa persona, incluso en los recibos de sueldo.
+        Sos responsable de tener una base legal para recolectar y procesar estos datos.
+        Esta excepción cubre únicamente estos campos nativos de Nómina, hechos a propósito
+        para eso — no ningún otro número de identificación emitido por el gobierno, y nunca
+        un campo personalizado configurado por el Tenant, aunque se use con un fin similar.
       </p>
 
       <h3>3.5 Datos como procesador</h3>

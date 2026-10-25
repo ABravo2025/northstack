@@ -1,5 +1,5 @@
 import prisma from '../../lib/prisma.js';
-import { decryptPaymentAccountData, encryptPaymentAccountData } from '../../lib/encryption.js';
+import { decryptPaymentAccountData, encryptPaymentAccountData, isPaymentEncryptionConfigured } from '../../lib/encryption.js';
 import { maskTaxId, personTaxIdKind, personTaxIdRequired, validateTaxId, type TaxIdKind } from '../../lib/taxId.js';
 
 // A person's tax ID (CUIL / SSN / other) — see EmployeeTaxId in schema.prisma and src/lib/taxId.ts.
@@ -7,6 +7,7 @@ import { maskTaxId, personTaxIdKind, personTaxIdRequired, validateTaxId, type Ta
 export type TaxIdSaveResult = { ok: true; masked: string } | { ok: false; error: string };
 
 export async function setEmployeeTaxId(tenantId: string, employeeId: string, raw: unknown, changedByUserId: string): Promise<TaxIdSaveResult> {
+  if (!isPaymentEncryptionConfigured()) return { ok: false, error: 'Tax IDs are not available yet' };
   const [tenant, employee] = await Promise.all([
     prisma.tenant.findUniqueOrThrow({ where: { id: tenantId }, select: { country: true } }),
     prisma.employee.findFirst({ where: { id: employeeId, tenantId }, select: { id: true } }),
@@ -25,7 +26,9 @@ export async function setEmployeeTaxId(tenantId: string, employeeId: string, raw
 // asked when the company has Payroll (Growth) — the payslip is the only thing that uses it, so
 // without Payroll it isn't collected at all.
 export async function checkTaxIdForTenant(tenantId: string, raw: unknown, personType: unknown, payrollEnabled: boolean): Promise<{ ok: true; provided: boolean } | { ok: false; error: string }> {
-  if (!payrollEnabled) return { ok: true, provided: false };
+  // Without Payroll, or without the encryption key (never store it unencrypted): not collected,
+  // and adding the person still works.
+  if (!payrollEnabled || !isPaymentEncryptionConfigured()) return { ok: true, provided: false };
   const tenant = await prisma.tenant.findUniqueOrThrow({ where: { id: tenantId }, select: { country: true } });
   const provided = typeof raw === 'string' && raw.trim() !== '';
   if (!provided) {
@@ -35,8 +38,6 @@ export async function checkTaxIdForTenant(tenantId: string, raw: unknown, person
   }
   const check = validateTaxId(personTaxIdKind(tenant.country), raw);
   if (!check.ok) return check;
-  // Fails here (missing key) rather than after the person was already created.
-  encryptPaymentAccountData(check.value);
   return { ok: true, provided: true };
 }
 

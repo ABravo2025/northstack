@@ -96,7 +96,7 @@ Indexación de las 2 páginas nuevas pedida en Search Console el 2026-10-03.
 - About EN/ES con meta description.
 - Sitemap completo: 18 URLs con pares EN/ES y `lastmod` real de los legales.
 - **No toca** la sección "Qué incluye" de la portada: la rama `landing-plans` (ae79fd0, otra sesión) ya agrega Turnos y Proyectos ahí. Cuando se publique, sumar links de las tarjetas a las páginas de módulo.
-- Pendiente para un pase 3: Legajo digital y Recibos de sueldo; `sameAs` (LinkedIn + G2) en el JSON-LD cuando estén los links.
+- Pendiente para un pase 3: Legajo digital y Recibos de sueldo.
 
 ## Analítica (en producción desde 2026-10-25)
 
@@ -121,6 +121,7 @@ Artifact. Fue escrito para el pase 1 (los retoques de portada fallan a propósit
 aplicados); para los próximos módulos, copiar una plantilla y reutilizar `buildModule()`.
 
 ## Changelog SEO (más nuevo arriba)
+- **2026-10-25** — `sameAs` en el JSON-LD Organization de la portada EN/ES: LinkedIn `company/144967011` + G2 `products/northstack` (`landing` 37e7bb0). `seo-pass-2` rebaseada encima (af03098).
 - **2026-10-25** — Google Analytics vinculado con Search Console (lo hizo Alejandro).
 - **2026-10-25** — Contenedor GTM versión 2 publicado con GA4 `G-DQJ1K0FVJ5` + consentimiento `analytics_storage` (verificado en el gtm.js público). La analítica ya mide.
 - **2026-10-25** — Analítica + banner de cookies + Política de Cookies **en producción** (`landing` e721e74), verificado en vivo. Falta publicar la etiqueta GA4 dentro de GTM. Pase 2 reconstruido encima (`seo-pass-2` aa4e8ac, 20 URLs), sigue esperando aprobación.

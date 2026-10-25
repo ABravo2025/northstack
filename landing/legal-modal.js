@@ -4,7 +4,7 @@
 // picked up, including links inside an open document (they switch the document in place).
 // Ctrl/Cmd/middle-click still opens the real page in a new tab.
 (function () {
-  var DOCS = { '/terms.html': 1, '/privacy.html': 1, '/refund.html': 1, '/cookies.html': 1, '/es/cookies.html': 1 };
+  var DOCS = { '/terms.html': 1, '/privacy.html': 1, '/refund.html': 1, '/cookies.html': 1, '/es/cookies.html': 1, '/es/terms.html': 1, '/es/privacy.html': 1, '/es/refund.html': 1 };
   var CSS =
     '.lm-overlay{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(14,10,30,.55);backdrop-filter:blur(3px);animation:lm-fade .18s ease both}' +
     '.lm-dialog{display:flex;flex-direction:column;width:100%;max-width:820px;max-height:88vh;background:var(--surface,#fff);color:var(--ink,#14102b);border:1px solid var(--line,#e6e1f5);border-radius:20px;overflow:hidden;box-shadow:0 2px 4px rgba(30,14,80,.06),0 40px 80px -24px rgba(50,20,140,.4);animation:lm-rise .22s ease both}' +

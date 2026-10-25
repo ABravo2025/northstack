@@ -20,6 +20,30 @@
     {
       "source": "/es/software-vacaciones",
       "destination": "/es/software-vacaciones.html"
+    },
+    {
+      "source": "/es/control-horario",
+      "destination": "/es/control-horario.html"
+    },
+    {
+      "source": "/employee-scheduling-software",
+      "destination": "/employee-scheduling-software.html"
+    },
+    {
+      "source": "/es/crm-para-pymes",
+      "destination": "/es/crm-para-pymes.html"
+    },
+    {
+      "source": "/crm-for-small-business",
+      "destination": "/crm-for-small-business.html"
+    },
+    {
+      "source": "/es/gestion-de-proyectos",
+      "destination": "/es/gestion-de-proyectos.html"
+    },
+    {
+      "source": "/project-management-software",
+      "destination": "/project-management-software.html"
     }
   ]
 }

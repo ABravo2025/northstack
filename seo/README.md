@@ -19,7 +19,7 @@ _Última actualización: 2026-10-03_
 | Pase técnico | ✅ Hecho 2026-10-02 (títulos, descripciones, canonical, hreflang, OG por idioma, JSON-LD, robots, sitemap) |
 | Páginas por módulo | ✅ Pase 1 (Vacaciones ES/EN) **en producción desde 2026-10-03** · ⬜ CRM, RR.HH., Nómina |
 | Backlinks / directorios | 🟡 En curso: **G2 aprobado 2026-10-03**. Resto pendiente (tabla en `2026-10/semana-01/directorios/perfil-producto.md`) |
-| Analítica del sitio | 🟡 GTM `GTM-TJHVX9R4` + Consent Mode v2 + banner de cookies + política de privacidad 2.4 armados (rama `analytics`, local, sin push). Falta: configurar el tag de GA4 dentro de GTM (Alejandro) |
+| Analítica del sitio | ✅ En producción desde 2026-10-25 (`landing` e721e74): GTM `GTM-TJHVX9R4` + Consent Mode v2 + banner + Política de Cookies. ⚠️ GA4 `G-DQJ1K0FVJ5` todavía **no publicado dentro del contenedor GTM** (lo hace Alejandro) |
 
 ## Problemas conocidos
 
@@ -98,7 +98,12 @@ Indexación de las 2 páginas nuevas pedida en Search Console el 2026-10-03.
 - **No toca** la sección "Qué incluye" de la portada: la rama `landing-plans` (ae79fd0, otra sesión) ya agrega Turnos y Proyectos ahí. Cuando se publique, sumar links de las tarjetas a las páginas de módulo.
 - Pendiente para un pase 3: Legajo digital y Recibos de sueldo; `sameAs` (LinkedIn + G2) en el JSON-LD cuando estén los links.
 
-## Analítica (2026-10-24)
+## Analítica (en producción desde 2026-10-25)
+
+- **GA4:** ID de medición `G-DQJ1K0FVJ5`. Retención en GA: 2 meses (lo que dice la política; si se cambia, actualizar Privacidad 2.4).
+- **Política de Cookies** nueva EN/ES (`/cookies.html`, `/es/cookies.html`): `ns-consent` (necesaria), `_ga` y `_ga_DQJ1K0FVJ5` (2 años, solo con Aceptar); app sin cookies (sesión y preferencias en localStorage) y sin analítica todavía. En todos los pies, modal de legales y sitemap.
+- **Privacidad 2.4** reescrita: sitio = en uso con consentimiento; app = "todavía no en uso" (otra sesión había anunciado GA también para la app, fa8c59a). Si se activa GA en la app, actualizar 2.4, la Política de Cookies y la tabla 4.1.
+- Rechazar después de aceptar borra las cookies `_ga` (consent.js).
 
 - Contenedor **Google Tag Manager `GTM-TJHVX9R4`** (lo creó Alejandro) en todas las páginas del landing, arriba del `<head>` + `<noscript>` al abrir `<body>`.
 - **Consent Mode v2** antes de GTM: `analytics_storage` denegado hasta que la persona acepta; `ad_storage`, `ad_user_data`, `ad_personalization` siempre denegados.
@@ -116,6 +121,7 @@ Artifact. Fue escrito para el pase 1 (los retoques de portada fallan a propósit
 aplicados); para los próximos módulos, copiar una plantilla y reutilizar `buildModule()`.
 
 ## Changelog SEO (más nuevo arriba)
+- **2026-10-25** — Analítica + banner de cookies + Política de Cookies **en producción** (`landing` e721e74), verificado en vivo. Falta publicar la etiqueta GA4 dentro de GTM. Pase 2 reconstruido encima (`seo-pass-2` aa4e8ac, 20 URLs), sigue esperando aprobación.
 - **2026-10-24** — GTM + Consent Mode + banner + política de privacidad armados en la rama `analytics` (local). `seo-pass-2` rebaseada encima, con GTM en sus 6 páginas.
 - **2026-10-20** — Pase 2 armado (Turnos/CRM/Proyectos EN/ES + arreglos de sitemap, About, legales ES). Vista previa publicada, sin push.
 - **2026-10-20** — Auditoría del landing (ver sección "Auditoría 2026-10-20"). G2: perfil visible; reseñas descartadas por ahora (deben venir de clientes con su propia cuenta).

@@ -63,7 +63,7 @@ const L = {
     min: 'Mínimo <span data-pricing="min-users">3</span> usuarios por equipo.', allPrices: 'Ver todos los precios →',
     relEyebrow: 'Parte de Northstack', relH3: 'Todos los módulos comparten el mismo equipo.', relP: 'El legajo de cada persona alimenta ausencias, turnos, CRM, proyectos y seguimiento de nómina. Nada se carga dos veces.',
     finalP: '15 días gratis. Sin tarjeta. Listo en una tarde.', locale: 'es_AR', altLocale: 'en_US', og: 'og-image-es.jpg',
-    company: 'Empresa', about: 'Nosotros', legal: 'Legal', terms: 'Términos de Servicio', privacy: 'Política de Privacidad', refund: 'Política de Reembolsos',
+    company: 'Empresa', about: 'Nosotros', legal: 'Legal', terms: 'Términos de Servicio', privacy: 'Política de Privacidad', refund: 'Política de Reembolsos', cookies: 'Política de Cookies',
     tagline: 'Personas, ausencias, turnos, ventas, proyectos y seguimiento de nómina — una plataforma para equipos que crecen.',
     copy: '© 2026 Northstack. Todos los derechos reservados.', legalPrefix: '/es' },
   en: { home: '/', product: 'Product', features: 'Features', pricing: 'Pricing', faq: 'FAQ', signin: 'Sign in', start: 'Start free trial',
@@ -74,7 +74,7 @@ const L = {
     min: 'Minimum <span data-pricing="min-users">3</span> users per team.', allPrices: 'See full pricing →',
     relEyebrow: 'Part of Northstack', relH3: 'Every module shares the same team.', relP: 'Each person’s record powers time off, shifts, the CRM, projects and payroll tracking. Nothing is typed twice.',
     finalP: '15 days free. No card. Set up in an afternoon.', locale: 'en_US', altLocale: 'es_AR', og: 'og-image-en.jpg',
-    company: 'Company', about: 'About', legal: 'Legal', terms: 'Terms of Service', privacy: 'Privacy Policy', refund: 'Refund Policy',
+    company: 'Company', about: 'About', legal: 'Legal', terms: 'Terms of Service', privacy: 'Privacy Policy', refund: 'Refund Policy', cookies: 'Cookie Policy',
     tagline: 'People, time off, shifts, sales, projects and payroll tracking — one platform for growing teams.',
     copy: '© 2026 Northstack. All rights reserved.', legalPrefix: '' },
 };
@@ -87,7 +87,7 @@ const footer = (l) => { const t = L[l]; return `<footer>
     <div><a class="brand" href="${t.home}"><img class="mark" src="/icon-color.svg" alt="" width="28" height="28">Northstack</a><p style="margin:10px 0 0;max-width:34ch">${t.tagline}</p></div>
     ${productCol(l, false)}
     <div><b>${t.company}</b><a href="${l === 'es' ? '/es/about.html' : '/about.html'}">${t.about}</a><a href="mailto:info@joinnorthstack.com">info@joinnorthstack.com</a></div>
-    <div><b>${t.legal}</b><a href="${t.legalPrefix}/terms.html">${t.terms}</a><a href="${t.legalPrefix}/privacy.html">${t.privacy}</a><a href="${t.legalPrefix}/refund.html">${t.refund}</a></div>
+    <div><b>${t.legal}</b><a href="${t.legalPrefix}/terms.html">${t.terms}</a><a href="${t.legalPrefix}/privacy.html">${t.privacy}</a><a href="${t.legalPrefix}/refund.html">${t.refund}</a><a href="${t.legalPrefix}/cookies.html">${t.cookies}</a></div>
     <div class="copy">${t.copy}</div>
   </div>
 </footer>`; };
@@ -324,7 +324,10 @@ for (const [f, d] of Object.entries(ABOUT)) {
 
 // Legal modal: Spanish documents open in the modal too.
 let lm = rd(LANDING + '/legal-modal.js');
-lm = rep(lm, "var DOCS = { '/terms.html': 1, '/privacy.html': 1, '/refund.html': 1 };", "var DOCS = { '/terms.html': 1, '/privacy.html': 1, '/refund.html': 1, '/es/terms.html': 1, '/es/privacy.html': 1, '/es/refund.html': 1 };", 'modal docs');
+for (const d of ['/es/terms.html', '/es/privacy.html', '/es/refund.html']) {
+  if (!lm.includes("'" + d + "'")) lm = lm.replace(/var DOCS = {([^}]*)};/, (m, inner) => `var DOCS = {${inner.trimEnd()}, '${d}': 1 };`);
+}
+if (!lm.includes("'/es/terms.html'")) throw new Error('modal docs');
 out['legal-modal.js'] = lm;
 
 // ── vercel.json rewrites ─────────────────────────────────────────────────────────────────
@@ -334,7 +337,7 @@ for (const p of PAGES) for (const l of ['es', 'en']) { const src = '/' + p[l].pa
 out['vercel.json'] = JSON.stringify(vj, null, 2) + '\n';
 
 // ── sitemap: every indexable page, EN/ES pairs, lastmod = today for what this pass touches ───
-const TODAY = '2026-10-20';
+const TODAY = '2026-10-25';
 const lastmod = (f) => (process.env.LASTMOD_JSON ? JSON.parse(process.env.LASTMOD_JSON)[f] : null) || TODAY;
 const pairs = [
   ['', 'es/', 'index.html', 'es/index.html', 'weekly', '1.0'],
@@ -344,6 +347,7 @@ const pairs = [
   ['terms.html', 'es/terms.html', 'terms.html', 'es/terms.html', 'yearly', '0.3'],
   ['privacy.html', 'es/privacy.html', 'privacy.html', 'es/privacy.html', 'yearly', '0.3'],
   ['refund.html', 'es/refund.html', 'refund.html', 'es/refund.html', 'yearly', '0.3'],
+  ['cookies.html', 'es/cookies.html', 'cookies.html', 'es/cookies.html', 'yearly', '0.3'],
 ];
 let sm = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n';
 for (const [en, es, fEn, fEs, freq, prio] of pairs) {

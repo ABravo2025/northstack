@@ -7,8 +7,8 @@
   var KEY = 'ns-consent';
   var es = (document.documentElement.lang || '').indexOf('es') === 0;
   var T = es
-    ? { text: 'Usamos cookies de analítica para entender cómo se usa este sitio. Solo se activan si las aceptás.', more: 'Política de privacidad', accept: 'Aceptar', decline: 'Rechazar', settings: 'Preferencias de cookies', label: 'Aviso de cookies', privacy: '/es/privacy.html' }
-    : { text: 'We use analytics cookies to understand how this site is used. They only turn on if you accept them.', more: 'Privacy Policy', accept: 'Accept', decline: 'Decline', settings: 'Cookie settings', label: 'Cookie notice', privacy: '/privacy.html' };
+    ? { text: 'Usamos cookies de analítica para entender cómo se usa este sitio. Solo se activan si las aceptás.', more: 'Política de cookies', accept: 'Aceptar', decline: 'Rechazar', settings: 'Preferencias de cookies', label: 'Aviso de cookies', policy: '/es/cookies.html' }
+    : { text: 'We use analytics cookies to understand how this site is used. They only turn on if you accept them.', more: 'Cookie Policy', accept: 'Accept', decline: 'Decline', settings: 'Cookie settings', label: 'Cookie notice', policy: '/cookies.html' };
   var CSS =
     '.ns-cc{position:fixed;left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:90;margin:0 auto;max-width:720px;display:flex;flex-wrap:wrap;align-items:center;gap:12px 18px;padding:14px 16px 14px 20px;border-radius:16px;background:var(--surface,#fff);color:var(--ink,#14102b);border:1px solid var(--line,#e6e1f5);box-shadow:0 2px 4px rgba(30,14,80,.06),0 24px 48px -16px rgba(40,18,110,.35);font:14.5px/1.5 var(--font,system-ui,sans-serif);animation:ns-cc-in .25s ease both}' +
     '.ns-cc p{margin:0;flex:1 1 300px;min-width:0;color:var(--ink-2,#4a4566)}' +
@@ -25,10 +25,25 @@
   function save(v) { try { localStorage.setItem(KEY, v); } catch (e) {} }
   function gtag() { window.dataLayer = window.dataLayer || []; window.dataLayer.push(arguments); }
 
+  // Declining after accepting removes the Google Analytics cookies already set (Cookie Policy §4).
+  function clearAnalyticsCookies() {
+    var host = location.hostname, domains = ['', host, '.' + host];
+    var parts = host.split('.');
+    if (parts.length > 2) domains.push('.' + parts.slice(-2).join('.'));
+    document.cookie.split(';').forEach(function (c) {
+      var name = c.split('=')[0].trim();
+      if (name.indexOf('_ga') !== 0) return;
+      domains.forEach(function (d) {
+        document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/' + (d ? '; domain=' + d : '');
+      });
+    });
+  }
+
   var bar;
   function decide(granted) {
     save(granted ? 'granted' : 'denied');
     gtag('consent', 'update', { analytics_storage: granted ? 'granted' : 'denied' });
+    if (!granted) clearAnalyticsCookies();
     if (bar) bar.hidden = true;
   }
   function show() {
@@ -40,7 +55,7 @@
       bar.className = 'ns-cc';
       bar.setAttribute('role', 'region');
       bar.setAttribute('aria-label', T.label);
-      bar.innerHTML = '<p>' + T.text + ' <a href="' + T.privacy + '">' + T.more + '</a></p>' +
+      bar.innerHTML = '<p>' + T.text + ' <a href="' + T.policy + '">' + T.more + '</a></p>' +
         '<div><button type="button" class="no">' + T.decline + '</button><button type="button" class="ok">' + T.accept + '</button></div>';
       bar.querySelector('.ok').addEventListener('click', function () { decide(true); });
       bar.querySelector('.no').addEventListener('click', function () { decide(false); });
@@ -50,7 +65,8 @@
   }
 
   function init() {
-    var copy = document.querySelector('footer .copy');
+    // Landing pages put the copyright in footer .copy; the legal pages in a plain footer <p>.
+    var copy = document.querySelector('footer .copy') || document.querySelector('footer p');
     if (copy) {
       var a = document.createElement('a');
       a.href = '#';
@@ -59,6 +75,13 @@
       a.addEventListener('click', function (e) { e.preventDefault(); show(); });
       copy.appendChild(a);
     }
+    // Any element marked data-ns-cookie-settings (e.g. on the Cookie Policy) reopens the banner.
+    document.addEventListener('click', function (e) {
+      var el = e.target.closest && e.target.closest('[data-ns-cookie-settings]');
+      if (!el) return;
+      e.preventDefault();
+      show();
+    });
     if (!read()) show();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();

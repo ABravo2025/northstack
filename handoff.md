@@ -4,7 +4,7 @@ Running context of the whole project, kept current so any session (or person) ca
 last one left off. **Update this file whenever a feature ships or something important changes**
 (newest entries on top in "Changelog"). Rule set in `README.md`.
 
-_Last updated: 2026-10-24_
+_Last updated: 2026-10-25_
 
 ---
 
@@ -45,7 +45,7 @@ Release flow: code → `staging` → user reviews → `main`. Additive DB change
 - **Payments** (Stripe, Growth plan): per-company table + period report (collected / open / refunded /
   failed / subscriptions); Dashboards → Payments. **Not marketed.**
 - **Sales**: pipelines with own stages (required names, inline "+ Add stage" row), Kanban, opportunities.
-- **Payroll tracking**: pay runs, compensation, pay stubs, contract confirmation by the employee.
+- **Payroll tracking** (**v2 live 2026-10-25**, Growth): its own sidebar (Overview, Pay runs, One-off payments, People, Payslips, My payslips, Settings → Settings > Payroll); "Liquidación" in Spanish (never "corrida"). Step-by-step pay run with per-currency totals and change vs the previous run; **bring approved timesheet hours**; **company-defined overtime and surcharges** (start from Argentina, US or custom). **Numbered payslips** (0001-000001) issued on confirm and emailed, Argentine model (net in words, signatures, CUIT/CUIL) or US pay stub (EIN, SSN last 4), QR verification page without amounts, every payslip marked **"Not valid as a legal document"**. Everyone sees **only their own payslips** (My payslips); only owner + Manage payroll see all. Automatic 5-digit file number (legajo, from 01001). Tax IDs: company CUIT/EIN at signup, each employee's CUIL/SSN when added (required only in AR/US for employees; encrypted, last 4 on screen). Payment methods as a switch grid with defaults by country. Numbers formatted by the company's country (AR 125.000,00 / US 125,000.00). Terms §3.4 + Privacy updated Oct 25.
 - Plan limits enforced (Starter vs Growth).
 - **AI assistants (MCP)** (live 2026-10-19, Growth): each person connects their own Claude / ChatGPT / Cursor via OAuth; it acts as them with their role. Since 2026-10-20 it reaches almost the whole app (122 tools): tasks with comments/@mentions, notes, CRM, employees incl. contract and custom fields, time off with policies/balances, projects, shifts (incl. publishing), timesheets, client reports, clock-in. Two-step confirmation for anything destructive or that notifies people; it can't invite as Admin or with salary/payment roles; payroll read-only; settings and terminations stay in the app.
 - **Referral program** (live 2026-10-06): any app user (not outside affiliates) joins from **Referidos** in the sidebar (above Settings, gift icon): payout method + details first (Wise, Payoneer, PayPal, wire — US routing+account / IBAN / SWIFT — or Argentine bank transfer), then the program terms (legal modal). Gets a random code link `app.joinnorthstack.com/register?ref=XXXX-XXXX`. Referred company gets a 30-day trial; the member earns **10% of its first 3 payments**, payable 30 days after each payment, transferred by hand once ≥ USD 50 / ARS 50.000 (per currency). Staff pay from Admin → Referidos and must attach the receipt; the member sees it in the app. Rules in `REFERRAL` (`src/config/pricing.ts`). Refund voiding is manual (providers don't notify refunds). **Don't announce yet** — terms pending accountant/legal review.
@@ -86,6 +86,7 @@ SEO is part of marketing: every SEO change is logged in `seo/README.md` + a chan
 ---
 
 ## Changelog (newest first)
+- **2026-10-25** — **Payroll v2 live in production** (main `9833988`, cherry-picked with the earlier "bring approved hours" and "overtime" units): new navigation, numbered AR/US payslips emailed to each person with QR verification, My payslips for everyone (own only), automatic legajo, CUIT/CUIL (EIN/SSN) on payslips, "not valid as a legal document" on every payslip, payment methods by country, numbers in the company's country format. Prod DB: 6 additive SQL files (the unrelated `Invoice` drift still untouched). Legal pages updated the same day (Terms §3.4 Payroll exception, Privacy). Marketing angle: "every employee gets a numbered payslip by email and only sees their own — tracking, not a legal payslip" (do NOT claim legal validity). Payroll stays Growth-only.
 - **2026-10-24** — Website analytics prepared (not live): GTM-TJHVX9R4 + Consent Mode v2 + cookie banner + Privacy Policy 2.4 (EN/ES, effective Oct 24), landing branch `analytics` (local). GA4 tag still to be configured inside GTM.
 - **2026-10-23** — WhatsApp statuses: 14 image-only 1080×1920 cards in Spanish and English (added 2026-10-24), one per feature (people, time off, calendar, shifts, clock-in, hours, client report, projects, tasks, CRM, payroll tracking, roles, AI assistant, 2FA) in `2026-10/semana-04/whatsapp/`, tooling `tools/whatsapp/estados.mjs`. Ready for Alejandro to post one at a time.
 - **2026-10-20** — SEO pass 2 built, not live: Shifts/CRM/Projects module pages EN/ES + sitemap/About/ES-legal fixes (landing branch `seo-pass-2`, local). Preview https://claude.ai/artifact/KMdMhxBJs1H5NV1Dgke6Br

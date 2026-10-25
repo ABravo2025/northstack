@@ -19,7 +19,7 @@ _Última actualización: 2026-10-03_
 | Pase técnico | ✅ Hecho 2026-10-02 (títulos, descripciones, canonical, hreflang, OG por idioma, JSON-LD, robots, sitemap) |
 | Páginas por módulo | ✅ Pase 1 (Vacaciones ES/EN) **en producción desde 2026-10-03** · ⬜ CRM, RR.HH., Nómina |
 | Backlinks / directorios | 🟡 En curso: **G2 aprobado 2026-10-03**. Resto pendiente (tabla en `2026-10/semana-01/directorios/perfil-producto.md`) |
-| Analítica del sitio | ✅ En producción desde 2026-10-25 (`landing` e721e74): GTM `GTM-TJHVX9R4` + Consent Mode v2 + banner + Política de Cookies. ⚠️ GA4 `G-DQJ1K0FVJ5` todavía **no publicado dentro del contenedor GTM** (lo hace Alejandro) |
+| Analítica del sitio | ✅ En producción desde 2026-10-25 (`landing` e721e74): GTM `GTM-TJHVX9R4` + Consent Mode v2 + banner + Política de Cookies. GA4 `G-DQJ1K0FVJ5` publicado en GTM (versión 2, 2026-10-25), requiere `analytics_storage` |
 
 ## Problemas conocidos
 
@@ -121,6 +121,7 @@ Artifact. Fue escrito para el pase 1 (los retoques de portada fallan a propósit
 aplicados); para los próximos módulos, copiar una plantilla y reutilizar `buildModule()`.
 
 ## Changelog SEO (más nuevo arriba)
+- **2026-10-25** — Contenedor GTM versión 2 publicado con GA4 `G-DQJ1K0FVJ5` + consentimiento `analytics_storage` (verificado en el gtm.js público). La analítica ya mide.
 - **2026-10-25** — Analítica + banner de cookies + Política de Cookies **en producción** (`landing` e721e74), verificado en vivo. Falta publicar la etiqueta GA4 dentro de GTM. Pase 2 reconstruido encima (`seo-pass-2` aa4e8ac, 20 URLs), sigue esperando aprobación.
 - **2026-10-24** — GTM + Consent Mode + banner + política de privacidad armados en la rama `analytics` (local). `seo-pass-2` rebaseada encima, con GTM en sus 6 páginas.
 - **2026-10-20** — Pase 2 armado (Turnos/CRM/Proyectos EN/ES + arreglos de sitemap, About, legales ES). Vista previa publicada, sin push.

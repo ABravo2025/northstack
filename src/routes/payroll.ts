@@ -1,3 +1,4 @@
+import prisma from '../lib/prisma.js';
 import { requirePayrollAccess } from '../lib/payrollAccess.js';
 import {
   createPayFrequency,

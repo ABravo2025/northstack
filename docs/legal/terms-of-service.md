@@ -289,6 +289,14 @@ disconnect by the user or whoever has manage_api_access, owner can switch it off
 (use_ai_assistants). Kept the Tenant's-own-choice-and-responsibility framing from §8.2 and made the
 third-party-AI-provider point explicit. Same text published on the landing (EN/ES).
 Effective Date bumped to October 19, 2026.
+
+2026-10-25 — Google Analytics (see privacy-policy.md's matching dated note for the full
+reasoning: confirmed zero code exists yet, same "coming soon" treatment as MCP/2FA got, scope
+= also inside the authenticated app per Alejandro, no ads/Signals). No ToS change: this is
+automatic usage/log data, same category already covered without a dedicated ToS clause (no
+clause exists today for the IP/browser/log-data bullet already in Privacy Policy §2.3
+either) — adding one here would be new precedent this file doesn't otherwise follow for that
+category. Not touched here; all of the new text is in privacy-policy.md.
 -->
 
 

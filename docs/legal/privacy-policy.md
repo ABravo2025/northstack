@@ -150,12 +150,37 @@ disconnect by the user or whoever has manage_api_access, owner can switch it off
 (use_ai_assistants). Kept the Tenant's-own-choice-and-responsibility framing from §8.2 and made the
 third-party-AI-provider point explicit. Same text published on the landing (EN/ES).
 Effective Date bumped to October 19, 2026.
+
+2026-10-25 — Alejandro: "Estoy incorporando Google Analytics a la plataforma... para darlo
+por hecho." Checked first, per the Lawyer skill file's instruction to verify before drafting:
+zero GA/gtag/GTM code anywhere on main, staging, or landing (git grep across all three came up
+empty — the earlier "google-analytics"/"gtag" hits were false positives, package-lock.json
+hashes that happen to contain those substrings). So this is not live, same situation MCP and
+2FA were in before their own "coming soon" paragraphs were written. Asked Alejandro the two
+facts that actually change the text (not guessable from code that doesn't exist yet):
+(1) scope — landing only vs. also the authenticated app: he said **also inside the logged-in
+app**, which is why this went into 2.3 (Account Data collected automatically) rather than
+being scoped as a marketing-site-only footnote; (2) Google Signals/ads: he said **plain
+analytics, no Signals, no ads/remarketing** — kept the existing "we do not use advertising
+trackers" sentence intact and wrote the new paragraph to explicitly not contradict it.
+Followed the MCP/2FA precedent exactly: a "we are building X, not yet in use, will update
+once it is" paragraph, not a present-tense claim, and not a new Section 4.1 Subprocessors row
+(that table is only live, active subprocessors — GA isn't one yet). Per the Lawyer skill
+file's "sin cláusulas GDPR todavía" scoping decision, did not add any cookie-consent-banner
+language — that's a deliberate, existing, separate decision, not something this change
+should quietly expand. Did NOT draft a customer-facing "What's new" announcement
+([[feedback_feature_announcement_drafting]]): that rule fires when a feature actually ships
+with a legal change, and this one hasn't shipped — an announcement+forced email now would
+tell customers something is live that isn't. Revisit when GA actually goes live, same
+lifecycle MCP/2FA went through. Effective Date bumped to October 25, 2026. Mirrored to
+landing/privacy.html (EN/ES); no ToS change (automatic-collection data, same as the rest of
+2.3, doesn't get its own ToS clause, same reasoning as Shifts/Timesheet's note above).
 -->
 
 
 # Northstack Privacy Policy
 
-**Effective Date:** October 19, 2026
+**Effective Date:** October 25, 2026
 
 This Privacy Policy explains how Northstack ("**Northstack**," "**we**," "**us**," or
 "**our**"), operated by Alejandro Bravo, an individual based in Buenos Aires, Argentina,
@@ -237,6 +262,15 @@ such requests if they reach us directly.
 
 We do not currently use third-party advertising or analytics trackers, and we do not use
 cookies for cross-site tracking or advertising purposes.
+
+**Coming: Google Analytics.** We are adding Google Analytics to measure how the Service is
+used — such as pages visited, sessions, and in-product usage events — across both our
+public website and the authenticated application. As planned, it will not enable Google
+Signals, cross-device tracking, or any advertising/remarketing feature, and it will not
+change what the paragraph above says about advertising trackers: it is a usage-analytics
+tool, not an advertising one. **This is not yet in use.** Once it is, we will update this
+Section and Section 4.1 (Subprocessors) with the details — what it collects, how long
+Google retains it, and how to opt out — and post a new effective date.
 
 ---
 

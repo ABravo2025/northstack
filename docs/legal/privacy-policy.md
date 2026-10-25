@@ -175,6 +175,65 @@ tell customers something is live that isn't. Revisit when GA actually goes live,
 lifecycle MCP/2FA went through. Effective Date bumped to October 25, 2026. Mirrored to
 landing/privacy.html (EN/ES); no ToS change (automatic-collection data, same as the rest of
 2.3, doesn't get its own ToS clause, same reasoning as Shifts/Timesheet's note above).
+
+2026-10-25 (later same day) — Payroll v2's tax IDs (staging aa23989) + a real 2FA
+correction, task handed over by what the brief itself calls "the development agent," with
+suggested wording for ToS §3.4/§1.3. Verified every factual claim against the code before
+using any of it (Lawyer skill file: redactar calibrado contra la industria real, no
+templates — but also, standing rule all session: code first, brief second):
+- Confirmed in schema.prisma: EmployeeTaxId is its own table (never travels with Employee
+  rows), AES-256-GCM via the same encryptPaymentAccountData used for payment account
+  details (src/lib/encryption.ts), last4 stored unencrypted for display, Cascade on both
+  employeeId and tenantId (survives nothing — not SET NULL like Invoice/PlatformAuditEntry).
+  Tenant.taxId (the company's own) is explicitly plain text per its own schema comment —
+  kept that distinction precise in 2.1/3.4 rather than letting "encrypts... tax
+  identification number" accidentally read as covering both.
+- taxIdForPayslip (employeeTaxIdService.ts) + maskTaxId (lib/taxId.ts) confirm exactly:
+  full decrypted CUIL for 'ar' layout, `XXX-XX-{last4}` for 'ssn' kind otherwise — same
+  renderIssuedPayslip() function serves both the viewed/downloaded PDF and the emailed
+  attachment (emailPayslip in routes/payslips.ts), so "the emailed PDF carries the full
+  CUIL" is the same fact as "the payslip carries the full CUIL," not a separate claim to
+  verify. Added Zoho Mail's Section 4.1 row to say so explicitly, since a full government ID
+  transiting an already-disclosed subprocessor deserved a concrete callout, same reasoning
+  as Dodo/Mercado Pago's specific "collects and stores X directly" sentences.
+- verifyPayslip() (payslipV2Service.ts) confirms the public page's exact field list (company
+  legalName-or-name, number, firstName + lastName[0]+'.', periodLabel, paymentDate,
+  createdAt) — never amounts, never a tax ID. New §4.7 holds it, not §4.2, since the public
+  verify page isn't "within a Tenant" at all (no login), and because itemizing it inside
+  4.2's existing, deliberately generic "per the Tenant's own roles" sentence would have
+  buried a materially different kind of disclosure (a page anyone with the code/QR can
+  reach, unauthenticated) inside a paragraph about internal access control.
+- One place the brief's own summary was more permissive than the code: "Only the owner and
+  Manage payroll roles can change it" undersells it — PUT .../tax-id's actual guard is
+  canManagePayroll() OR (canManageEmployee() AND the field is still empty), i.e. whoever can
+  manage a person's record can set it once, but only the owner/Manage payroll can change an
+  existing one. Wrote §4.7 to say both halves, not the simplified one.
+- Retention: the brief's "issued payslips keep their copy of the data for as long as the
+  payslip exists" is true but reads as if a payslip's lifetime were its own independent
+  thing. It isn't: Payslip.employee has onDelete: Cascade, so deleting a person's record
+  deletes their payslips (tax ID copy included) in the same stroke, not later and not
+  separately. Wrote §5's new paragraph to say exactly that, rather than repeat language that
+  could be read as promising payslips outlive the record they're about.
+- Tenant.taxId is collected both at signup (tenantService.ts's createTenant input) and
+  editable after in Settings → Company profile (tenantProfileService.ts) — confirms the
+  brief's description exactly, and confirms this is Alejandro's own 2026-10-24 reversal of
+  this file's prior "no tax ID anywhere" decision (see
+  [[project_company_profile_settings_2026-09-25]], which already recorded the reversal and
+  flagged this exact legal update as pending) — not a new tension to raise, just the
+  follow-through.
+- 2FA: the brief asked only to fix "is not yet available." Checked mfaService.ts's
+  mfaRequiredFor first and found the old sentence's other half — "optional account security
+  feature" — is now also false: required for the owner, manage_billing, manage_payments,
+  and Northstack staff. Rewrote both halves, in both documents (see
+  terms-of-service.md's matching note), not just the one Alejandro named.
+- Did not touch Section 7 (International Data Transfers): no new subprocessor country,
+  Zoho already covers the email channel.
+Effective Date bumped to October 25, 2026 (same day as the GA note above — two unrelated
+substantive passes, one day). Mirrored to landing/privacy.html and landing/terms.html
+(EN/ES). Did not draft a "What's new" announcement here — per
+[[feedback_feature_announcement_drafting]] that's the development agent's job once it
+promotes the release, per Alejandro's own routing instruction in the brief ("let the
+development agent know... it will draft the announcement").
 -->
 
 
@@ -224,7 +283,11 @@ such requests if they reach us directly.
 ### 2.1 Account Data you provide directly
 
 - Registration information: company name, your name, email address, phone number, and
-  password (stored as a salted cryptographic hash, never in plain text).
+  password (stored as a salted cryptographic hash, never in plain text), and, for companies
+  based in Argentina or the United States, the company's own tax identification number (a
+  CUIT or EIN) — optional, as free text, for companies elsewhere. It can be edited
+  afterward in Settings → Company profile, and is stored as a plain business identifier,
+  not encrypted.
 - Profile information you update after registration.
 - Content of support or contact communications you send us.
 - Billing and subscription information: the plan you select, trial and subscription status,
@@ -244,9 +307,15 @@ such requests if they reach us directly.
   of our Terms of Service).
 - Payroll and compensation records a Tenant enters for its own employees/contractors —
   pay frequency, pay runs, pay stubs, and payment account details used to tell the Tenant
-  where to send that person's pay (stored encrypted). **Northstack does not use this data to
-  execute or transmit any payment — the Payroll module is a record-keeping tool only; see
-  Section 1.3 of our Terms of Service.**
+  where to send that person's pay (stored encrypted). For a person hired as an employee in
+  Argentina or the United States, if the company uses Payroll: their own tax identification
+  number (a CUIL or Social Security number), stored encrypted in a table separate from their
+  other records — screens show only its last 4 digits. An issued payslip is emailed to that
+  person as a PDF attachment: on an Argentine payslip, both the payslip and that emailed PDF
+  show the person's full tax identification number, the way a local *recibo de sueldo* does;
+  on a U.S. payslip, both show only the last 4 digits (for example, XXX-XX-1234). **Northstack
+  does not use this data to execute or transmit any payment — the Payroll module is a
+  record-keeping tool only; see Section 1.3 of our Terms of Service.**
 - Invoice records a Tenant creates for its own clients through the Stripe integration
   (line items, descriptions, amounts, and memos). This data is sent to that Tenant's own
   connected Stripe account so Stripe can deliver and collect the invoice; see Section 4.5.
@@ -309,7 +378,7 @@ obligations consistent with the purpose for which we share data with them:
 |---|---|---|
 | Vercel | Application hosting (frontend and backend) | All data transmitted through the Service |
 | Neon | Database hosting (PostgreSQL) | All Account Data and Processed Data at rest |
-| Zoho Mail | Transactional email delivery (e.g., invitations) | Recipient email address, name, and email content |
+| Zoho Mail | Transactional email delivery (e.g., invitations) | Recipient email address, name, and email content, including a payslip PDF attachment, which on an Argentine payslip carries the person's full tax identification number |
 | Dodo Payments | Payment processing for Tenants billed internationally in USD | Billing contact information, plan/subscription data, and transaction data. Dodo Payments collects and stores full payment card details directly — we do not store your full card number. |
 | Mercado Pago | Payment processing for Tenants billed in Argentina in ARS | Billing contact information, plan/subscription data, and transaction data. Mercado Pago collects and stores full payment/bank account details directly — we do not store your full account or card number. |
 
@@ -392,6 +461,20 @@ trial, changing a plan, suspending an account, or exporting a copy of a Tenant's
 example, to fulfill a request under Section 6). Every administrative action our staff take
 on a Tenant is recorded together with its reason.
 
+### 4.7 Payslip visibility and the public verification page
+
+Within a Tenant, an issued payslip — and the tax identification number it may show — is
+visible only to the person it was issued to, and to the Tenant's owner and any role with
+"Manage payroll" permission. A person's tax identification number can be entered, once, by
+anyone who can manage that person's record, but can only be changed afterward by the owner
+or a "Manage payroll" role.
+
+Each issued payslip also has a public verification page, reachable only with its own QR
+code or verification code. That page confirms the payslip was issued by Northstack and
+shows only the company name, the payslip number, the person's first name and last initial,
+the pay period, the payment date, and when it was issued — **never an amount or a tax
+identification number.**
+
 ---
 
 ## 5. Data Retention
@@ -413,6 +496,11 @@ We keep our own copies of invoices and billing records for longer, as needed to 
 with our own tax and accounting obligations, even after the rest of a Tenant's data is
 deleted. Payment records held by our payment processors (Dodo Payments, Mercado Pago) are
 kept by them according to their own obligations, independent of ours.
+
+A person's tax identification number is deleted when their own record is deleted, or when
+the Tenant account is deleted, whichever happens first. An issued payslip, including the
+tax identification number it captured at the time it was issued, is deleted together with
+the person's record — it is not kept independently afterward — or with the Tenant account.
 
 If you are a Referral Program Member, deleting or deactivating your account does not delete
 your payout method and details or the record of your referral commissions and transfers right
@@ -485,9 +573,12 @@ for your compliance needs.
 We use reasonable technical and organizational measures designed to protect Account Data
 and Processed Data, including encryption of data in transit (HTTPS/TLS), salted
 cryptographic password hashing (scrypt), and tenant-scoped access controls enforced at the
-application layer. We are also building two-factor authentication (2FA) as an additional,
-optional account security feature; **it is not yet available**, and we will announce it
-once it is. No method of transmission or storage is 100% secure, and we cannot
+application layer. Two-step verification (2FA) is available to every user and required for
+the account owner, users with billing or payments permissions, and Northstack staff (Section
+2.2 of our Terms of Service); the authenticator-app secret is encrypted at rest, and
+one-time recovery codes are stored as a one-way hash, the same way as your password, and
+shown to you only once, when you generate them. No method of transmission or storage is
+100% secure, and we cannot
 guarantee absolute security. If we become aware of a security incident affecting your data
 that we are required by law to notify you of, we will do so without undue delay.
 

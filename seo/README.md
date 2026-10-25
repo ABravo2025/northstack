@@ -121,6 +121,7 @@ Artifact. Fue escrito para el pase 1 (los retoques de portada fallan a propósit
 aplicados); para los próximos módulos, copiar una plantilla y reutilizar `buildModule()`.
 
 ## Changelog SEO (más nuevo arriba)
+- **2026-10-25** — Google Analytics vinculado con Search Console (lo hizo Alejandro).
 - **2026-10-25** — Contenedor GTM versión 2 publicado con GA4 `G-DQJ1K0FVJ5` + consentimiento `analytics_storage` (verificado en el gtm.js público). La analítica ya mide.
 - **2026-10-25** — Analítica + banner de cookies + Política de Cookies **en producción** (`landing` e721e74), verificado en vivo. Falta publicar la etiqueta GA4 dentro de GTM. Pase 2 reconstruido encima (`seo-pass-2` aa4e8ac, 20 URLs), sigue esperando aprobación.
 - **2026-10-24** — GTM + Consent Mode + banner + política de privacidad armados en la rama `analytics` (local). `seo-pass-2` rebaseada encima, con GTM en sus 6 páginas.

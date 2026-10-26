@@ -1,5 +1,5 @@
 import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
-import type { ImportHoursResult, PayrollOverview, PayslipRow, PayslipVerification, PayslipSettingsView, PaymentMethodCatalog, OvertimePolicy, OvertimeSetup,
+import type { ImportHoursResult, PayrollCost, PayrollCostPeriod, PayrollOverview, PayslipRow, PayslipVerification, PayslipSettingsView, PaymentMethodCatalog, OvertimePolicy, OvertimeSetup,
   BulkCompensationEntryResult,
   CompensationStatusEntry,
   DueDateOffset,
@@ -172,6 +172,12 @@ export const payrollApi = {
     return res.json();
   },
 
+  getPayrollCost: async (token: string, period: PayrollCostPeriod, departmentId?: string): Promise<PayrollCost> => {
+    const qs = new URLSearchParams({ period, ...(departmentId ? { departmentId } : {}) }).toString();
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/cost?${qs}`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
   getNextPayDate: async (token: string, payFrequencyId: string): Promise<{ paymentDate: string }> => {
     const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/pay-frequencies/${payFrequencyId}/next-pay-date`, { headers: { Authorization: `Bearer ${token}` } });
     if (!res.ok) await throwApiError(res);

@@ -786,14 +786,23 @@
       },
       "missingTaxId": "{{name}} has no {{label}}: it's printed on their payslip",
       "cost": {
-        "byMonth": "Paid per month",
-        "byArea": "Paid per area (last 6 months)",
         "month": "Month",
         "paid": "Paid",
         "area": "Area",
-        "paid6": "Paid",
         "noArea": "No area",
-        "empty": "Nothing paid yet."
+        "empty": "Nothing paid yet.",
+        "title": "Paid",
+        "period": "Period",
+        "department": "Department",
+        "allDepartments": "All departments",
+        "periods": {
+          "7": "Last week",
+          "15": "Last 15 days",
+          "30": "Last 30 days",
+          "60": "Last 60 days",
+          "90": "Last 90 days",
+          "all": "All time"
+        }
       }
     },
     "payslips": {

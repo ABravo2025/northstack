@@ -33,7 +33,7 @@ import { createOffPayments, listOffPayments } from '../modules/hr/payrollOffPaym
 import { issuePayslipsForEntries, issuePayslipsForRun, renderIssuedPayslip, renderRunPreview } from '../modules/hr/payslipV2Service.js';
 import { emailPayslip, emailPayslipVoided } from './payslips.js';
 import { importApprovedHours } from '../modules/hr/payrollHoursService.js';
-import { getPayrollOverview } from '../modules/hr/payrollOverviewService.js';
+import { COST_PERIODS, getPayrollOverview, payrollCost, type CostPeriod } from '../modules/hr/payrollOverviewService.js';
 import { getOvertimePolicy, listOvertimePeople, saveOvertimePolicy, setOvertimeExempt } from '../modules/hr/overtimePolicyService.js';
 import { TEMPLATES } from '../modules/hr/overtimeRules.js';
 import { validateSession } from '../lib/httpAuth.js';
@@ -377,6 +377,16 @@ payrollRouter.post('/api/hr/payroll/compensation/bulk', async (req, res) => {
 // --- Payroll Runs (Unidad 12/13/16/17) — owner-only, real $ amounts -------
 
 // Payroll v2 (spec-payroll-v2.md, unit 2): the overview — latest pay run, recent runs, what's pending.
+// Payroll v2 (2026-10-26): what was paid, with the metrics period selector and department filter.
+payrollRouter.get('/api/hr/payroll/cost', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user || !requirePayrollAccess(user, res)) return;
+  const period = String(req.query.period ?? '90');
+  if (!COST_PERIODS.includes(period as CostPeriod)) return res.status(400).json({ error: 'Invalid period' });
+  const departmentId = typeof req.query.departmentId === 'string' && req.query.departmentId ? req.query.departmentId : null;
+  return res.json(await payrollCost(user.tenantId!, { period: period as CostPeriod, departmentId }));
+});
+
 payrollRouter.get('/api/hr/payroll/overview', async (req, res) => {
   const user = await validateSession(req, res);
   if (!user) {

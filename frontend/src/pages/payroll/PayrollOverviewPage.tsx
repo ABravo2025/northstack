@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { api } from '../../api';
 import type { PayrollOverview } from '../../api';
 import TableBody from '../../components/common/TableBody';
+import PayrollCostSection from '../../components/payroll/PayrollCostSection';
 import TableSkeleton from '../../components/common/TableSkeleton';
 import { BriefcaseIcon, CheckIcon } from '../../components/common/Icons';
 import { useToast } from '../../components/common/ToastProvider';
@@ -28,10 +29,6 @@ export default function PayrollOverviewPage({ token }: { token: string }) {
   }, [token]);
 
   const num = (n: number) => formatNumber(n);
-  const monthLabel = (ym: string) => {
-    const s = new Date(`${ym}-01T00:00:00Z`).toLocaleDateString(i18n.language.startsWith('es') ? 'es-AR' : 'en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
-    return s.charAt(0).toUpperCase() + s.slice(1);
-  };
   const totals = (tt: Record<string, number>) =>
     Object.keys(tt).length ? Object.entries(tt).sort((a, b) => b[1] - a[1]).map(([c, v]) => formatMoney(v, c)).join(' + ') : '—';
   const day = (d: string) => new Date(`${d.slice(0, 10)}T00:00:00Z`).toLocaleDateString(i18n.language.startsWith('es') ? 'es-AR' : 'en-US', { day: 'numeric', month: 'short', timeZone: 'UTC' });
@@ -139,59 +136,7 @@ export default function PayrollOverviewPage({ token }: { token: string }) {
         </div>
       </section>
 
-      {/* Payroll v2 (2026-10-26): what was paid in the last 6 months, per month and per area. */}
-      {data.cost && (
-        <section className="grid gap-4 md:grid-cols-2">
-          <div className="flex flex-col gap-2">
-            <h3 className="card-title">{t('payroll.overview.cost.byMonth')}</h3>
-            <div className="full-table-wrap">
-              <table className="table full-table !mt-0">
-                <thead>
-                  <tr>
-                    <th>{t('payroll.overview.cost.month')}</th>
-                    <th>{t('payroll.overview.cost.paid')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[...data.cost.byMonth].reverse().map((m) => (
-                    <tr key={m.month}>
-                      <td>{monthLabel(m.month)}</td>
-                      <td className="tabular-nums">{totals(m.totals)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-          <div className="flex flex-col gap-2">
-            <h3 className="card-title">{t('payroll.overview.cost.byArea')}</h3>
-            <div className="full-table-wrap">
-              <table className="table full-table !mt-0">
-                <thead>
-                  <tr>
-                    <th>{t('payroll.overview.cost.area')}</th>
-                    <th>{t('payroll.overview.cost.paid6')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.cost.byArea.length === 0 ? (
-                    <tr>
-                      <td colSpan={2} className="text-ink-faint dark:text-dark-ink-faint">{t('payroll.overview.cost.empty')}</td>
-                    </tr>
-                  ) : (
-                    data.cost.byArea.map((a) => (
-                      <tr key={a.area ?? '—'}>
-                        <td>{a.area ?? t('payroll.overview.cost.noArea')}</td>
-                        <td className="tabular-nums">{totals(a.totals)}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-      )}
+      <PayrollCostSection token={token} />
 
       <section className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-2">

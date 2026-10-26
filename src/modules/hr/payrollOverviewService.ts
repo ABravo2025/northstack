@@ -43,33 +43,62 @@ export async function runSummaries(tenantId: string, runIds: string[]) {
   return out;
 }
 
-// Payroll v2 (2026-10-26): what was paid in the last 6 months — confirmed runs and one-off payments
-// (never voided runs or drafts), by pay date — per month and per area (department), each per
-// currency (amounts in different currencies are never added together).
-export async function payrollCost(tenantId: string, now = new Date()) {
-  const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 5, 1));
+// Payroll v2 (2026-10-26): what was paid — confirmed runs and one-off payments (never voided runs or
+// drafts), by pay date. Standing rule for every metric (Alejandro, 2026-10-26): a period selector
+// (7 / 15 / 30 / 60 / 90 days or everything) and a department filter. Per currency, never added
+// across currencies; per area, and per month across the period.
+export const COST_PERIODS = ['7', '15', '30', '60', '90', 'all'] as const;
+export type CostPeriod = (typeof COST_PERIODS)[number];
+const DAY = 86_400_000;
+const MAX_MONTHS = 36;
+
+export async function payrollCost(tenantId: string, opts: { period?: CostPeriod; departmentId?: string | null } = {}, now = new Date()) {
+  const period: CostPeriod = opts.period && COST_PERIODS.includes(opts.period) ? opts.period : '90';
+  const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const from = period === 'all' ? null : new Date(today.getTime() - (Number(period) - 1) * DAY);
+  const departmentFilter = opts.departmentId === 'none' ? { departmentId: null } : opts.departmentId ? { departmentId: opts.departmentId } : {};
   const entries = await prisma.payrollEntry.findMany({
-    where: { tenantId, paymentDate: { gte: from }, OR: [{ runId: null }, { run: { status: 'confirmed' } }] },
+    where: {
+      tenantId,
+      // From N days back on: a confirmed run with an upcoming pay date is money already committed.
+      ...(from ? { paymentDate: { gte: from } } : {}),
+      OR: [{ runId: null }, { run: { status: 'confirmed' } }],
+      employee: departmentFilter,
+    },
     select: { amountCents: true, currency: true, paymentDate: true, employee: { select: { departmentDefn: { select: { name: true } } } } },
   });
-  const months: { month: string; totals: Record<string, number> }[] = [];
-  for (let i = 0; i < 6; i++) {
-    const d = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth() + i, 1));
-    months.push({ month: d.toISOString().slice(0, 7), totals: {} });
-  }
+
+  const total: Record<string, number> = {};
   const areas = new Map<string, Record<string, number>>();
+  const monthTotals = new Map<string, Record<string, number>>();
+  let first: Date | null = null;
+  let last: Date | null = null;
   for (const e of entries) {
-    const m = months.find((x) => x.month === e.paymentDate.toISOString().slice(0, 7));
-    if (m) m.totals[e.currency] = (m.totals[e.currency] ?? 0) + e.amountCents;
+    total[e.currency] = (total[e.currency] ?? 0) + e.amountCents;
     const area = e.employee.departmentDefn?.name ?? '';
     const a = areas.get(area) ?? {};
     a[e.currency] = (a[e.currency] ?? 0) + e.amountCents;
     areas.set(area, a);
+    const month = e.paymentDate.toISOString().slice(0, 7);
+    const m = monthTotals.get(month) ?? {};
+    m[e.currency] = (m[e.currency] ?? 0) + e.amountCents;
+    monthTotals.set(month, m);
+    if (!first || e.paymentDate < first) first = e.paymentDate;
+    if (!last || e.paymentDate > last) last = e.paymentDate;
+  }
+  // Every month of the period, empty ones included (newest first, capped for "everything").
+  const start = from ?? first ?? today;
+  const end = last && last > today ? last : today;
+  const byMonth: { month: string; totals: Record<string, number> }[] = [];
+  for (let d = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), 1)); d >= new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), 1)) && byMonth.length < MAX_MONTHS; d = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - 1, 1))) {
+    const month = d.toISOString().slice(0, 7);
+    byMonth.push({ month, totals: monthTotals.get(month) ?? {} });
   }
   const byArea = [...areas.entries()]
     .map(([area, totals]) => ({ area: area || null, totals }))
     .sort((x, y) => Math.max(0, ...Object.values(y.totals)) - Math.max(0, ...Object.values(x.totals)));
-  return { byMonth: months, byArea };
+  const departments = await prisma.fieldCatalogDefinition.findMany({ where: { tenantId, kind: 'department' }, select: { id: true, name: true }, orderBy: { name: 'asc' } });
+  return { period, departmentId: opts.departmentId ?? null, total, byMonth, byArea, departments };
 }
 
 export async function getPayrollOverview(tenantId: string, now = new Date()) {
@@ -124,11 +153,8 @@ export async function getPayrollOverview(tenantId: string, now = new Date()) {
     ...summaries.get(r.id)!,
   });
 
-  const cost = await payrollCost(tenantId, now);
-
   return {
     inPayroll,
-    cost,
     lastRun: last ? { ...serializeRun(last), variationPct: variationPct(summaries.get(last.id)!.totals, previousSameFrequency ? summaries.get(previousSameFrequency.id)!.totals : null) } : null,
     draft: drafts[0] ? serializeRun(drafts[0]) : null,
     recentRuns: runs.slice(0, 6).map(serializeRun),

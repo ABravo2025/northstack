@@ -1330,8 +1330,17 @@ export interface PayrollOverview {
     staleDrafts: { id: string; periodLabel: string; days: number }[];
     missingHours: { runId: string; employeeId: string; name: string }[];
   };
-  // Last 6 months paid (confirmed runs + one-off payments), per currency.
-  cost?: { byMonth: { month: string; totals: Record<string, number> }[]; byArea: { area: string | null; totals: Record<string, number> }[] };
+}
+
+// Payroll v2: what was paid, with the metrics period selector and department filter.
+export type PayrollCostPeriod = '7' | '15' | '30' | '60' | '90' | 'all';
+export interface PayrollCost {
+  period: PayrollCostPeriod;
+  departmentId: string | null;
+  total: Record<string, number>;
+  byMonth: { month: string; totals: Record<string, number> }[];
+  byArea: { area: string | null; totals: Record<string, number> }[];
+  departments: { id: string; name: string }[];
 }
 
 export interface PayslipRow {

@@ -786,14 +786,23 @@
       },
       "missingTaxId": "A {{name}} le falta el {{label}}: va impreso en su recibo",
       "cost": {
-        "byMonth": "Pagado por mes",
-        "byArea": "Pagado por área (últimos 6 meses)",
         "month": "Mes",
         "paid": "Pagado",
         "area": "Área",
-        "paid6": "Pagado",
         "noArea": "Sin área",
-        "empty": "Todavía no se pagó nada."
+        "empty": "Todavía no se pagó nada.",
+        "title": "Pagado",
+        "period": "Período",
+        "department": "Departamento",
+        "allDepartments": "Todos los departamentos",
+        "periods": {
+          "7": "Última semana",
+          "15": "Últimos 15 días",
+          "30": "Últimos 30 días",
+          "60": "Últimos 60 días",
+          "90": "Últimos 90 días",
+          "all": "Todo"
+        }
       }
     },
     "payslips": {

@@ -256,9 +256,11 @@ export async function setNextBillingDate(externalSubscriptionId: string, date: D
 // now). `product_id` is structural data on the Subscription resource itself, not custom
 // metadata, so routes/webhooks.ts resolves the plan from this (via PlanPrice.dodoProductId) when
 // metadata.plan isn't present, instead of trusting metadata alone.
-export async function getSubscriptionProductId(externalSubscriptionId: string): Promise<string> {
+// createdAt dates the checkout, so the product resolves to the PlanPrice row in effect back then
+// (several rows can share one product — see resolvePlanPriceFromDodoProductId).
+export async function getSubscriptionProduct(externalSubscriptionId: string): Promise<{ productId: string; createdAt: Date }> {
   const subscription = await getClient().subscriptions.retrieve(externalSubscriptionId);
-  return subscription.product_id;
+  return { productId: subscription.product_id, createdAt: new Date(subscription.created_at) };
 }
 
 // Real invoice PDF, same "fetched fresh on each click, never cached" reasoning as

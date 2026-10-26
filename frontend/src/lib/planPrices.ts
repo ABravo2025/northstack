@@ -56,13 +56,17 @@ export function marketForCountry(country: string | null | undefined): Market {
   return country === 'Argentina' ? 'ar' : 'international';
 }
 
-// "$19" / "ARS 15,000" — whole amounts drop the decimals, which every current price is.
+// "$19" / "ARS 15,000" — whole amounts drop the decimals, which every current price is. Both digit
+// bounds are set: a currency's default minimum is 2, and older engines (Safari, outdated Android
+// WebViews in the Capacitor app) throw a RangeError on a maximum below the minimum.
 export function formatPlanPrice(cents: number, currency: string): string {
   const amount = cents / 100;
+  const digits = Number.isInteger(amount) ? 0 : 2;
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency,
-    maximumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
   }).format(amount);
 }
 
@@ -74,10 +78,12 @@ export function planPriceLabel(pricing: PlanPricing | null, market: Market, plan
   return formatPlanPrice(m.plans[plan], m.currency);
 }
 
+// Same "0 = not sold in that market yet" rule as planPriceLabel — never advertise free seats.
 export function extraSeatPriceLabel(pricing: PlanPricing | null, market: Market, plan: PricedPlan = 'starter'): string {
   const m = pricing?.markets[market];
-  if (!m) return '—';
-  return formatPlanPrice(m.extraSeatByPlan?.[plan] ?? m.extraSeat, m.currency);
+  const cents = m ? (m.extraSeatByPlan?.[plan] ?? m.extraSeat) : 0;
+  if (!m || cents <= 0) return '—';
+  return formatPlanPrice(cents, m.currency);
 }
 
 // Per-user pricing (2026-10-02): the price per active user per month a NEW team gets today, and the

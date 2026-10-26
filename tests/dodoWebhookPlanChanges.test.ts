@@ -40,11 +40,14 @@ const { unwrapMock, syncMock } = vi.hoisted(() => ({
 vi.mock('../src/lib/dodopayments.js', () => ({
   unwrapDodoWebhookEvent: unwrapMock,
   getNextBillingDate: vi.fn(async () => new Date('2026-10-30T00:00:00Z')),
-  getSubscriptionProductId: vi.fn(async () => 'pdt_growth'),
+  getSubscriptionProduct: vi.fn(async () => ({ productId: 'pdt_growth', createdAt: new Date() })),
 }));
 vi.mock('../src/modules/tenant/subscriptionService.js', () => ({
   syncSubscriptionAndTenant: syncMock,
   resolvePlanPriceFromDodoProductId: vi.fn(async (productId: string) => planPrices.find((p) => p.dodoProductId === productId) ?? null),
+}));
+vi.mock('../src/modules/tenant/planPriceService.js', () => ({
+  lockedPlanPrice: vi.fn(async (s: any) => planPrices.find((p) => p.plan === s.plan && p.launchPriceCents === s.lockedPriceCents) ?? null),
 }));
 vi.mock('../src/modules/tenant/seatService.js', () => ({
   syncSeatBilling: vi.fn(async () => {}),
@@ -168,5 +171,25 @@ describe('Dodo webhook — 100%-off discount', () => {
 
     expect(body.status).toContain('upgrade payment failed');
     expect(syncMock).not.toHaveBeenCalled();
+  });
+
+  it('a renewal of a pre-planPriceId subscription never re-applies its stale checkout plan', async () => {
+    // Checked out on Starter, moved to Growth before planPriceId existed: still unpinned.
+    Object.assign(subscriptions[0], { plan: 'growth', planPriceId: null, lockedPriceCents: 3900, currentPeriodStart: new Date('2026-09-01T00:00:00Z') });
+
+    await deliver(payment({ total_amount: 3900, discounts: [], metadata: { subscriptionId: 'sub1', plan: 'starter' } }));
+
+    const fields = (syncMock.mock.calls[0] as any)[0];
+    expect(fields).toMatchObject({ status: 'active' });
+    expect(fields).not.toHaveProperty('plan');
+    expect(invoices[0]).toMatchObject({ baseAmountCents: 3900 });
+  });
+
+  it('a first real charge still confirms the checkout plan', async () => {
+    Object.assign(subscriptions[0], { plan: 'starter', planPriceId: null, provider: null, status: 'trialing', currentPeriodStart: null });
+
+    await deliver(payment({ total_amount: 3900, discounts: [], metadata: { subscriptionId: 'sub1', planPriceId: 'pp_growth' } }));
+
+    expect(syncMock).toHaveBeenCalledWith(expect.objectContaining({ plan: 'growth', planPriceId: 'pp_growth', lockedPriceCents: 3900 }));
   });
 });

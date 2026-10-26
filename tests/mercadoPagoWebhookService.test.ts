@@ -22,6 +22,7 @@ vi.mock('../src/lib/prisma.js', () => ({
     },
     planPrice: {
       findUnique: vi.fn(async ({ where }: any) => planPrices.find((p) => p.id === where.id) ?? null),
+      findFirst: vi.fn(async ({ where }: any) => planPrices.find((p) => p.plan === where.plan && p.market === where.market) ?? null),
     },
   },
 }));
@@ -104,6 +105,14 @@ describe('handleMercadoPagoPreapproval — first subscribe', () => {
 
     expect(syncMock).toHaveBeenCalledTimes(1);
     expect(syncMock).toHaveBeenCalledWith(expect.not.objectContaining({ plan: expect.anything() }));
+  });
+
+  it(`confirms a 2026-09-26 "<subscriptionId>:<plan>" reference at the plan's latest AR row`, async () => {
+    subscriptions.push({ id: 'sub1', tenantId: 't1', provider: null, externalSubscriptionId: null, plan: 'starter', status: 'trialing' });
+
+    await handleMercadoPagoPreapproval(preapproval({ external_reference: 'sub1:growth' }));
+
+    expect(syncMock).toHaveBeenCalledWith(expect.objectContaining({ plan: 'growth', planPriceId: 'pp_ar_growth', lockedPriceCents: 3_000_000 }));
   });
 
   it('ignores a preapproval whose Subscription does not exist', async () => {

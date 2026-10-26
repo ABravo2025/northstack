@@ -2,7 +2,7 @@ import { createAsyncRouter } from '../lib/asyncRouter.js';
 import prisma from '../lib/prisma.js';
 import { verifyMercadoPagoSignature } from '../lib/mercadopago.js';
 import { handleMercadoPagoAuthorizedPaymentEvent, handleMercadoPagoPreapprovalEvent } from '../modules/tenant/mercadoPagoWebhookService.js';
-import { getNextBillingDate, getSubscriptionProductId, unwrapDodoWebhookEvent } from '../lib/dodopayments.js';
+import { getNextBillingDate, getSubscriptionProduct, unwrapDodoWebhookEvent } from '../lib/dodopayments.js';
 import { GRACE_PERIOD_DAYS } from '../modules/tenant/planTransitionService.js';
 import { syncSubscriptionAndTenant, resolvePlanPriceFromDodoProductId } from '../modules/tenant/subscriptionService.js';
 import { syncSeatBilling, countActiveSeats, extraSeatsFor } from '../modules/tenant/seatService.js';
@@ -96,10 +96,11 @@ webhooksRouter.post('/api/webhooks/mercadopago', async (req, res) => {
 // that propagation turned out to be unreliable in a real test delivery (found live: a real
 // payment's metadata came back without it). `product_id` is structural data — always present on
 // a Subscription resource, reverse-lookupable via PlanPrice.dodoProductId — so it's the fallback
-// whenever metadata doesn't have it. `directProductId` lets subscription.active (whose event data
+// whenever metadata doesn't have it. `directProduct` lets subscription.active (whose event data
 // IS a Subscription resource, product_id already in hand) skip the extra API call entirely;
 // payment.succeeded has no product_id on the Payment resource itself, so its callers omit
-// directProductId and this fetches the subscription instead.
+// directProduct and this fetches the subscription instead. The subscription's created_at dates
+// the checkout, which picks the right row among those sharing one product.
 //
 // 2026-09-26: resolves the PlanPrice ROW, not just the plan — metadata.planPriceId (the exact row the
 // checkout was priced from) first, so the subscription is pinned to the price it signed up at
@@ -108,7 +109,7 @@ webhooksRouter.post('/api/webhooks/mercadopago', async (req, res) => {
 async function resolveConfirmedPlanPrice(
   metadata: Record<string, unknown> | null | undefined,
   externalSubscriptionId: string | null,
-  directProductId?: string,
+  directProduct?: { productId: string; createdAt: Date },
 ) {
   const planPriceId = metadata?.planPriceId;
   if (typeof planPriceId === 'string') {
@@ -119,11 +120,11 @@ async function resolveConfirmedPlanPrice(
   if (metadataPlan === 'starter' || metadataPlan === 'growth') {
     return prisma.planPrice.findFirst({ where: { plan: metadataPlan, market: 'international' }, orderBy: { effectiveFrom: 'desc' } });
   }
-  const productId = directProductId ?? (externalSubscriptionId ? await getSubscriptionProductId(externalSubscriptionId) : null);
-  if (!productId) {
+  const product = directProduct ?? (externalSubscriptionId ? await getSubscriptionProduct(externalSubscriptionId) : null);
+  if (!product) {
     return null;
   }
-  return resolvePlanPriceFromDodoProductId(productId);
+  return resolvePlanPriceFromDodoProductId(product.productId, product.createdAt);
 }
 
 function confirmedPlanFields(row: { id: string; plan: string; launchPriceCents: number }) {
@@ -134,14 +135,20 @@ function confirmedPlanFields(row: { id: string; plan: string; launchPriceCents: 
 // plan/price is only applied while the subscription isn't pinned to a PlanPrice row yet (its first
 // confirmation). Before 2026-09-26 each renewal re-applied metadata.plan, reverting any self-serve
 // plan change (changePlan pins planPriceId, so it's never overwritten now).
+//
+// A subscription confirmed before planPriceId existed is unpinned but NOT on its first
+// confirmation: it already had a paid Dodo period (currentPeriodStart is only ever set by a real
+// charge here). Its stale checkout metadata must not be re-applied either — lockedPlanPrice pins it
+// to the row it actually pays instead (2026-10-26 review).
 async function resolveFirstConfirmation(
-  subscription: { planPriceId: string | null },
+  subscription: { planPriceId: string | null; provider: PaymentProvider | null; currentPeriodStart: Date | null },
   metadata: Record<string, unknown> | null | undefined,
   externalSubscriptionId: string | null,
-  directProductId?: string,
+  directProduct?: { productId: string; createdAt: Date },
 ) {
   if (subscription.planPriceId) return null;
-  return resolveConfirmedPlanPrice(metadata, externalSubscriptionId, directProductId);
+  if (subscription.provider === 'dodopayments' && subscription.currentPeriodStart) return null;
+  return resolveConfirmedPlanPrice(metadata, externalSubscriptionId, directProduct);
 }
 
 webhooksRouter.post('/api/webhooks/dodopayments', async (req, res) => {
@@ -402,7 +409,7 @@ webhooksRouter.post('/api/webhooks/dodopayments', async (req, res) => {
         subscription,
         event.data.metadata,
         event.data.subscription_id ?? subscription.externalSubscriptionId ?? null,
-        event.data.product_id,
+        { productId: event.data.product_id, createdAt: new Date(event.data.created_at) },
       );
       await syncSubscriptionAndTenant({
         tenantId: subscription.tenantId,

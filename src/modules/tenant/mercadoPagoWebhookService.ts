@@ -27,6 +27,17 @@ import { recordReferralCommission } from '../referral/referralService.js';
 //     left alone (stays `trialing`) and the first real charge — the authorized_payment `approved`
 //     webhook — is what moves it to `active`. Same as Dodo's subscription.created handling; before
 //     this an AR tenant jumped to "Active" the moment they entered a card.
+// The PlanPrice row an external_reference names. For a short while on 2026-09-26 its second part
+// was the plan name ("<subscriptionId>:growth") rather than a row id — a preapproval created then
+// and authorized later still confirms, at that plan's latest AR row (what it was priced from).
+async function referencedPlanPrice(planPriceId: string | null) {
+  if (!planPriceId) return null;
+  if (planPriceId === 'starter' || planPriceId === 'growth') {
+    return prisma.planPrice.findFirst({ where: { plan: planPriceId, market: 'ar' }, orderBy: { effectiveFrom: 'desc' } });
+  }
+  return prisma.planPrice.findUnique({ where: { id: planPriceId } });
+}
+
 export async function handleMercadoPagoPreapproval(preapproval: MercadoPagoPreapproval): Promise<string> {
   if (!preapproval.external_reference) {
     return 'no external_reference on preapproval';
@@ -56,7 +67,7 @@ export async function handleMercadoPagoPreapproval(preapproval: MercadoPagoPreap
     // new plan's row): the exact PlanPrice row it was priced from, which also pins the subscription
     // to it. lockedPriceCents is the base plan price, seat surcharge excluded, same as changePlan
     // and the Dodo webhook. Any scheduled downgrade is superseded by this choice.
-    const planPrice = planPriceId ? await prisma.planPrice.findUnique({ where: { id: planPriceId } }) : null;
+    const planPrice = await referencedPlanPrice(planPriceId);
     const planFields = planPrice
       ? { plan: planPrice.plan, lockedPriceCents: planPrice.launchPriceCents, planPriceId: planPrice.id, pendingPlanPriceId: null }
       : null;
@@ -173,7 +184,7 @@ export async function handleMercadoPagoAuthorizedPayment(payment: MercadoPagoAut
     // apart (seen 2026-09-30: the invoice got the old Starter price as base and the rest as "extra
     // seats"). Its price is the PlanPrice row in its external_reference, not the stale stored one.
     const refPlanPriceId = payment.external_reference ? parseExternalReference(payment.external_reference).planPriceId : null;
-    const refPrice = !isCurrent && refPlanPriceId ? await prisma.planPrice.findUnique({ where: { id: refPlanPriceId } }) : null;
+    const refPrice = !isCurrent ? await referencedPlanPrice(refPlanPriceId) : null;
     const lockedPriceCents = pending?.launchPriceCents ?? refPrice?.launchPriceCents ?? subscription.lockedPriceCents;
 
     if (isCurrent) {

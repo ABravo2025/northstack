@@ -2,6 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const tenants: any[] = [];
 const subscriptions: any[] = [];
+// Two rows sharing one Dodo product: only the seat price changed between them.
+const planPrices: any[] = [
+  { id: 'pp_old', plan: 'starter', dodoProductId: 'pdt_starter', extraSeatPriceCents: 400, effectiveFrom: new Date('2026-09-01T00:00:00Z') },
+  { id: 'pp_new', plan: 'starter', dodoProductId: 'pdt_starter', extraSeatPriceCents: 500, effectiveFrom: new Date('2026-10-01T00:00:00Z') },
+];
 
 vi.mock('../src/lib/prisma.js', () => {
   const mockPrisma: any = {
@@ -24,6 +29,13 @@ vi.mock('../src/lib/prisma.js', () => {
         return tenant;
       }),
     },
+    planPrice: {
+      findFirst: vi.fn(async ({ where }: any) =>
+        planPrices
+          .filter((p) => p.dodoProductId === where.dodoProductId && (!where.effectiveFrom || p.effectiveFrom <= where.effectiveFrom.lte))
+          .sort((a, b) => b.effectiveFrom - a.effectiveFrom)[0] ?? null,
+      ),
+    },
     activityLogEntry: {
       create: vi.fn(async ({ data }: any) => data),
     },
@@ -33,7 +45,17 @@ vi.mock('../src/lib/prisma.js', () => {
 });
 
 import prisma from '../src/lib/prisma.js';
-import { resolveProvider, syncSubscriptionAndTenant } from '../src/modules/tenant/subscriptionService.js';
+import { resolvePlanPriceFromDodoProductId, resolveProvider, syncSubscriptionAndTenant } from '../src/modules/tenant/subscriptionService.js';
+
+describe('resolvePlanPriceFromDodoProductId', () => {
+  it('picks the row in effect when the checkout happened, not a later seat-price change', async () => {
+    expect((await resolvePlanPriceFromDodoProductId('pdt_starter', new Date('2026-09-15T00:00:00Z')))?.id).toBe('pp_old');
+  });
+
+  it('picks the latest row without a checkout date', async () => {
+    expect((await resolvePlanPriceFromDodoProductId('pdt_starter'))?.id).toBe('pp_new');
+  });
+});
 
 describe('resolveProvider', () => {
   it('routes Argentina to mercadopago', () => {

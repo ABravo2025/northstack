@@ -18,7 +18,8 @@ export function marketForProvider(provider: PaymentProvider | null, country: str
 }
 
 // Serializes concurrent syncs (two checkouts right after a deploy) so neither inserts a duplicate
-// row nor provisions a duplicate Dodo Product. Transaction-scoped: released on commit/rollback.
+// row. DB-only work under it — Dodo provisioning (ensureDodoObjects) never takes it.
+// Transaction-scoped: released on commit/rollback.
 const SYNC_LOCK_KEY = 7_202_609_26;
 
 // Per-process memo so the DB is only consulted once per config change per warm instance.
@@ -68,35 +69,40 @@ export async function ensurePlanPricesSynced(): Promise<void> {
 
 // Fills the latest international row's missing Dodo Product/Addon. Separate from the sync above so
 // Mercado Pago checkouts (and local dev without Dodo credentials) never call Dodo.
-async function ensureDodoObjects(row: PlanPrice): Promise<PlanPrice> {
-  const needsProduct = row.launchPriceCents > 0 && !row.dodoProductId;
-  const needsAddon = row.extraSeatPriceCents > 0 && !row.dodoExtraSeatAddonId;
-  if (!needsProduct && !needsAddon) return row;
+//
+// Deliberately NOT inside a transaction or advisory lock (2026-10-26 review): holding one across
+// Dodo's API calls queued every concurrent checkout and webhook behind a slow Dodo, and a timeout
+// rolled back the saved ids of objects Dodo had already created. Instead each object is saved the
+// moment it exists, with a conditional write — if a concurrent request saved one first, theirs is
+// kept and ours stays unused in Dodo (never attached to any subscription, so harmless).
+function needsDodoObjects(row: PlanPrice): boolean {
+  return (row.launchPriceCents > 0 && !row.dodoProductId) || (row.extraSeatPriceCents > 0 && !row.dodoExtraSeatAddonId);
+}
 
-  return prisma.$transaction(
-    async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${SYNC_LOCK_KEY})`;
-      // Re-read under the lock: a concurrent request may have provisioned them already.
-      const fresh = await tx.planPrice.findUniqueOrThrow({ where: { id: row.id } });
-      const data: { dodoProductId?: string; dodoExtraSeatAddonId?: string } = {};
-      if (fresh.launchPriceCents > 0 && !fresh.dodoProductId) {
-        data.dodoProductId = await createRecurringProduct({ name: `Northstack — ${fresh.plan}`, priceCents: fresh.launchPriceCents });
-      }
-      if (fresh.extraSeatPriceCents > 0 && !fresh.dodoExtraSeatAddonId) {
-        // Another row (either plan) with the same seat price may already have an addon for it.
-        const sibling = await tx.planPrice.findFirst({
-          where: { market: fresh.market, extraSeatPriceCents: fresh.extraSeatPriceCents, dodoExtraSeatAddonId: { not: null } },
-          orderBy: { effectiveFrom: 'desc' },
-        });
-        data.dodoExtraSeatAddonId =
-          sibling?.dodoExtraSeatAddonId ??
-          (await legacyExtraSeatAddonMatching(fresh.extraSeatPriceCents)) ??
-          (await createExtraSeatAddon(fresh.extraSeatPriceCents));
-      }
-      return Object.keys(data).length > 0 ? tx.planPrice.update({ where: { id: fresh.id }, data }) : fresh;
-    },
-    { timeout: 30_000 },
-  );
+async function ensureDodoObjects(row: PlanPrice): Promise<PlanPrice> {
+  if (!needsDodoObjects(row)) return row;
+  // A concurrent request may have provisioned them since `row` was read.
+  const fresh = await prisma.planPrice.findUniqueOrThrow({ where: { id: row.id } });
+  if (!needsDodoObjects(fresh)) return fresh;
+
+  if (fresh.launchPriceCents > 0 && !fresh.dodoProductId) {
+    const productId = await createRecurringProduct({ name: `Northstack — ${fresh.plan}`, priceCents: fresh.launchPriceCents });
+    const saved = await prisma.planPrice.updateMany({ where: { id: fresh.id, dodoProductId: null }, data: { dodoProductId: productId } });
+    if (saved.count === 0) console.warn(`PlanPrice ${fresh.id}: concurrent request provisioned the Dodo product first, ${productId} left unused`);
+  }
+  if (fresh.extraSeatPriceCents > 0 && !fresh.dodoExtraSeatAddonId) {
+    // Another row (either plan) with the same seat price may already have an addon for it.
+    const sibling = await prisma.planPrice.findFirst({
+      where: { market: fresh.market, extraSeatPriceCents: fresh.extraSeatPriceCents, dodoExtraSeatAddonId: { not: null } },
+      orderBy: { effectiveFrom: 'desc' },
+    });
+    const addonId =
+      sibling?.dodoExtraSeatAddonId ??
+      (await legacyExtraSeatAddonMatching(fresh.extraSeatPriceCents)) ??
+      (await createExtraSeatAddon(fresh.extraSeatPriceCents));
+    await prisma.planPrice.updateMany({ where: { id: fresh.id, dodoExtraSeatAddonId: null }, data: { dodoExtraSeatAddonId: addonId } });
+  }
+  return prisma.planPrice.findUniqueOrThrow({ where: { id: fresh.id } });
 }
 
 // The row a NEW checkout or plan change is priced from. Null when the plan isn't sold in that
@@ -109,9 +115,12 @@ export async function currentPlanPrice(plan: PricedPlan, market: Market): Promis
 }
 
 // The row an EXISTING subscription keeps paying (grandfathered). A subscription confirmed before
-// planPriceId existed reads the market's latest row (what seat billing always did) and, when that
-// row is the price it actually pays, gets pinned to it right here — self-healing, no backfill
-// script — so a later change in PRICING no longer moves it.
+// planPriceId existed resolves to the latest row of its plan/market at the base price it actually
+// pays (lockedPriceCents) — the current row normally, an older one once PRICING has moved on — and
+// gets pinned to it right here (self-healing, no backfill script), so a later change in PRICING no
+// longer moves it. Never the current row at a different price: seat billing against that would
+// reprice a grandfathered subscriber (2026-10-26 review). No row at that price → null, and callers
+// leave billing as it is rather than guess.
 export async function lockedPlanPrice(
   subscription: { id: string; planPriceId: string | null; plan: PricedPlan; provider: PaymentProvider | null; lockedPriceCents: number },
   market: Market,
@@ -120,8 +129,16 @@ export async function lockedPlanPrice(
     const row = await prisma.planPrice.findUnique({ where: { id: subscription.planPriceId } });
     if (row) return row;
   }
-  const row = await currentPlanPrice(subscription.plan, market);
-  if (row && subscription.provider && row.launchPriceCents === subscription.lockedPriceCents) {
+  await ensurePlanPricesSynced();
+  const row = await prisma.planPrice.findFirst({
+    where: { plan: subscription.plan, market, launchPriceCents: subscription.lockedPriceCents },
+    orderBy: { effectiveFrom: 'desc' },
+  });
+  if (!row || row.launchPriceCents <= 0) {
+    console.warn(`Subscription ${subscription.id}: no ${subscription.plan}/${market} PlanPrice at ${subscription.lockedPriceCents}, billing left unchanged`);
+    return null;
+  }
+  if (subscription.provider) {
     await prisma.subscription.update({ where: { id: subscription.id }, data: { planPriceId: row.id } });
   }
   return row;

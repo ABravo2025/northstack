@@ -19,11 +19,16 @@ export function resolveProvider(tenant: { country: string | null }): PaymentProv
 }
 
 // 2026-09-16, QA-91 — routes/webhooks.ts's reliable fallback when metadata isn't present on a Dodo
-// event (see getSubscriptionProductId's comment in dodopayments.ts). Reverse-looks-up the PlanPrice
-// row a Dodo product id belongs to — the latest one, since a row whose plan price didn't change
-// reuses the previous row's product (planPriceService.ts).
-export async function resolvePlanPriceFromDodoProductId(productId: string) {
-  const planPrice = await prisma.planPrice.findFirst({ where: { dodoProductId: productId }, orderBy: { effectiveFrom: 'desc' } });
+// event (see getSubscriptionProduct's comment in dodopayments.ts). Reverse-looks-up the PlanPrice
+// row a Dodo product id belongs to. A row whose plan price didn't change reuses the previous row's
+// product (planPriceService.ts), so several rows can match — differing only in seat price/addon.
+// `asOf` (when the checkout happened) picks the row in effect then, so a seat-price change made
+// after the checkout doesn't pin the subscriber to the newer seat price; without it, the latest.
+export async function resolvePlanPriceFromDodoProductId(productId: string, asOf?: Date) {
+  const planPrice =
+    (asOf
+      ? await prisma.planPrice.findFirst({ where: { dodoProductId: productId, effectiveFrom: { lte: asOf } }, orderBy: { effectiveFrom: 'desc' } })
+      : null) ?? (await prisma.planPrice.findFirst({ where: { dodoProductId: productId }, orderBy: { effectiveFrom: 'desc' } }));
   if (!planPrice || (planPrice.plan !== 'starter' && planPrice.plan !== 'growth')) {
     return null;
   }

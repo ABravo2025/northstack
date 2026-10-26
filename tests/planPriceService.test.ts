@@ -11,6 +11,7 @@ function latest(where: any) {
         (r) =>
           (where.plan === undefined || r.plan === where.plan) &&
           r.market === where.market &&
+          (where.launchPriceCents === undefined || r.launchPriceCents === where.launchPriceCents) &&
           (where.extraSeatPriceCents === undefined || r.extraSeatPriceCents === where.extraSeatPriceCents) &&
           (where.dodoExtraSeatAddonId?.not !== null || r.dodoExtraSeatAddonId !== null),
       )
@@ -31,6 +32,13 @@ vi.mock('../src/lib/prisma.js', () => {
         return row;
       }),
       update: vi.fn(async ({ where, data }: any) => Object.assign(rows.find((r) => r.id === where.id), data)),
+      // Conditional write: only when every other `where` field still holds its expected value.
+      updateMany: vi.fn(async ({ where, data }: any) => {
+        const { id, ...expected } = where;
+        const r = rows.find((x) => x.id === id && Object.entries(expected).every(([k, v]) => x[k] === v));
+        if (r) Object.assign(r, data);
+        return { count: r ? 1 : 0 };
+      }),
     },
     subscription: {
       update: vi.fn(async (args: any) => subscriptionUpdates.push(args)),
@@ -157,6 +165,34 @@ describe('currentPlanPrice', () => {
     expect(result?.dodoExtraSeatAddonId).toBe('adn_same_price');
   });
 
+  it('provisions Dodo objects outside any transaction or lock', async () => {
+    const prisma = (await import('../src/lib/prisma.js')).default as any;
+    const { currentPlanPrice } = await load();
+    await currentPlanPrice('starter', 'international'); // seeds the rows (its own short sync transaction)
+    prisma.$transaction.mockClear();
+    prisma.$executeRaw.mockClear();
+    rows.forEach((r) => Object.assign(r, { dodoProductId: null, dodoExtraSeatAddonId: null }));
+
+    await currentPlanPrice('starter', 'international');
+
+    expect(createRecurringProductMock).toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(prisma.$executeRaw).not.toHaveBeenCalled();
+  });
+
+  it("keeps a concurrent request's product when it saved one first", async () => {
+    const { currentPlanPrice } = await load();
+    createRecurringProductMock.mockImplementationOnce(async () => {
+      // Another request finishes provisioning while this one waits on Dodo.
+      rows.filter((r) => r.plan === 'starter' && r.market === 'international').forEach((r) => (r.dodoProductId = 'pdt_other'));
+      return 'pdt_new';
+    });
+
+    const result = await currentPlanPrice('starter', 'international');
+
+    expect(result?.dodoProductId).toBe('pdt_other');
+  });
+
   it('gives each plan its own per-user seat addon when their prices differ (per-user pricing)', async () => {
     const { currentPlanPrice } = await load();
     await currentPlanPrice('starter', 'international');
@@ -189,10 +225,21 @@ describe('lockedPlanPrice', () => {
     expect(subscriptionUpdates).toEqual([{ where: { id: 's1' }, data: { planPriceId: result!.id } }]);
   });
 
-  it('does not pin a subscription paying a different (older) price', async () => {
+  it('resolves an unpinned subscription paying an older price to that older row, never the current one', async () => {
+    const old = row({ plan: 'starter', market: 'international', launchPriceCents: 2900, extraSeatPriceCents: 400, dodoProductId: 'pdt_old' });
     const { lockedPlanPrice } = await load();
-    await lockedPlanPrice({ id: 's1', planPriceId: null, plan: 'starter', provider: 'dodopayments', lockedPriceCents: 2900 }, 'international');
 
+    const result = await lockedPlanPrice({ id: 's1', planPriceId: null, plan: 'starter', provider: 'dodopayments', lockedPriceCents: 2900 }, 'international');
+
+    expect(result).toBe(old);
+    expect(subscriptionUpdates).toEqual([{ where: { id: 's1' }, data: { planPriceId: old.id } }]);
+  });
+
+  it('returns null (billing left unchanged) when no row has the price the subscription pays', async () => {
+    const { lockedPlanPrice } = await load();
+    const result = await lockedPlanPrice({ id: 's1', planPriceId: null, plan: 'starter', provider: 'dodopayments', lockedPriceCents: 2901 }, 'international');
+
+    expect(result).toBeNull();
     expect(subscriptionUpdates).toHaveLength(0);
   });
 });

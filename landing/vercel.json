@@ -44,6 +44,22 @@
     {
       "source": "/project-management-software",
       "destination": "/project-management-software.html"
+    },
+    {
+      "source": "/es/legajo-digital",
+      "destination": "/es/legajo-digital.html"
+    },
+    {
+      "source": "/hr-software",
+      "destination": "/hr-software.html"
+    },
+    {
+      "source": "/es/seguimiento-de-nomina",
+      "destination": "/es/seguimiento-de-nomina.html"
+    },
+    {
+      "source": "/payroll-tracking-software",
+      "destination": "/payroll-tracking-software.html"
     }
   ]
 }

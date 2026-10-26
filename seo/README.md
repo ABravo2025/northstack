@@ -50,11 +50,11 @@ _Última actualización: 2026-10-03_
    | Módulo | ES | EN | Búsquedas objetivo | Estado |
    |---|---|---|---|---|
    | Ausencias | `/es/software-vacaciones` | `/time-off-software` | software de vacaciones para empleados, control de vacaciones y licencias, calendario de feriados / PTO tracker, leave management | ✅ En producción 2026-10-03 |
-   | Turnos y control horario | `/es/control-horario` | `/employee-scheduling-software` | software de turnos, control horario, registro de jornada, fichaje / employee scheduling, timesheet software | 🟡 Pase 2, sin publicar |
-   | CRM | `/es/crm-para-pymes` | `/crm-for-small-business` | CRM para pymes, CRM simple, pipeline de ventas / simple CRM, sales pipeline software | 🟡 Pase 2, sin publicar |
-   | Proyectos | `/es/gestion-de-proyectos` | `/project-management-software` | gestión de proyectos para pymes / project management software for small teams | 🟡 Pase 2, sin publicar |
-   | RR.HH. | `/es/legajo-digital` | `/hr-software` | legajo digital de empleados, software de RR.HH. para pymes / HR software for small business | ⬜ |
-   | Nómina | `/es/recibos-de-sueldo` | `/payroll-tracking` | recibos de sueldo digitales, historial de liquidaciones / payroll records, payslip software | ⬜ |
+   | Turnos y control horario | `/es/control-horario` | `/employee-scheduling-software` | software de turnos, control horario, registro de jornada, fichaje / employee scheduling, timesheet software | ✅ En producción 2026-10-26 |
+   | CRM | `/es/crm-para-pymes` | `/crm-for-small-business` | CRM para pymes, CRM simple, pipeline de ventas / simple CRM, sales pipeline software | ✅ En producción 2026-10-26 |
+   | Proyectos | `/es/gestion-de-proyectos` | `/project-management-software` | gestión de proyectos para pymes / project management software for small teams | ✅ En producción 2026-10-26 |
+   | RR.HH. | `/es/legajo-digital` | `/hr-software` | legajo digital de empleados, software de RR.HH. para pymes / HR software, employee records | 🟡 Pase 3, sin publicar |
+   | Nómina | `/es/seguimiento-de-nomina` | `/payroll-tracking-software` | seguimiento de nómina, registro de sueldos / payroll tracking software (NO "recibos de sueldo digitales": los recibos dicen "no válido como documento legal") | 🟡 Pase 3, sin publicar |
 
    Regla: **nunca** apuntar a "software de liquidación de sueldos" — Northstack solo registra, no
    calcula ni paga (trae tráfico equivocado).
@@ -121,6 +121,7 @@ Artifact. Fue escrito para el pase 1 (los retoques de portada fallan a propósit
 aplicados); para los próximos módulos, copiar una plantilla y reutilizar `buildModule()`.
 
 ## Changelog SEO (más nuevo arriba)
+- **2026-10-26** — Pase 2 **en producción** (`landing` af03098), aprobado por Alejandro y verificado en vivo (6 páginas, sitemap 20 URLs). Pase 3 (Legajo digital + Seguimiento de nómina, EN/ES) armado en `seo-pass-3` 35f6e41, sin push. Vista previa: https://claude.ai/artifact/PXLdcuzS8uGtWBEdo7oCvL. Guía de directorios (Capterra, SaaSworthy, AlternativeTo, Google Business Profile, Product Hunt) en `2026-10/semana-01/directorios/guia-directorios.md`. Anuncio de "Novedades" de privacidad/cookies: Alejandro decidió no publicarlo.
 - **2026-10-25** — `sameAs` en el JSON-LD Organization de la portada EN/ES: LinkedIn `company/144967011` + G2 `products/northstack` (`landing` 37e7bb0). `seo-pass-2` rebaseada encima (af03098).
 - **2026-10-25** — Google Analytics vinculado con Search Console (lo hizo Alejandro).
 - **2026-10-25** — Contenedor GTM versión 2 publicado con GA4 `G-DQJ1K0FVJ5` + consentimiento `analytics_storage` (verificado en el gtm.js público). La analítica ya mide.

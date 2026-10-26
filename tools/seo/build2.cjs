@@ -11,7 +11,7 @@ const rd = (p) => fs.readFileSync(p, 'utf8').replace(/\r\n/g, '\n');
 const wr = (p, s) => { fs.mkdirSync(path.dirname(p), { recursive: true }); fs.writeFileSync(p, s); };
 const rep = (s, a, b, label) => { if (!s.includes(a)) throw new Error('not found [' + label + ']'); return s.split(a).join(b); };
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-const PAGES = require('./pages.cjs');
+const PAGES = require('./pages.cjs').concat(fs.existsSync(path.join(__dirname, 'pages3.cjs')) ? require('./pages3.cjs') : []);
 
 // ── Chrome copied from the live Time Off page ─────────────────────────────────────────────
 const tplEs = rd(LANDING + '/es/software-vacaciones.html');
@@ -51,8 +51,8 @@ const EXTRA_CSS = `
 
 // ── Shared bits ──────────────────────────────────────────────────────────────────────────
 const MODULES = {
-  es: [['/es/software-vacaciones', 'Software de vacaciones'], ['/es/control-horario', 'Turnos y control horario'], ['/es/crm-para-pymes', 'CRM para pymes'], ['/es/gestion-de-proyectos', 'Gestión de proyectos']],
-  en: [['/time-off-software', 'Time off software'], ['/employee-scheduling-software', 'Employee scheduling'], ['/crm-for-small-business', 'CRM for small business'], ['/project-management-software', 'Project management']],
+  es: [['/es/software-vacaciones', 'Software de vacaciones'], ['/es/control-horario', 'Turnos y control horario'], ['/es/crm-para-pymes', 'CRM para pymes'], ['/es/gestion-de-proyectos', 'Gestión de proyectos'], ['/es/legajo-digital', 'Legajo digital'], ['/es/seguimiento-de-nomina', 'Seguimiento de nómina']],
+  en: [['/time-off-software', 'Time off software'], ['/employee-scheduling-software', 'Employee scheduling'], ['/crm-for-small-business', 'CRM for small business'], ['/project-management-software', 'Project management'], ['/hr-software', 'HR software'], ['/payroll-tracking-software', 'Payroll tracking']],
 };
 const L = {
   es: { home: '/es/', product: 'Producto', features: 'Funciones', pricing: 'Precios', faq: 'Preguntas', signin: 'Iniciar sesión', start: 'Empezar gratis',
@@ -337,7 +337,7 @@ for (const p of PAGES) for (const l of ['es', 'en']) { const src = '/' + p[l].pa
 out['vercel.json'] = JSON.stringify(vj, null, 2) + '\n';
 
 // ── sitemap: every indexable page, EN/ES pairs, lastmod = today for what this pass touches ───
-const TODAY = '2026-10-25';
+const TODAY = '2026-10-26';
 const lastmod = (f) => (process.env.LASTMOD_JSON ? JSON.parse(process.env.LASTMOD_JSON)[f] : null) || TODAY;
 const pairs = [
   ['', 'es/', 'index.html', 'es/index.html', 'weekly', '1.0'],

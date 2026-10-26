@@ -86,6 +86,7 @@ SEO is part of marketing: every SEO change is logged in `seo/README.md` + a chan
 ---
 
 ## Changelog (newest first)
+- **2026-10-26** — Landing: SEO pass 3 (HR records + payroll tracking pages) and the plans review (comparison by module, Projects/Shifts cards, 3-user trial) LIVE together (landing 9f69930); plans table now also lists clock-in, numbered pay stubs, AI assistants (Growth) and 2FA (all plans). Every module now has its own EN/ES page. App side of the plans review (staging 18ac75e, pricing API `limits`) still pending; landing falls back to static numbers that match planLimits.ts. Gap: suggested schedule is documented as Growth but not plan-gated in code.
 - **2026-10-26** — SEO pass 2 LIVE: Shifts/CRM/Projects module pages EN/ES (landing af03098). Pass 3 (HR records + payroll tracking pages) built, awaiting approval. Payroll page is tracking-only and says payslips are not legal documents.
 - **2026-10-25** — GTM container v2 published with GA4 G-DQJ1K0FVJ5 (consent: analytics_storage). Website analytics now measuring.
 - **2026-10-25** — Website analytics LIVE: GTM-TJHVX9R4 + Consent Mode v2 + cookie banner + new Cookie Policy EN/ES; Privacy 2.4 (website in use, app not yet). GA4 G-DQJ1K0FVJ5 tag not yet published inside GTM. Never claim app analytics until 2.4 is updated.

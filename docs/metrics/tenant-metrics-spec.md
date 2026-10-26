@@ -148,7 +148,8 @@ tener cargado).
 
 ### 2.9 Turnos, Timesheet y Proyectos (pendientes — pedido de Alejandro 2026-10-21)
 
-Van dentro de **Turnos → Reportes** (no en `/overview`). Hoy Reportes ya muestra, por persona / empresa /
+**Decisión de Alejandro (2026-10-26): van en Dashboards** (no en Turnos → Reportes ni en `/overview`).
+Prioridad baja: quedan asentadas, sin construir hasta que lo pida. Hoy Reportes ya muestra, por persona / empresa /
 proyecto y por mes: horas planificadas (pasadas, próximas, sin confirmar), cargadas, aprobadas,
 facturables, presupuesto por proyecto, fichado / tarde / ausente y costo a tarifa por hora (Growth).
 Lo que falta:
@@ -160,7 +161,7 @@ Lo que falta:
 | Utilización por persona (% de horas facturables) | 🔧 Pendiente | `billable minutes / logged minutes` por persona y mes; objetivo opcional por persona |
 | Capacidad vs. carga | 🔧 Pendiente | horas planificadas (turnos) o disponibles (disponibilidad) vs. cargadas, por persona y semana — quién está sobrecargado |
 | Planificado vs. trabajado | 🔧 Pendiente | horas de turnos aceptados vs. fichadas / cargadas, por persona y por sede (desvío en % y en horas) |
-| Horas extra | 🔧 Pendiente | turnos `isOvertime` + horas sobre el umbral que defina la empresa (depende de las reglas de horas extra configurables, todavía sin construir) |
+| Horas extra | 🔧 Pendiente | líneas `PayrollEntry.type = overtime` (`overtimeKind` weekday/rest/night) + turnos `isOvertime`; las reglas por empresa (`OvertimePolicy`) ya existen, en producción desde 2026-10-25 |
 | Ausentismo y llegadas tarde (tendencia) | 🔧 Pendiente | hoy hay totales del mes en Reportes; falta la evolución mes a mes por persona / sede |
 | Costo del cronograma por sede | 🔧 Pendiente | hoy el costo se ve por persona; agrupar por `Location` |
 | Desvío de presupuesto por proyecto | 🔧 Pendiente | horas cargadas vs. `Project.budgetMinutes` en el tiempo (hoy solo el estado actual y los avisos 80/100 %) |

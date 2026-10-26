@@ -1,6 +1,6 @@
 # Spec Shifts — Fase 2 (fichaje, intercambio de turnos y horas por proyecto)
 
-**Estado:** aprobada por Alejandro el 2026-10-14 con las decisiones de §0.1. Bloques A-E **completos en `staging`** el 2026-10-14 (A 9ecc15f, B 9c527ef/e1a80f6/949472f, C 20f5ef5, D 6265313, E df05ea0, Centro de ayuda d2d9bf2; QA-114 a QA-119). Falta la prueba conjunta y la promoción a producción; se prueba todo junto al final (Alejandro: "hacelos en el orden que te parezca y después testeamos todo junto").
+**Estado:** aprobada por Alejandro el 2026-10-14 con las decisiones de §0.1. Bloques A-E **completos en `staging`** el 2026-10-14 (A 9ecc15f, B 9c527ef/e1a80f6/949472f, C 20f5ef5, D 6265313, E df05ea0, Centro de ayuda d2d9bf2; QA-114 a QA-119). **En producción desde 2026-10-19** (main `a8c892b`).
 **Base:** la fase 1 (`spec-shifts.md`, Unidades 1-13) está completa y en producción desde el 2026-10-13.
 **Origen:** decisiones de Alejandro del 2026-10-04 ("Segunda etapa: bolsa e intercambio de turnos —
 prioridad alta—, presupuesto de horas por proyecto, informe de horas para el cliente, cronograma sugerido

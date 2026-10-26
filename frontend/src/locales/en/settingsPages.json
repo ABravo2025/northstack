@@ -603,6 +603,9 @@
         "billable": {
           "label": "Billable hours and per-client hours report"
         },
+        "clockIn": {
+          "label": "Clock-in and \"Who's in\" board"
+        },
         "payroll": {
           "label": "Payroll tracking",
           "sub": "Tracking only: Northstack never moves money"
@@ -612,6 +615,9 @@
         },
         "api": {
           "label": "Private API and webhooks"
+        },
+        "aiAssistants": {
+          "label": "AI assistants (ChatGPT, Claude) via MCP"
         },
         "activityLog": {
           "label": "Activity log history"

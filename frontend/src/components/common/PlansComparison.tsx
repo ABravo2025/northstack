@@ -7,8 +7,8 @@ import type { PricedPlan, PublicPlanLimits } from '../../api/types';
 // "5 projects" on its own. Shown under the plan cards in PlansModal; the landing has its own copy
 // of the same groups (landing/index.html, no Payments row there by decision).
 //
-// Not listed yet on purpose: clock-in (Shifts phase 2) and AI assistants (MCP) — add their rows
-// when each one reaches production, not before (the comparison must only promise what's live).
+// Clock-in and AI assistants (MCP) joined on 2026-10-25, once both were live in production — the
+// comparison must only promise what's live. AI assistants ride on the API access gate (same as MCP).
 
 type Value = boolean | number | null | 'text';
 
@@ -61,6 +61,7 @@ const GROUPS: { key: string; rows: Row[] }[] = [
       { key: 'timesheet', value: () => true },
       { key: 'skills', value: (l) => l.shiftSkillsEnabled },
       { key: 'billable', value: (l) => l.billableHoursEnabled },
+      { key: 'clockIn', value: (l) => l.clockInEnabled },
     ],
   },
   {
@@ -72,7 +73,10 @@ const GROUPS: { key: string; rows: Row[] }[] = [
   },
   {
     key: 'integrations',
-    rows: [{ key: 'api', value: (l) => l.apiAccessEnabled }],
+    rows: [
+      { key: 'api', value: (l) => l.apiAccessEnabled },
+      { key: 'aiAssistants', value: (l) => l.apiAccessEnabled },
+    ],
   },
   {
     key: 'control',

@@ -2840,6 +2840,8 @@ export default function GuidePage() {
                   <tr><td>Sedes activas (Turnos)</td><td className="num">1</td><td className="num">Ilimitadas</td></tr>
                   <tr><td>Habilidades y certificaciones</td><td className="no">—</td><td className="yes">Incluido</td></tr>
                   <tr><td>Horas facturables</td><td className="no">—</td><td className="yes">Incluido</td></tr>
+                  <tr><td>Fichaje y tablero "Quién está"</td><td className="no">—</td><td className="yes">Incluido</td></tr>
+                  <tr><td>Asistentes de IA (MCP)</td><td className="no">—</td><td className="yes">Incluido</td></tr>
                 </tbody>
               </table>
             </div>
@@ -2925,6 +2927,8 @@ export default function GuidePage() {
                   <tr><td>Active locations (Shifts)</td><td className="num">1</td><td className="num">Unlimited</td></tr>
                   <tr><td>Skills and certifications</td><td className="no">—</td><td className="yes">Included</td></tr>
                   <tr><td>Billable hours</td><td className="no">—</td><td className="yes">Included</td></tr>
+                  <tr><td>Clock-in and "Who's in" board</td><td className="no">—</td><td className="yes">Included</td></tr>
+                  <tr><td>AI assistants (MCP)</td><td className="no">—</td><td className="yes">Included</td></tr>
                 </tbody>
               </table>
             </div>

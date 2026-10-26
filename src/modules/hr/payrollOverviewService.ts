@@ -80,7 +80,9 @@ export async function getPayrollOverview(tenantId: string, now = new Date()) {
     take: 24,
   });
   const summaries = await runSummaries(tenantId, runs.map((r) => r.id));
-  const confirmed = runs.filter((r) => r.status === 'confirmed').sort((a, b) => (b.confirmedAt?.getTime() ?? 0) - (a.confirmedAt?.getTime() ?? 0));
+  // A supplementary run (only the adjustments missed in another run) is never "the last run" nor
+  // the one a run is compared against.
+  const confirmed = runs.filter((r) => r.status === 'confirmed' && r.correctionKind !== 'supplement').sort((a, b) => (b.confirmedAt?.getTime() ?? 0) - (a.confirmedAt?.getTime() ?? 0));
   const last = confirmed[0] ?? null;
   const previousSameFrequency = last ? confirmed.find((r) => r.id !== last.id && r.payFrequencyId === last.payFrequencyId) ?? null : null;
 

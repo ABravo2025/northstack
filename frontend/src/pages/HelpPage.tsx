@@ -162,8 +162,8 @@ const FAQ_CATEGORIES: FaqCategory[] = [
     icon: <BriefcaseIcon />,
     items: [
       {
-        q: 'Can I undo a confirmed payroll run?',
-        a: "No — confirming a run locks it permanently; entries can't be added, edited, or removed afterward. Review hours and adjustments carefully before confirming.",
+        q: 'Can I correct a confirmed payroll run?',
+        a: "A confirmed run isn't edited, but you can correct it from the run with Correct: a supplementary run for what was missing or extra (only that adjustment, with its own payslip), or void and reissue (reason required; its payslips stay marked VOID with their numbers, each person is emailed, and a draft copy opens to fix and confirm again with new numbers).",
       },
       {
         q: 'Is the payslip PDF a legal document?',
@@ -524,8 +524,8 @@ const FAQ_CATEGORIES_ES: FaqCategory[] = [
     icon: <BriefcaseIcon />,
     items: [
       {
-        q: '¿Puedo deshacer una liquidación confirmada?',
-        a: 'No — confirmar una liquidación la bloquea para siempre; después no se pueden agregar, editar ni eliminar líneas. Revisá bien las horas y los ajustes antes de confirmar.',
+        q: '¿Puedo corregir una liquidación confirmada?',
+        a: 'Una liquidación confirmada no se edita, pero la podés corregir desde la liquidación con Corregir: una liquidación complementaria para lo que faltó o sobró (solo ese ajuste, con su propio recibo), o anular y volver a emitir (con motivo obligatorio; sus recibos quedan marcados ANULADO con su número, cada persona recibe un email, y se abre una copia en borrador para corregir y confirmar de nuevo con números nuevos).',
       },
       {
         q: '¿El PDF del recibo de pago es un documento legal?',

@@ -36,6 +36,8 @@ import TaxIdModal from '../components/payroll/TaxIdModal';
 import { personTaxIdKind } from '../lib/taxId';
 import { currentTenantCountry } from '../lib/countries';
 
+const RUN_STATUS_COLOR: Record<string, string> = { draft: '#9ca3af', confirmed: '#059669', voided: '#dc2626' };
+
 // Payroll v2 (spec-payroll-v2.md §1): no tab bar anymore — each part has its own route and an
 // entry in the Payroll sidebar: pay runs, one-off payments, people; the policies (frequencies,
 // payment methods, overtime) live in Settings → Payroll.
@@ -246,6 +248,8 @@ export default function PayrollPage({ token, section }: PayrollPageProps) {
   const [newRunModalOpen, setNewRunModalOpen] = useState(false);
   const [newRunPayFrequencyId, setNewRunPayFrequencyId] = useState('');
   const [newRunPeriodLabel, setNewRunPeriodLabel] = useState('');
+  // Payroll v2 (2026-10-26): the real pay date, suggested from the frequency, editable.
+  const [newRunPayDate, setNewRunPayDate] = useState('');
   const [savingRun, setSavingRun] = useState(false);
 
   const [offPaymentModalOpen, setOffPaymentModalOpen] = useState(false);
@@ -466,6 +470,7 @@ export default function PayrollPage({ token, section }: PayrollPageProps) {
   const openNewRunModal = () => {
     setNewRunPayFrequencyId('');
     setNewRunPeriodLabel('');
+    setNewRunPayDate('');
     setNewRunModalOpen(true);
   };
 
@@ -489,6 +494,7 @@ export default function PayrollPage({ token, section }: PayrollPageProps) {
       const run = await api.createPayrollRun(token, {
         payFrequencyId: newRunPayFrequencyId,
         periodLabel: newRunPeriodLabel.trim(),
+        paymentDate: newRunPayDate || undefined,
       });
       setNewRunModalOpen(false);
       toast.success(t('payroll.page.toasts.runCreated'));
@@ -614,8 +620,8 @@ export default function PayrollPage({ token, section }: PayrollPageProps) {
                           <span className="flex items-center justify-between gap-2">
                             <span className="entity-card-name">{item.run.periodLabel}</span>
                             <StatusChip
-                              color={item.run.status === 'confirmed' ? '#059669' : '#9ca3af'}
-                              label={item.run.status === 'confirmed' ? t('payroll.page.statusLabels.confirmed') : t('payroll.page.statusLabels.draft')}
+                              color={RUN_STATUS_COLOR[item.run.status]}
+                              label={t(`payroll.page.statusLabels.${item.run.status}`)}
                             />
                           </span>
                           <span className="entity-card-meta">{t('payroll.page.timeline.runMeta', { date: item.date.slice(0, 10) })}</span>
@@ -673,8 +679,8 @@ export default function PayrollPage({ token, section }: PayrollPageProps) {
                             <td>{item.run.periodLabel}</td>
                             <td>
                               <StatusChip
-                                color={item.run.status === 'confirmed' ? '#059669' : '#9ca3af'}
-                                label={item.run.status === 'confirmed' ? t('payroll.page.statusLabels.confirmed') : t('payroll.page.statusLabels.draft')}
+                                color={RUN_STATUS_COLOR[item.run.status]}
+                                label={t(`payroll.page.statusLabels.${item.run.status}`)}
                               />
                             </td>
                             <td>
@@ -1527,7 +1533,12 @@ export default function PayrollPage({ token, section }: PayrollPageProps) {
             <select
               id="new-run-frequency"
               value={newRunPayFrequencyId}
-              onChange={(e) => setNewRunPayFrequencyId(e.target.value)}
+              onChange={(e) => {
+                const id = e.target.value;
+                setNewRunPayFrequencyId(id);
+                setNewRunPayDate('');
+                if (id) api.getNextPayDate(token, id).then((r) => setNewRunPayDate(r.paymentDate)).catch(() => {});
+              }}
               required
             >
               <option value="">{t('payroll.page.selectPlaceholder')}</option>
@@ -1552,6 +1563,13 @@ export default function PayrollPage({ token, section }: PayrollPageProps) {
               required
             />
           </div>
+          {newRunPayFrequencyId && (
+            <div className="form-group">
+              <label htmlFor="new-run-paydate">{t('payroll.runDetail.payDate')}</label>
+              <input id="new-run-paydate" type="date" value={newRunPayDate} onChange={(e) => setNewRunPayDate(e.target.value)} />
+              <small className="text-ink-faint dark:text-dark-ink-faint">{t('payroll.runDetail.payDateHint')}</small>
+            </div>
+          )}
         </form>
       </Modal>
 

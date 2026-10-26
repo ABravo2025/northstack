@@ -5234,6 +5234,20 @@ Resuelve el pendiente de agosto ("un área en el perfil de las notificaciones qu
 
 **Verificado** (servicios contra `staging`, 6/6): turno fichado 10 min tarde con 15 min de pausa → sugerencia 220 min (planificado 240); turno sin fichaje → 120 planificados; reporte: fichado 220, 1 tardanza, 1 ausencia; sin fichaje en el plan no hay columnas; resumen al Owner y no dos veces el mismo día. 790/790 tests.
 
+## QA-125 — Nómina: corregir liquidaciones, fecha de pago real, costo por mes/área, CUIL en la confirmación, recibos en IA (2026-10-26, en `staging`, Growth)
+
+Decisiones de Alejandro (2026-10-26): las dos formas de corregir, que elija quien liquida; CUIL también lo carga la persona al confirmar su contrato y se ve como columna en Personas; **sin archivo para pagar** (Nómina se va a unir con getThera más adelante); sin conceptos recurrentes ni segunda aprobación.
+- **Corregir** (liquidación confirmada, `manage_payroll`): **complementaria** (liquidación nueva en borrador vinculada, solo con los ajustes —bono, comisión, reintegro, deducción—, de personas de la original y en su moneda; recibos propios; la original no cambia) o **anular y volver a emitir** (motivo obligatorio; estado `voided`; recibos marcados ANULADO con su número, sello en el PDF, no se reenvían, la verificación pública dice anulado; email a cada persona; copia en borrador con las mismas líneas y fecha; al confirmarla, números nuevos). Las complementarias no cuentan como "liquidación anterior" en las variaciones ni como "última liquidación".
+- **Fecha de pago real** (`PayrollRun.paymentDate`): sugerida según la frecuencia (`payDateService.ts`: días fijos en fin de semana o feriado de la empresa → hábil anterior; "primer día hábil" → hacia adelante), editable en el borrador y en "Nueva liquidación"; al confirmar, todas las líneas la toman.
+- **Resumen:** pagado por mes (6 meses) y por área (departamento), por moneda; sin liquidaciones anuladas ni borradores. Sin "por sede": las personas no tienen sede (solo los turnos).
+- **CUIL:** la pantalla de confirmación de contrato lo pide si nadie lo cargó (obligatorio para empleados en AR/EE. UU.); columna CUIL enmascarada en Personas para `manage_payroll`.
+- **IA (MCP):** `my_payslips` y `list_payslips`, solo datos (sin PDF).
+- SQL: `C:	mp
+s-payroll-v2-e.sql` (aplicado en `staging`).
+
+**Verificado:** API contra `staging` 35/35 (fecha sugerida salteando un feriado de la empresa, cambio en borrador, bloqueada al confirmar, recibo con esa fecha; complementaria — persona ajena rechazada, deducción en negativo, recibo `0001-000002` neto 40.000, la original sigue confirmada; anular — motivo obligatorio, Member 403, recibo anulado con su número, sin reenvío, verificación "anulado", PDF abre, copia con mismas líneas, al confirmar `0001-000003`; costo de octubre sin la anulada y por área; última liquidación sin comparar con la complementaria; CUIL en la confirmación de contrato — inválido rechazado, guardado cifrado; columna enmascarada solo para el owner). Navegador EN claro y ES oscuro 10/10 cada uno; PDF anulado revisado a ojo.
+**Bugs encontrados en la prueba:** la variación comparaba contra la complementaria (+2.400 %); el renglón de ajustes no entraba en el diálogo; "Octubre De 2026".
+
 ## QA-124 — Nómina v2: rediseño, recibos numerados y Mis recibos (2026-10-23, en `staging`, Growth)
 
 Spec: `docs/general/spec-payroll-v2.md` (propuesta aprobada por Alejandro en el artifact "Rediseño de Nómina").

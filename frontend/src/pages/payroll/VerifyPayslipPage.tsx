@@ -40,10 +40,14 @@ export default function VerifyPayslipPage() {
           )}
           {result && (
             <>
-              <p className="m-0 inline-flex items-center gap-2 font-semibold text-emerald-700 dark:text-emerald-300">
-                <CheckIcon className="h-5 w-5" />
-                {t('payroll.verify.valid')}
-              </p>
+              {result.voidedAt ? (
+                <p className="m-0 font-semibold text-red-700 dark:text-red-300">{t('payroll.verify.voided')}</p>
+              ) : (
+                <p className="m-0 inline-flex items-center gap-2 font-semibold text-emerald-700 dark:text-emerald-300">
+                  <CheckIcon className="h-5 w-5" />
+                  {t('payroll.verify.valid')}
+                </p>
+              )}
               <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-sm">
                 <dt className="text-ink-muted dark:text-dark-ink-muted">{t('payroll.verify.company')}</dt><dd className="m-0 font-medium">{result.company}</dd>
                 <dt className="text-ink-muted dark:text-dark-ink-muted">{t('payroll.verify.number')}</dt><dd className="m-0 font-mono">{result.number}</dd>

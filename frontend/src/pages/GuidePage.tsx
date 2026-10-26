@@ -6,7 +6,6 @@ import { launchEndLabel, perUserPriceLabel, usePlanPricing } from '../lib/planPr
 import { API_BASE_URL, apiFetch } from '../api/http';
 import type { ReferralRules } from '../api/referrals';
 import {
-  AlertCircleIcon,
   AlertTriangleIcon,
   BriefcaseIcon,
   BuildingIcon,
@@ -1395,14 +1394,21 @@ export default function GuidePage() {
             <div className="help-sub">
               <h3>Haciendo una liquidación</h3>
               <ol className="help-steps">
-                <li>En <strong>Liquidaciones</strong>, hacé clic en <strong>Nueva liquidación</strong>, elegí una frecuencia y una etiqueta de período — todos los que están en esa frecuencia se cargan automáticamente como borrador. Arriba ves en qué paso estás: Personas, Horas, Ajustes, Confirmar y emitir recibos.</li>
+                <li>En <strong>Liquidaciones</strong>, hacé clic en <strong>Nueva liquidación</strong>, elegí una frecuencia y una etiqueta de período — todos los que están en esa frecuencia se cargan automáticamente como borrador. La <strong>fecha de pago</strong> se sugiere según la frecuencia (si cae en fin de semana o feriado de la empresa, pasa al día hábil anterior) y la podés cambiar hasta confirmar. Arriba ves en qué paso estás: Personas, Horas, Ajustes, Confirmar y emitir recibos.</li>
                 <li>Cargá las horas de quienes cobran por hora (la liquidación no se puede confirmar hasta que lo hagas): con <strong>Traer horas aprobadas</strong> se completan solas con sus semanas aprobadas del timesheet en el período que elijas, y te avisa quién tiene semanas sin aprobar. Si la empresa configuró <strong>Horas extra y recargos</strong> (Configuración → Nómina, Growth: empezar en base a Argentina, EE. UU. o personalizada), las horas extra, en descanso o feriado y nocturnas se agregan como líneas aparte.</li>
                 <li>Agregá los ajustes que correspondan por persona: <strong>Bono, Comisión, Reintegro</strong> o <strong>Deducción</strong>. Los totales de arriba (por moneda, nunca sumados entre monedas) muestran la variación contra la liquidación anterior.</li>
                 <li>Hacé clic en <strong>Revisar y confirmar</strong>: ves el resumen y, al confirmar, la liquidación se bloquea y se <strong>emite un recibo numerado por persona</strong>, que le llega por email.</li>
               </ol>
-              <div className="help-callout help-callout-danger">
-                <AlertCircleIcon />
-                <p>Una liquidación confirmada no se puede editar ni reabrir desde la interfaz — revisá bien las horas y los ajustes antes de confirmar.</p>
+              <div className="help-callout help-callout-note">
+                <InfoIcon />
+                <p>
+                  Una liquidación confirmada no se edita. Si algo salió mal, usá <strong>Corregir</strong> y elegí:
+                  una <strong>liquidación complementaria</strong> (faltó o sobró algo — un bono olvidado, una
+                  deducción: se emite solo ese ajuste, con su propio recibo, y la original queda como está), o{' '}
+                  <strong>anular y volver a emitir</strong> (estaba mal en general: con un motivo obligatorio, sus
+                  recibos quedan marcados ANULADO con su número, cada persona recibe un email, y se abre una copia en
+                  borrador para corregir y confirmar de nuevo con números nuevos).
+                </p>
               </div>
               <p>
                 ¿Necesitás pagarle a alguien fuera de un ciclo normal? Usá <strong>Pagos únicos</strong> — los mismos
@@ -1443,7 +1449,9 @@ export default function GuidePage() {
                 son el CUIT de la empresa y el CUIL de la persona; en <strong>EE. UU.</strong>, el EIN y el SSN. En esos
                 dos países son obligatorios: el CUIT o EIN se pide al crear la cuenta de la empresa (y se cambia en
                 Configuración → Datos de la empresa), y el CUIL o SSN, al agregar a alguien como empleado (para
-                contractors es opcional). En el resto de los países son opcionales.
+                contractors es opcional). Si quien lo da de alta no lo carga, se lo pide a la persona cuando confirma
+                su contrato. En el resto de los países son opcionales. Quien gestiona la nómina ve la columna CUIL
+                (solo los últimos 4 dígitos) en la tabla de Personas.
               </p>
               <p>
                 La identificación de cada persona se guarda cifrada y en pantalla solo se ven los últimos 4 dígitos.
@@ -1537,14 +1545,21 @@ export default function GuidePage() {
             <div className="help-sub">
               <h3>Running a pay run</h3>
               <ol className="help-steps">
-                <li>In <strong>Pay runs</strong>, click <strong>New Run</strong>, pick a frequency and a period label — everyone on that frequency loads in automatically as a draft. The top shows which step you're on: People, Hours, Adjustments, Confirm and issue payslips.</li>
+                <li>In <strong>Pay runs</strong>, click <strong>New Run</strong>, pick a frequency and a period label — everyone on that frequency loads in automatically as a draft. The <strong>pay date</strong> is suggested from the frequency (on a weekend or company holiday it moves to the business day before) and you can change it until you confirm. The top shows which step you're on: People, Hours, Adjustments, Confirm and issue payslips.</li>
                 <li>Enter hours for anyone paid hourly (the run can't be confirmed until you do): <strong>Bring approved hours</strong> fills them in from their approved timesheet weeks in the period you pick and tells you who still has weeks waiting for approval. If the company set up <strong>Overtime and surcharges</strong> (Settings → Payroll, Growth: start from Argentina, the US or custom), overtime, rest-day/holiday and night hours are added as separate lines.</li>
                 <li>Add any adjustments per person: <strong>Bonus, Commission, Reimbursement,</strong> or <strong>Deduction</strong>. The totals at the top (per currency, never added across currencies) show the change against the previous run.</li>
                 <li>Click <strong>Review and confirm</strong>: you see the summary and, once you confirm, the run is locked and <strong>one numbered payslip per person</strong> is issued and emailed to them.</li>
               </ol>
-              <div className="help-callout help-callout-danger">
-                <AlertCircleIcon />
-                <p>A confirmed run can't be edited or reopened from the UI — double-check hours and adjustments before confirming.</p>
+              <div className="help-callout help-callout-note">
+                <InfoIcon />
+                <p>
+                  A confirmed run isn't edited. If something went wrong, use <strong>Correct</strong> and pick: a{' '}
+                  <strong>supplementary run</strong> (something was missing or extra — a forgotten bonus, a deduction:
+                  only that adjustment is issued, with its own payslip, and the original stays as it is), or{' '}
+                  <strong>void and reissue</strong> (it was wrong as a whole: with a required reason, its payslips are
+                  marked VOID keeping their numbers, each person is emailed, and a draft copy opens to fix and confirm
+                  again with new numbers).
+                </p>
               </div>
               <p>
                 Need to pay someone outside a normal cycle? Use <strong>One-off payments</strong> — same adjustment
@@ -1584,7 +1599,9 @@ export default function GuidePage() {
                 company's CUIT and the person's CUIL; in the <strong>US</strong>, the EIN and the SSN. In those two
                 countries they're required: the CUIT or EIN is asked when the company account is created (and changed
                 in Settings → Company profile), and the CUIL or SSN when someone is added as an employee (optional for
-                contractors). Everywhere else they're optional.
+                contractors). If whoever adds them leaves it empty, the person is asked when they confirm their
+                contract. Everywhere else they're optional. Whoever runs payroll sees a CUIL column (last 4 digits
+                only) in the People table.
               </p>
               <p>
                 Each person's tax ID is stored encrypted and screens only show its last 4 digits. The Argentine payslip

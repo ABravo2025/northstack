@@ -972,6 +972,12 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       label: t('employees.columns.personType'),
       render: (emp: any) => (emp.personType ? PERSON_TYPE_LABELS[emp.personType] : '—'),
     },
+    // Payroll v2 (2026-10-26): masked tax ID (CUIL / SSN), payroll managers only (PAYROLL_COLUMN_KEYS).
+    {
+      key: 'taxId',
+      label: t(`common:taxId.label.${taxIdKind}`),
+      render: (emp: any) => <span className="tabular-nums">{emp.taxIdMasked ?? '—'}</span>,
+    },
     {
       key: 'contractStatus',
       label: t('employees.columns.contractStatus'),
@@ -993,7 +999,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
 
   // Contract Status / Pay Frequency come from Payroll compensation records — always empty (—)
   // without Payroll access, so they aren't offered at all then.
-  const PAYROLL_COLUMN_KEYS = ['contractStatus', 'payFrequencyName'];
+  const PAYROLL_COLUMN_KEYS = ['contractStatus', 'payFrequencyName', 'taxId'];
   const columns = canManagePayroll ? allColumns : allColumns.filter((col) => !PAYROLL_COLUMN_KEYS.includes(col.key));
 
   const toggleableColumns = [

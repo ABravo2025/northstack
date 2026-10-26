@@ -211,7 +211,7 @@ export async function getRunDetail(tenantId: string, runId: string): Promise<Get
   );
 
   const previous = await prisma.payrollRun.findFirst({
-    where: { tenantId, status: 'confirmed', payFrequencyId: run.payFrequencyId, id: { not: run.id }, ...(run.confirmedAt ? { confirmedAt: { lt: run.confirmedAt } } : {}) },
+    where: { tenantId, status: 'confirmed', payFrequencyId: run.payFrequencyId, id: { not: run.id }, OR: [{ correctionKind: null }, { correctionKind: { not: 'supplement' } }], ...(run.confirmedAt ? { confirmedAt: { lt: run.confirmedAt } } : {}) },
     orderBy: { confirmedAt: 'desc' },
     select: { id: true },
   });

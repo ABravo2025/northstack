@@ -10,6 +10,7 @@ import AcceptTermsCheckbox from '../components/common/AcceptTermsCheckbox';
 import RequiredMark from '../components/common/RequiredMark';
 import { formatMoney } from '../lib/currencies';
 import { COUNTRIES } from '../lib/countries';
+import { isTaxIdValid } from '../lib/taxId';
 
 interface ContractConfirmationPageProps {
   onConfirmed: (token: string, user: any) => void;
@@ -34,6 +35,8 @@ export default function ContractConfirmationPage({ onConfirmed }: ContractConfir
   const [routingNumber, setRoutingNumber] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [usernameValue, setUsernameValue] = useState('');
+  // Payroll v2 (2026-10-26): their own CUIL / SSN when whoever added them didn't fill it in.
+  const [taxId, setTaxId] = useState('');
   const [acceptedContract, setAcceptedContract] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
 
@@ -59,6 +62,9 @@ export default function ContractConfirmationPage({ onConfirmed }: ContractConfir
   const isWireTransfer = asks === 'iban_ach';
   const asksNothing = asks === 'none';
 
+  const taxAsk = details?.taxId ?? null;
+  const taxIdInvalid = Boolean(taxAsk && taxId.trim() && !isTaxIdValid(taxAsk.kind, taxId));
+  const taxIdOk = !taxAsk || (!taxIdInvalid && (!taxAsk.required || Boolean(taxId.trim())));
   const canSubmit =
     Boolean(phone.trim()) &&
     Boolean(password) &&
@@ -69,6 +75,7 @@ export default function ContractConfirmationPage({ onConfirmed }: ContractConfir
         ? Boolean(ibanValue.trim())
         : Boolean(routingNumber.trim()) && Boolean(accountNumber.trim())
       : asksNothing || Boolean(usernameValue.trim())) &&
+    taxIdOk &&
     acceptedContract &&
     acceptedTerms;
 
@@ -92,6 +99,7 @@ export default function ContractConfirmationPage({ onConfirmed }: ContractConfir
         paymentMethodId,
         paymentAccountSubType: isWireTransfer ? subType : 'username',
         paymentAccountData,
+        taxId: taxAsk && taxId.trim() ? taxId.trim() : undefined,
         acceptedContract,
         acceptedTerms,
       });
@@ -337,6 +345,29 @@ export default function ContractConfirmationPage({ onConfirmed }: ContractConfir
                       required
                       disabled={submitting}
                     />
+                  </div>
+                )}
+
+                {taxAsk && (
+                  <div className="form-group">
+                    <label htmlFor="confirm-taxId">
+                      {t(`common:taxId.label.${taxAsk.kind}`)}
+                      {taxAsk.required && <RequiredMark />}
+                    </label>
+                    <input
+                      id="confirm-taxId"
+                      type="text"
+                      value={taxId}
+                      onChange={(e) => setTaxId(e.target.value)}
+                      maxLength={30}
+                      autoComplete="off"
+                      aria-invalid={taxIdInvalid || undefined}
+                      required={taxAsk.required}
+                      disabled={submitting}
+                    />
+                    <small className={taxIdInvalid ? 'field-error' : 'text-ink-faint dark:text-dark-ink-faint'}>
+                      {taxIdInvalid ? t(`common:taxId.invalid.${taxAsk.kind}`) : t(`common:taxId.hint.${taxAsk.kind}`)}
+                    </small>
                   </div>
                 )}
 

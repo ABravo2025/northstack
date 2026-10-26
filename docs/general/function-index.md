@@ -511,6 +511,12 @@ Puras (`tests/taxId.test.ts`): **companyTaxIdKind** / **personTaxIdKind** (AR �
 - **countryCode(country)** — `Tenant.country` guarda el nombre en inglés ("Argentina"); devuelve el ISO-2 ("AR"), acepta también el código. Índice armado con `Intl.DisplayNames` (sin códigos retirados) + alias. Espejo en `frontend/src/lib/countries.ts`.
 - **localeForCountry(country)** — formato de números del país de la empresa (`es-AR`, `en-US`, `de-DE`…). Espejo en `frontend/src/lib/currencies.ts` (`formatMoney`, `formatNumber`).
 
+### `src/modules/hr/payrollCorrectionService.ts` + `payDateService.ts` (2026-10-26)
+- **voidAndReissueRun(tenantId, runId, reason, userId)** — liquidación confirmada → `voided` (motivo), recibos con `voidedAt`/`voidReason`, copia en borrador (`correctionKind: 'reissue'`, `correctionOfId`). La ruta (`POST /api/hr/payroll/runs/:id/void`) manda `sendPayslipVoidedEmail` por recibo.
+- **createSupplementRun(tenantId, runId, lines, userId)** — borrador `correctionKind: 'supplement'` solo con ajustes de personas de la original (`POST .../supplement`).
+- **suggestPayDate(cadence, anchor, from, isBusinessDay)** (pura, `tests/payDate.test.ts`), **businessDayChecker(tenantId)** (fines de semana + `TimeOffHoliday` no religiosos), **suggestPayDateForFrequency**. Rutas: `GET /api/hr/payroll/pay-frequencies/:id/next-pay-date`, `PATCH /api/hr/payroll/runs/:id/payment-date`; `createRun` acepta `paymentDate`; `confirmRun` pasa la fecha a todas las líneas.
+- `payrollOverviewService.payrollCost` — pagado por mes y por área (6 meses, por moneda). Front: **CorrectRunModal**.
+
 ### `src/modules/hr/amountInWords.ts` (Nómina v2)
 - **amountInWords(cents, currency, 'es'|'en')** — "Dos millones cuatrocientos mil pesos", apócope ("un millón de pesos", "veintiún"), centavos "con 50/100". Tests: `tests/amountInWords.test.ts`.
 

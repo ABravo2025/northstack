@@ -427,7 +427,8 @@
       "add": "Agregar",
       "statusLabels": {
         "confirmed": "Confirmada",
-        "draft": "Borrador"
+        "draft": "Borrador",
+        "voided": "Anulada"
       },
       "entryTypeLabels": {
         "base": "Pago",
@@ -684,7 +685,9 @@
         "reviewBody": "Cada persona recibe su recibo numerado por email y lo ve en Mis recibos. La liquidación queda bloqueada al confirmarla.",
         "confirmedToast_one": "Liquidación confirmada · {{count}} recibo emitido",
         "confirmedToast_other": "Liquidación confirmada · {{count}} recibos emitidos"
-      }
+      },
+      "payDate": "Fecha de pago",
+      "payDateHint": "Sugerida según la frecuencia de pago (si cae en un día no hábil, pasa al hábil anterior). La podés cambiar hasta confirmar."
     },
     "overtime": {
       "title": "Horas extra y recargos",
@@ -781,7 +784,17 @@
         "total": "Total",
         "status": "Estado"
       },
-      "missingTaxId": "A {{name}} le falta el {{label}}: va impreso en su recibo"
+      "missingTaxId": "A {{name}} le falta el {{label}}: va impreso en su recibo",
+      "cost": {
+        "byMonth": "Pagado por mes",
+        "byArea": "Pagado por área (últimos 6 meses)",
+        "month": "Mes",
+        "paid": "Pagado",
+        "area": "Área",
+        "paid6": "Pagado",
+        "noArea": "Sin área",
+        "empty": "Todavía no se pagó nada."
+      }
     },
     "payslips": {
       "subtitle": "Todos los recibos emitidos. Cada uno tiene número y se puede verificar con su código.",
@@ -801,7 +814,8 @@
       "emptyTitle": "Todavía no hay recibos",
       "emptyBody": "Se emiten al confirmar una liquidación o al hacer un pago único.",
       "modalTitle": "Recibo {{number}}",
-      "modalHint": "Recibo emitido. La persona lo recibió por email y lo ve en Mis recibos."
+      "modalHint": "Recibo emitido. La persona lo recibió por email y lo ve en Mis recibos.",
+      "voided": "Anulado"
     },
     "mine": {
       "subtitle": "Tus recibos. Solo los ves vos (y quien liquida la nómina).",
@@ -823,7 +837,8 @@
       "period": "Período",
       "paymentDate": "Fecha de pago",
       "issued": "Emitido el",
-      "note": "No válido como documento legal: es un registro interno de seguimiento, hasta su certificación según las normas de cada país. Por privacidad, acá nunca se muestran montos."
+      "note": "No válido como documento legal: es un registro interno de seguimiento, hasta su certificación según las normas de cada país. Por privacidad, acá nunca se muestran montos.",
+      "voided": "Este recibo fue anulado: ya no es válido."
     },
     "methods": {
       "lead": "Activá los métodos con los que paga tu empresa. Cada persona elige uno al confirmar su contrato.",
@@ -876,6 +891,57 @@
     },
     "people": {
       "fileNumber": "Legajo"
+    },
+    "correct": {
+      "button": "Corregir",
+      "title": "Corregir {{period}}",
+      "cancel": "Cancelar",
+      "supplement": {
+        "title": "Liquidación complementaria",
+        "body": "Faltó o sobró algo (un bono olvidado, una deducción). Una liquidación chica vinculada a esta, solo con esos ajustes y sus propios recibos. Esta liquidación queda como está."
+      },
+      "void": {
+        "title": "Anular y volver a emitir",
+        "body_one": "La liquidación estaba mal en general. Su recibo queda con su número, marcado ANULADO, y le avisamos por email a la persona; se abre una copia en borrador para corregir y volver a confirmar (con números nuevos).",
+        "body_other": "La liquidación estaba mal en general. Sus {{count}} recibos quedan con sus números, marcados ANULADO, y le avisamos por email a cada persona; se abre una copia en borrador para corregir y volver a confirmar (con números nuevos)."
+      },
+      "reason": "Motivo (obligatorio)",
+      "reasonPlaceholder": "Por ejemplo: tarifa por hora equivocada en dos personas",
+      "reasonHint": "Va en el email a cada persona y en el recibo anulado.",
+      "voidSubmit": "Anular y abrir la copia",
+      "supplementSubmit": "Crear liquidación complementaria",
+      "person": "Persona",
+      "type": "Tipo",
+      "amount": "Importe ({{currency}})",
+      "amountShort": "Importe",
+      "label": "Concepto (opcional)",
+      "removeLine": "Quitar línea",
+      "addLine": "Agregar otro ajuste",
+      "supplementHint": "Importes en la moneda de cada persona en esta liquidación; las deducciones siempre restan. La revisás y confirmás como cualquier liquidación.",
+      "types": {
+        "bonus": "Bono",
+        "commission": "Comisión",
+        "reimbursement": "Reintegro",
+        "deduction": "Deducción"
+      },
+      "voidedToast_one": "Liquidación anulada ({{count}} recibo). Corregí la copia y confirmala.",
+      "voidedToast_other": "Liquidación anulada ({{count}} recibos). Corregí la copia y confirmala.",
+      "supplementToast": "Liquidación complementaria creada. Revisala y confirmala.",
+      "kindChip": {
+        "reissue": "Reemisión",
+        "supplement": "Complementaria"
+      },
+      "voidedBanner": "Esta liquidación fue anulada. Sus recibos ya no son válidos.",
+      "voidedReason": "Motivo: {{reason}}",
+      "openReissue": "Abrir la liquidación corregida",
+      "correctionOf": {
+        "reissue": "Copia corregida de la liquidación anulada {{period}}.",
+        "supplement": "Liquidación complementaria de {{period}}."
+      },
+      "openOriginal": "Abrir la original",
+      "hasSupplements_one": "Esta liquidación tiene {{count}} complementaria:",
+      "hasSupplements_other": "Esta liquidación tiene {{count}} complementarias:",
+      "openSupplement": "Complementaria {{n}}"
     }
   }
 }

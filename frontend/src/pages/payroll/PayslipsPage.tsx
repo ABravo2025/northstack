@@ -73,7 +73,10 @@ export default function PayslipsPage({ token }: { token: string }) {
             <TableBody colSpan={7} isEmpty={rows.length === 0} empty={{ icon: <ListIcon />, title: t('payroll.payslips.emptyTitle'), body: t('payroll.payslips.emptyBody') }}>
               {rows.map((p) => (
                 <tr key={p.id}>
-                  <td className="font-mono text-xs tabular-nums">{p.number}</td>
+                  <td className="font-mono text-xs tabular-nums">
+                    {p.number}
+                    {p.voidedAt && <span className="to-chip to-chip-rejected ml-2 font-sans" title={p.voidReason ?? undefined}>{t('payroll.payslips.voided')}</span>}
+                  </td>
                   <td className="font-medium">{p.employeeName}</td>
                   <td>{p.periodLabel}</td>
                   <td className="tabular-nums">{day(p.paymentDate)}</td>
@@ -82,10 +85,12 @@ export default function PayslipsPage({ token }: { token: string }) {
                   <td>
                     <div className="flex justify-end gap-3 whitespace-nowrap">
                       <button type="button" className="to-link text-xs" onClick={() => setOpen(p)}>{t('payroll.payslips.view')}</button>
-                      <button type="button" className="to-link inline-flex items-center gap-1 text-xs" onClick={() => resend(p)}>
-                        <MailIcon className="h-3.5 w-3.5" />
-                        {t('payroll.payslips.resend')}
-                      </button>
+                      {!p.voidedAt && (
+                        <button type="button" className="to-link inline-flex items-center gap-1 text-xs" onClick={() => resend(p)}>
+                          <MailIcon className="h-3.5 w-3.5" />
+                          {t('payroll.payslips.resend')}
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

@@ -172,7 +172,43 @@ export const payrollApi = {
     return res.json();
   },
 
-  createPayrollRun: async (token: string, data: { payFrequencyId: string; periodLabel: string }): Promise<PayrollRun> => {
+  getNextPayDate: async (token: string, payFrequencyId: string): Promise<{ paymentDate: string }> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/pay-frequencies/${payFrequencyId}/next-pay-date`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+  setRunPaymentDate: async (token: string, runId: string, paymentDate: string): Promise<PayrollRun> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/runs/${runId}/payment-date`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ paymentDate }),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+  voidPayrollRun: async (token: string, runId: string, reason: string): Promise<{ reissueRunId: string; payslipsVoided: number; emailed: number }> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/runs/${runId}/void`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ reason }),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+  createSupplementRun: async (
+    token: string,
+    runId: string,
+    lines: { employeeId: string; type: 'bonus' | 'commission' | 'reimbursement' | 'deduction'; amountCents: number; label?: string }[],
+  ): Promise<{ supplementRunId: string }> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/runs/${runId}/supplement`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ lines }),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+  createPayrollRun: async (token: string, data: { payFrequencyId: string; periodLabel: string; paymentDate?: string }): Promise<PayrollRun> => {
     const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/runs`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },

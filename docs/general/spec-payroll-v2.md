@@ -76,6 +76,15 @@ pago (firma, numeración).
 - Todo recibo dice "No válido como documento legal" (arriba, marca de agua y pie) hasta la
   certificación de cada país.
 
+## 2c. Agregados del 2026-10-26 (QA-125)
+
+Corregir una liquidación confirmada (complementaria o anular y volver a emitir, a elección), fecha de
+pago real según la frecuencia, costo por mes y por área en el Resumen, CUIL también en la
+confirmación del contrato y como columna en Personas, recibos en el asistente de IA.
+
+**Descartado por Alejandro:** archivo para pagar por banco/método — Nómina se va a integrar con
+**getThera** para procesar los pagos. Conceptos recurrentes y segunda aprobación: no por ahora.
+
 ## 3. Después (no en esta etapa)
 
 Exportar para pagar (archivo por método), conceptos recurrentes por persona, fechas de pago reales

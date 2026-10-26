@@ -427,7 +427,8 @@
       "add": "Add",
       "statusLabels": {
         "confirmed": "Confirmed",
-        "draft": "Draft"
+        "draft": "Draft",
+        "voided": "Voided"
       },
       "entryTypeLabels": {
         "base": "Payment",
@@ -684,7 +685,9 @@
         "reviewBody": "Each person gets a numbered payslip by email and can see it in My payslips. The pay run is locked once confirmed.",
         "confirmedToast_one": "Pay run confirmed · {{count}} payslip issued",
         "confirmedToast_other": "Pay run confirmed · {{count}} payslips issued"
-      }
+      },
+      "payDate": "Pay date",
+      "payDateHint": "Suggested from the pay frequency (a day off moves it to the business day before). You can change it until you confirm."
     },
     "overtime": {
       "title": "Overtime and surcharges",
@@ -781,7 +784,17 @@
         "total": "Total",
         "status": "Status"
       },
-      "missingTaxId": "{{name}} has no {{label}}: it's printed on their payslip"
+      "missingTaxId": "{{name}} has no {{label}}: it's printed on their payslip",
+      "cost": {
+        "byMonth": "Paid per month",
+        "byArea": "Paid per area (last 6 months)",
+        "month": "Month",
+        "paid": "Paid",
+        "area": "Area",
+        "paid6": "Paid",
+        "noArea": "No area",
+        "empty": "Nothing paid yet."
+      }
     },
     "payslips": {
       "subtitle": "Every issued payslip. Each is numbered and can be verified with its code.",
@@ -801,7 +814,8 @@
       "emptyTitle": "No payslips yet",
       "emptyBody": "They are issued when a pay run is confirmed or a one-off payment is made.",
       "modalTitle": "Payslip {{number}}",
-      "modalHint": "Issued payslip. The person received it by email and can see it in My payslips."
+      "modalHint": "Issued payslip. The person received it by email and can see it in My payslips.",
+      "voided": "Void"
     },
     "mine": {
       "subtitle": "Your payslips. Only you (and whoever runs payroll) can see them.",
@@ -823,7 +837,8 @@
       "period": "Period",
       "paymentDate": "Payment date",
       "issued": "Issued on",
-      "note": "Not valid as a legal document: an internal tracking record, until certified under each country's rules. For privacy, amounts are never shown here."
+      "note": "Not valid as a legal document: an internal tracking record, until certified under each country's rules. For privacy, amounts are never shown here.",
+      "voided": "This payslip was voided: it is no longer valid."
     },
     "methods": {
       "lead": "Turn on the methods your company pays with. People pick one when they confirm their contract.",
@@ -876,6 +891,57 @@
     },
     "people": {
       "fileNumber": "File no."
+    },
+    "correct": {
+      "button": "Correct",
+      "title": "Correct {{period}}",
+      "cancel": "Cancel",
+      "supplement": {
+        "title": "Supplementary run",
+        "body": "Something was missing or extra (a forgotten bonus, a deduction). A small run linked to this one with only those adjustments, and its own payslips. This run stays as it is."
+      },
+      "void": {
+        "title": "Void and reissue",
+        "body_one": "The run was wrong as a whole. Its {{count}} payslip stays with its number, marked VOID, and the person is emailed; a draft copy opens for you to fix and confirm again (new numbers).",
+        "body_other": "The run was wrong as a whole. Its {{count}} payslips stay with their numbers, marked VOID, and each person is emailed; a draft copy opens for you to fix and confirm again (new numbers)."
+      },
+      "reason": "Reason (required)",
+      "reasonPlaceholder": "e.g. Wrong hourly rate for two people",
+      "reasonHint": "It goes in the email to each person and on the voided payslip.",
+      "voidSubmit": "Void and open the copy",
+      "supplementSubmit": "Create supplementary run",
+      "person": "Person",
+      "type": "Type",
+      "amount": "Amount ({{currency}})",
+      "amountShort": "Amount",
+      "label": "Concept (optional)",
+      "removeLine": "Remove line",
+      "addLine": "Add another adjustment",
+      "supplementHint": "Amounts in each person's currency in this run; deductions are always subtracted. You review and confirm it like any run.",
+      "types": {
+        "bonus": "Bonus",
+        "commission": "Commission",
+        "reimbursement": "Reimbursement",
+        "deduction": "Deduction"
+      },
+      "voidedToast_one": "Run voided ({{count}} payslip). Fix the copy and confirm it.",
+      "voidedToast_other": "Run voided ({{count}} payslips). Fix the copy and confirm it.",
+      "supplementToast": "Supplementary run created. Review it and confirm.",
+      "kindChip": {
+        "reissue": "Reissue",
+        "supplement": "Supplementary"
+      },
+      "voidedBanner": "This run was voided. Its payslips are no longer valid.",
+      "voidedReason": "Reason: {{reason}}",
+      "openReissue": "Open the corrected run",
+      "correctionOf": {
+        "reissue": "Corrected copy of the voided run {{period}}.",
+        "supplement": "Supplementary run of {{period}}."
+      },
+      "openOriginal": "Open the original",
+      "hasSupplements_one": "This run has {{count}} supplementary run:",
+      "hasSupplements_other": "This run has {{count}} supplementary runs:",
+      "openSupplement": "Supplementary {{n}}"
     }
   }
 }

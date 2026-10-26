@@ -1187,7 +1187,7 @@ export interface BulkCompensationEntryResult {
 }
 
 export type PayrollEntryType = 'base' | 'bonus' | 'commission' | 'reimbursement' | 'deduction' | 'overtime';
-export type PayrollRunStatus = 'draft' | 'confirmed';
+export type PayrollRunStatus = 'draft' | 'confirmed' | 'voided';
 
 export interface PayrollRun {
   id: string;
@@ -1198,6 +1198,12 @@ export interface PayrollRun {
   createdByUserId: string;
   confirmedAt: string | null;
   createdAt: string;
+  // Payroll v2 (2026-10-26): real pay date, void, and which run this one corrects.
+  paymentDate?: string | null;
+  voidedAt?: string | null;
+  voidReason?: string | null;
+  correctionOfId?: string | null;
+  correctionKind?: 'reissue' | 'supplement' | null;
 }
 
 export interface PayrollRunEntry {
@@ -1294,13 +1300,15 @@ export interface RunDetail {
   previousTotals?: Record<string, number> | null;
   unapprovedWeeks?: { employeeId: string; name: string; weekStart: string; status: string }[];
   payslipsIssued?: number;
+  correctionOf?: { id: string; periodLabel: string; status: PayrollRunStatus } | null;
+  corrections?: { id: string; kind: 'reissue' | 'supplement' | null; status: PayrollRunStatus; createdAt: string }[];
 }
 
 // Payroll v2 (spec-payroll-v2.md): overview, payslips, payment-method catalog, payslip settings.
 export interface PayrollRunSummary {
   id: string;
   periodLabel: string;
-  status: 'draft' | 'confirmed';
+  status: PayrollRunStatus;
   frequency: string | null;
   createdAt: string;
   confirmedAt: string | null;
@@ -1322,6 +1330,8 @@ export interface PayrollOverview {
     staleDrafts: { id: string; periodLabel: string; days: number }[];
     missingHours: { runId: string; employeeId: string; name: string }[];
   };
+  // Last 6 months paid (confirmed runs + one-off payments), per currency.
+  cost?: { byMonth: { month: string; totals: Record<string, number> }[]; byArea: { area: string | null; totals: Record<string, number> }[] };
 }
 
 export interface PayslipRow {
@@ -1339,6 +1349,8 @@ export interface PayslipRow {
   deductionsCents: number;
   netCents: number;
   emailedAt: string | null;
+  voidedAt?: string | null;
+  voidReason?: string | null;
   createdAt: string;
 }
 
@@ -1349,6 +1361,7 @@ export interface PayslipVerification {
   periodLabel: string;
   paymentDate: string;
   issuedAt: string;
+  voidedAt?: string | null;
 }
 
 export interface PayslipSettingsView {

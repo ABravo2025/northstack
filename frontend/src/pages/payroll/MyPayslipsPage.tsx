@@ -57,7 +57,10 @@ export default function MyPayslipsPage({ token }: { token: string }) {
               {rows.map((p) => (
                 <tr key={p.id} className="to-row" onClick={() => setOpen(p)}>
                   <td className="font-medium">{p.periodLabel}</td>
-                  <td className="font-mono text-xs tabular-nums">{p.number}</td>
+                  <td className="font-mono text-xs tabular-nums">
+                    {p.number}
+                    {p.voidedAt && <span className="to-chip to-chip-rejected ml-2 font-sans">{t('payroll.payslips.voided')}</span>}
+                  </td>
                   <td className="tabular-nums">{day(p.paymentDate)}</td>
                   <td className="tabular-nums">{formatMoney(p.grossCents, p.currency)}</td>
                   <td className="tabular-nums">{p.deductionsCents ? formatMoney(p.deductionsCents, p.currency) : '—'}</td>

@@ -17,6 +17,8 @@ export interface ContractConfirmationDetails {
   timeOffPolicyNames: string[];
   // Payroll v2: `asks` = which account detail to ask for (cbu, cvu, iban_ach, email, none, text).
   paymentMethods: { id: string; name: string; kind?: string; asks?: string }[];
+  // Payroll v2: the person's tax ID (CUIL / SSN / other) when nobody filled it in yet.
+  taxId?: { kind: 'cuit' | 'cuil' | 'ein' | 'ssn' | 'other'; required: boolean } | null;
 }
 
 export const contractConfirmationPublicApi = {
@@ -36,6 +38,7 @@ export const contractConfirmationPublicApi = {
       paymentMethodId: string;
       paymentAccountSubType?: 'iban' | 'ach' | 'username' | null;
       paymentAccountData: string;
+      taxId?: string;
       acceptedContract: boolean;
       acceptedTerms: boolean;
     },

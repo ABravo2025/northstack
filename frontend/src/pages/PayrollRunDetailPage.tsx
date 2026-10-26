@@ -9,6 +9,7 @@ import TableSkeleton from '../components/common/TableSkeleton';
 import StatusChip from '../components/common/StatusChip';
 import PayslipPreviewModal from '../components/payroll/PayslipPreviewModal';
 import ImportHoursModal from '../components/payroll/ImportHoursModal';
+import CorrectRunModal from '../components/payroll/CorrectRunModal';
 import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar';
 import { formatMoney, formatNumber } from '../lib/currencies';
 import { ChevronDownIcon, ChevronLeftIcon, ClockIcon, EyeIcon, PlusIcon, TrashIcon } from '../components/common/Icons';
@@ -45,6 +46,8 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
   const [importingHours, setImportingHours] = useState(false);
   // Payroll v2 (unit 3): confirming goes through a review dialog with the totals.
   const [reviewing, setReviewing] = useState(false);
+  // Payroll v2 (2026-10-26): fix a confirmed run (void and reissue, or supplement).
+  const [correcting, setCorrecting] = useState(false);
 
   useEffect(() => {
     load();
@@ -208,6 +211,18 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
   }
 
   const isDraft = detail.run.status === 'draft';
+  const isVoided = detail.run.status === 'voided';
+  const payDay = detail.run.paymentDate ? detail.run.paymentDate.slice(0, 10) : '';
+  const savePayDay = async (value: string) => {
+    if (!value || value === payDay || !runId) return;
+    try {
+      await api.setRunPaymentDate(token, runId, value);
+      load(true);
+    } catch (error) {
+      toast.error((error as Error).message);
+    }
+  };
+  const reissue = (detail.corrections ?? []).find((c) => c.kind === 'reissue');
   // Payroll v2 (spec-payroll-v2.md, unit 3): totals per currency (never added across currencies),
   // hours, adjustments, the step it's at.
   const totals: Record<string, number> = {};
@@ -245,10 +260,16 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
           </button>
           <h2 className="page-title">{detail.run.periodLabel}</h2>
           <StatusChip
-            color={isDraft ? '#9ca3af' : '#059669'}
-            label={isDraft ? t('payroll.page.statusLabels.draft') : t('payroll.page.statusLabels.confirmed')}
+            color={isDraft ? '#9ca3af' : isVoided ? '#dc2626' : '#059669'}
+            label={t(`payroll.page.statusLabels.${detail.run.status}`)}
           />
+          {detail.run.correctionKind && <span className="category-chip">{t(`payroll.correct.kindChip.${detail.run.correctionKind}`)}</span>}
         </div>
+        {detail.run.status === 'confirmed' && canManagePayroll && (
+          <button type="button" className="btn-secondary" onClick={() => setCorrecting(true)}>
+            {t('payroll.correct.button')}
+          </button>
+        )}
         {isDraft && (
           <div className="flex items-center gap-2">
             <button type="button" className="btn-secondary gap-1.5" onClick={openAddPersonModal}>
@@ -277,7 +298,47 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
 
       <p className="text-sm text-ink-muted dark:text-dark-ink-muted mb-3">
         {t('payroll.runDetail.payFrequencyLabel', { name: detail.run.payFrequency?.name || '—' })} · {t('payroll.runDetail.v2.people', { count: detail.employeeRows.length })}
+        {' · '}
+        {isDraft ? (
+          <label className="inline-flex items-center gap-1.5">
+            {t('payroll.runDetail.payDate')}
+            <input type="date" className="select-compact !w-auto" defaultValue={payDay} key={payDay} onBlur={(e) => savePayDay(e.target.value)} />
+          </label>
+        ) : (
+          <>{t('payroll.runDetail.payDate')} {payDay ? shortDay(payDay) : '—'}</>
+        )}
       </p>
+      {isDraft && <p className="-mt-2 mb-3 text-xs text-ink-faint dark:text-dark-ink-faint">{t('payroll.runDetail.payDateHint')}</p>}
+
+      {isVoided && (
+        <div className="alert alert-error mb-3 flex flex-col gap-1">
+          <strong>{t('payroll.correct.voidedBanner')}</strong>
+          {detail.run.voidReason && <span>{t('payroll.correct.voidedReason', { reason: detail.run.voidReason })}</span>}
+          {reissue && (
+            <button type="button" className="to-link self-start" onClick={() => navigate(`/payroll/runs/${reissue.id}`)}>
+              {t('payroll.correct.openReissue')}
+            </button>
+          )}
+        </div>
+      )}
+      {detail.correctionOf && (
+        <div className="alert alert-info mb-3">
+          {t(`payroll.correct.correctionOf.${detail.run.correctionKind ?? 'supplement'}`, { period: detail.correctionOf.periodLabel })}{' '}
+          <button type="button" className="to-link" onClick={() => navigate(`/payroll/runs/${detail.correctionOf!.id}`)}>
+            {t('payroll.correct.openOriginal')}
+          </button>
+        </div>
+      )}
+      {!isDraft && (detail.corrections ?? []).some((c) => c.kind === 'supplement') && (
+        <div className="alert alert-info mb-3 flex flex-wrap items-center gap-2">
+          {t('payroll.correct.hasSupplements', { count: (detail.corrections ?? []).filter((c) => c.kind === 'supplement').length })}
+          {(detail.corrections ?? []).filter((c) => c.kind === 'supplement').map((c, i) => (
+            <button key={c.id} type="button" className="to-link" onClick={() => navigate(`/payroll/runs/${c.id}`)}>
+              {t('payroll.correct.openSupplement', { n: i + 1 })}
+            </button>
+          ))}
+        </div>
+      )}
 
       <ol className="m-0 mb-4 flex list-none flex-wrap gap-1.5 p-0" aria-label={t('payroll.runDetail.v2.stepsLabel')}>
         {STEPS.map((key, i) => {
@@ -631,6 +692,21 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
           <p className="m-0">{t('payroll.runDetail.v2.reviewBody')}</p>
         </div>
       </Modal>
+
+      {correcting && runId && (
+        <CorrectRunModal
+          token={token}
+          runId={runId}
+          periodLabel={detail.run.periodLabel}
+          payslipsIssued={detail.payslipsIssued ?? 0}
+          rows={detail.employeeRows}
+          onClose={() => setCorrecting(false)}
+          onDone={(id) => {
+            setCorrecting(false);
+            navigate(`/payroll/runs/${id}`);
+          }}
+        />
+      )}
 
       {importingHours && runId && (
         <ImportHoursModal

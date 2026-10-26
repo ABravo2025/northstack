@@ -642,6 +642,26 @@ export async function sendPayslipEmail(input: { to: string; locale?: string | nu
   );
 }
 
+// Payroll v2 (2026-10-26): the run behind this payslip was voided. Same "payslips" preference.
+export async function sendPayslipVoidedEmail(input: { to: string; locale?: string | null; firstName: string; companyName: string; period: string; number: string; reason: string; url: string }): Promise<void> {
+  if (!mailerConfigured()) return;
+  const lng = resolveEmailLocale(input.locale);
+  const t = (key: string, opts?: Record<string, unknown>) => i18n.t(`payslip.${key}`, { lng, ns: 'emails', ...opts });
+  const vars = { name: input.firstName, company: input.companyName, period: input.period, number: input.number, reason: input.reason };
+  await dispatchMail(
+    {
+      from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
+      to: input.to,
+      subject: t('voidedSubject', vars),
+      text: [t('greeting', vars), '', t('voidedBody', vars), '', `${t('open')}: ${input.url}`].join('\n'),
+      html: [`<p>${t('greeting', vars)}</p>`, `<p>${t('voidedBody', { ...vars, company: strong(input.companyName), period: strong(input.period), reason: escapeHtml(input.reason) })}</p>`, `<p><a href="${input.url}">${t('open')}</a></p>`].join('\n'),
+    },
+    'Failed to send payslip voided email:',
+    lng,
+    'payslips',
+  );
+}
+
 // Two-step verification (spec-2fa.md): a security notice on every change, so a change the
 // person didn't make doesn't go unnoticed. No preferences category: security emails always go out.
 export type TwoStepNoticeKind = 'enabled' | 'disabled' | 'reset' | 'recoveryUsed' | 'recoveryRegenerated';

@@ -1,7 +1,7 @@
 import { asksFor } from './paymentMethodService.js';
 import { randomUUID } from 'crypto';
 import prisma from '../../lib/prisma.js';
-import type { PaymentAccountSubType, Session, User } from '@prisma/client';
+import type { PaymentAccountSubType, Session, Tenant, User } from '@prisma/client';
 import { findInvitationByToken } from '../tenant/invitationService.js';
 import {
   hashPassword,
@@ -18,6 +18,10 @@ import { sendContractSignedEmail } from '../../lib/mailer.js';
 import { getEmailDomain } from '../../lib/email.js';
 import { seatCapError, syncSeatBilling } from '../tenant/seatService.js';
 import { bestEffort } from '../../lib/bestEffort.js';
+import { getPlanLimits } from '../tenant/planLimits.js';
+import { isPaymentEncryptionConfigured } from '../../lib/encryption.js';
+import { personTaxIdKind, personTaxIdRequired, taxIdLabel, validateTaxId, type TaxIdKind } from '../../lib/taxId.js';
+import { hasEmployeeTaxId, setEmployeeTaxId } from './employeeTaxIdService.js';
 
 // Public, token-gated read model for the contract-confirmation screen
 // (docs/spec-payroll.md Unidad 7) — split into a read-only block (what the
@@ -39,6 +43,9 @@ export interface ContractConfirmationDetails {
   timeOffPolicyNames: string[];
   // Payroll v2: kind/asks decide which account detail the form asks for.
   paymentMethods: { id: string; name: string; kind: string; asks: string }[];
+  // Payroll v2 (2026-10-26): the person's own tax ID (CUIL / SSN / other), asked here when whoever
+  // added them didn't fill it in — null when it's already set or not collected (no Payroll / key).
+  taxId: { kind: TaxIdKind; required: boolean } | null;
 }
 
 export interface GetContractConfirmationResult {
@@ -119,8 +126,15 @@ export async function getContractConfirmationDetails(token: string): Promise<Get
       nationality: employee.nationality,
       timeOffPolicyNames: employee.timeOffPolicies.map((a) => a.timeOffPolicy.name),
       paymentMethods: paymentMethods.map((m) => ({ id: m.id, name: m.name, kind: m.kind, asks: asksFor(m.kind === 'other' && m.name === 'Wire transfer' ? 'bank_intl' : m.kind) })),
+      taxId: (await taxIdAsked(tenant, employee.id, employee.personType)),
     },
   };
+}
+
+async function taxIdAsked(tenant: Tenant, employeeId: string, personType: string | null): Promise<{ kind: TaxIdKind; required: boolean } | null> {
+  if (!getPlanLimits(tenant).payrollEnabled || !isPaymentEncryptionConfigured()) return null;
+  if (await hasEmployeeTaxId(tenant.id, employeeId)) return null;
+  return { kind: personTaxIdKind(tenant.country), required: personTaxIdRequired(tenant.country, personType) };
 }
 
 export interface ConfirmContractInput {
@@ -131,6 +145,7 @@ export interface ConfirmContractInput {
   paymentMethodId: string;
   paymentAccountSubType?: PaymentAccountSubType | null;
   paymentAccountData: string;
+  taxId?: string;
   acceptedContract: boolean;
   acceptedTerms: boolean;
   ip: string;
@@ -181,6 +196,17 @@ export async function confirmContract(input: ConfirmContractInput): Promise<Conf
   }
 
   const tenant = await prisma.tenant.findUniqueOrThrow({ where: { id: invitation.tenantId } });
+
+  // Payroll v2: their tax ID, when it's asked (see taxIdAsked) — required in AR/US for employees.
+  const taxIdAsk = await taxIdAsked(tenant, employee.id, employee.personType);
+  const taxIdRaw = (input.taxId ?? '').trim();
+  if (taxIdAsk) {
+    if (!taxIdRaw && taxIdAsk.required) return { success: false, error: `${taxIdLabel(taxIdAsk.kind)} is required`, field: 'taxId' };
+    if (taxIdRaw) {
+      const check = validateTaxId(taxIdAsk.kind, taxIdRaw);
+      if (!check.ok) return { success: false, error: check.error, field: 'taxId' };
+    }
+  }
 
   // Same guard as invitationService.ts's acceptInvitation — confirming a contract creates a new
   // active seat too. Checked before the (fairly expensive) PDF render below.
@@ -291,6 +317,8 @@ export async function confirmContract(input: ConfirmContractInput): Promise<Conf
     pdfBuffer: signedPdfBuffer,
     locale: result.user.locale,
   });
+
+  if (taxIdAsk && taxIdRaw) await setEmployeeTaxId(tenant.id, employee.id, taxIdRaw, result.user.id);
 
   return { success: true, user: result.user, session: result.session };
 }

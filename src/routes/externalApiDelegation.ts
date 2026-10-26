@@ -27,6 +27,7 @@ import { payrollRouter } from './payroll.js';
 import { tenantsRouter } from './tenants.js';
 import { rolesRouter } from './roles.js';
 import { activityRouter } from './activity.js';
+import { payslipsRouter } from './payslips.js';
 
 // Private API → the app's own routes (spec-mcp-server.md §10, widened 2026-10-20). An allowlisted
 // request is handed to the app router that serves the same feature in the SPA, running AS the
@@ -185,6 +186,10 @@ export const DELEGATED_ROUTES: DelegatedRoute[] = [
   r('GET', '/api/hr/payroll/off-payments', payrollRouter, 'hr.payroll:read'),
   r('GET', '/api/hr/employees/:id/compensation', employeesRouter, 'hr.payroll:read'),
   r('GET', '/api/hr/employees/:id/payment-history', employeesRouter, 'hr.payroll:read'),
+  // Payroll v2 (2026-10-26): payslips as data (never the PDF). Everyone's for whoever runs payroll;
+  // the person's own for anyone through their AI assistant (a per-person inbox, like notifications).
+  r('GET', '/api/hr/payroll/payslips', payslipsRouter, 'hr.payroll:read'),
+  r('GET', '/api/payroll/me/payslips', payslipsRouter, 'tasks:read', { aiOnly: true }),
 
   // ---- CRM: custom-field values, opportunity contacts and stage history ----
   r('GET', '/api/companies/:id/custom-fields', companiesRouter, 'crm.companies:read'),

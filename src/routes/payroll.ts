@@ -26,17 +26,20 @@ import {
   createRun,
   getRunDetail,
   listRuns,
+  setRunPaymentDate,
 } from '../modules/hr/payrollRunService.js';
 import { createAdjustment, deleteEntry, updateEntryHours } from '../modules/hr/payrollEntryService.js';
 import { createOffPayments, listOffPayments } from '../modules/hr/payrollOffPaymentService.js';
 import { issuePayslipsForEntries, issuePayslipsForRun, renderIssuedPayslip, renderRunPreview } from '../modules/hr/payslipV2Service.js';
-import { emailPayslip } from './payslips.js';
+import { emailPayslip, emailPayslipVoided } from './payslips.js';
 import { importApprovedHours } from '../modules/hr/payrollHoursService.js';
 import { getPayrollOverview } from '../modules/hr/payrollOverviewService.js';
 import { getOvertimePolicy, listOvertimePeople, saveOvertimePolicy, setOvertimeExempt } from '../modules/hr/overtimePolicyService.js';
 import { TEMPLATES } from '../modules/hr/overtimeRules.js';
 import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
+import { createSupplementRun, voidAndReissueRun } from '../modules/hr/payrollCorrectionService.js';
+import { suggestPayDateForFrequency } from '../modules/hr/payDateService.js';
 
 const VALID_PAYROLL_COMPENSATION_TYPES = ['hourly', 'fixed'];
 
@@ -416,6 +419,7 @@ payrollRouter.post('/api/hr/payroll/runs', async (req, res) => {
     payFrequencyId: req.body.payFrequencyId,
     periodLabel: req.body.periodLabel.trim(),
     createdByUserId: user.id,
+    paymentDate: typeof req.body.paymentDate === 'string' ? req.body.paymentDate : undefined,
   });
 
   if (!result.success) {
@@ -478,6 +482,42 @@ payrollRouter.post('/api/hr/payroll/runs/:id/confirm', async (req, res) => {
   const issued = await issuePayslipsForRun(user.tenantId!, req.params.id);
   for (const id of issued) await emailPayslip(id, user.tenantId!);
   return res.json({ ...result.run, payslipsIssued: issued.length });
+});
+
+// Payroll v2 (2026-10-26): real pay date — suggestion for a frequency, and change it on a draft run.
+payrollRouter.get('/api/hr/payroll/pay-frequencies/:id/next-pay-date', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user || !requirePayrollAccess(user, res)) return;
+  const date = await suggestPayDateForFrequency(user.tenantId!, String(req.params.id));
+  if (!date) return res.status(404).json({ error: 'Pay frequency not found' });
+  return res.json({ paymentDate: date.toISOString().slice(0, 10) });
+});
+
+payrollRouter.patch('/api/hr/payroll/runs/:id/payment-date', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user || !requirePayrollAccess(user, res)) return;
+  const result = await setRunPaymentDate(user.tenantId!, String(req.params.id), req.body?.paymentDate, user.id);
+  if (!result.success) return res.status(result.error === 'Run not found' ? 404 : 400).json({ error: result.error });
+  return res.json(result.run);
+});
+
+// Payroll v2 (2026-10-26): fix a confirmed run — void it and reissue, or add a supplement.
+payrollRouter.post('/api/hr/payroll/runs/:id/void', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user || !requirePayrollAccess(user, res)) return;
+  const result = await voidAndReissueRun(user.tenantId!, String(req.params.id), req.body?.reason, user.id);
+  if (!result.success) return res.status(result.error === 'Run not found' ? 404 : 400).json({ error: result.error });
+  let emailed = 0;
+  for (const id of result.voidedPayslipIds ?? []) if (await emailPayslipVoided(id, user.tenantId!)) emailed++;
+  return res.json({ reissueRunId: result.run.id, payslipsVoided: result.voidedPayslipIds?.length ?? 0, emailed });
+});
+
+payrollRouter.post('/api/hr/payroll/runs/:id/supplement', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user || !requirePayrollAccess(user, res)) return;
+  const result = await createSupplementRun(user.tenantId!, String(req.params.id), req.body?.lines, user.id);
+  if (!result.success) return res.status(result.error === 'Run not found' ? 404 : 400).json({ error: result.error });
+  return res.status(201).json({ supplementRunId: result.run.id });
 });
 
 // --- Payroll entries: adjustments (Unidad 14) + hours (Unidad 15) --------

@@ -45,6 +45,13 @@ export async function hasEmployeeTaxId(tenantId: string, employeeId: string): Pr
   return (await prisma.employeeTaxId.count({ where: { tenantId, employeeId } })) > 0;
 }
 
+// Masked values for screens (People table), by employee id.
+export async function maskedTaxIds(tenantId: string, employeeIds: string[]): Promise<Map<string, string>> {
+  if (!employeeIds.length) return new Map();
+  const rows = await prisma.employeeTaxId.findMany({ where: { tenantId, employeeId: { in: employeeIds } }, select: { employeeId: true, kind: true, last4: true } });
+  return new Map(rows.map((r) => [r.employeeId, maskTaxId(r.kind as TaxIdKind, r.last4)]));
+}
+
 // For the payslip: the full value (Argentina prints it) or masked (everywhere else).
 export async function taxIdForPayslip(tenantId: string, employeeId: string, full: boolean): Promise<{ kind: TaxIdKind; value: string } | null> {
   const row = await prisma.employeeTaxId.findFirst({ where: { tenantId, employeeId } });

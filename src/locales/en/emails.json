@@ -80,7 +80,9 @@
     "subject": "Your payslip {{number}} from {{company}}",
     "greeting": "Hi {{name}},",
     "body": "{{company}} confirmed the pay run {{period}}. Your payslip is attached.",
-    "open": "See all your payslips"
+    "open": "See all your payslips",
+    "voidedSubject": "Your payslip {{number}} from {{company}} was voided",
+    "voidedBody": "{{company}} voided the pay run {{period}}, so payslip {{number}} is no longer valid. Reason: {{reason}}. If a corrected pay run is issued you'll get the new payslip by email."
   },
   "passwordReset": {
     "subject": "Reset your Northstack password",

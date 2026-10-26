@@ -42,6 +42,7 @@ import {
   canInviteUsers,
   canManageCustomFields,
   canManageEmployee,
+  canManagePayroll,
   canViewEmployee,
   canViewEmployeeCustomFields,
 } from '../modules/auth/permissionService.js';
@@ -51,7 +52,7 @@ import { exportEmployeesToCsv, getEmployeesCsvTemplate, importEmployeesFromCsv }
 import { validateSession } from '../lib/httpAuth.js';
 import type { AuthenticatedUser } from '../modules/auth/authService.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
-import { checkTaxIdForTenant, setEmployeeTaxId } from '../modules/hr/employeeTaxIdService.js';
+import { checkTaxIdForTenant, maskedTaxIds, setEmployeeTaxId } from '../modules/hr/employeeTaxIdService.js';
 import { getPlanLimits } from '../modules/tenant/planLimits.js';
 
 // Exported for routes/externalApi.ts (Private API + Webhooks, Unit 3) — one source of truth for
@@ -85,6 +86,11 @@ employeesRouter.get('/api/hr/employees', async (req, res) => {
 
   const visibleIds = await resolveVisibleEmployeeIds(user.tenantId!, user.roleContext, user.id);
   const employees = await listEmployees(user.tenantId, visibleIds);
+  // Payroll v2: the masked tax ID (CUIL / SSN), only for whoever runs payroll.
+  if (canManagePayroll(user.roleContext) && getPlanLimits(user.tenant).payrollEnabled) {
+    const masked = await maskedTaxIds(user.tenantId!, employees.map((e) => e.id));
+    for (const e of employees) e.taxIdMasked = masked.get(e.id) ?? null;
+  }
   return res.json(redactEntityListFields(employees, 'employee', user.roleContext));
 });
 

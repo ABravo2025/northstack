@@ -568,6 +568,23 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
     annotations: READ,
   }, async ({ id }) => respond(api.get(`/hr/payroll/${id}`)));
 
+  server.registerTool('my_payslips', {
+    title: 'My payslips',
+    description: "The connected person's own payslips: number, period, pay date, gross, deductions and net per currency, and whether one was voided. Read-only; the PDF stays in the app (Payroll → My payslips).",
+    inputSchema: {},
+    annotations: READ,
+  }, async () => respond(api.get('/payroll/me/payslips')));
+
+  server.registerTool('list_payslips', {
+    title: 'List payslips',
+    description: 'Every issued payslip of the company (needs payroll access), optionally for one employee or one pay run, or matching a name/period. Read-only; no PDFs, no account details.',
+    inputSchema: { employeeId: z.string().optional(), runId: z.string().optional(), q: z.string().optional() },
+    annotations: READ,
+  }, async ({ employeeId, runId, q }) => {
+    const qs = new URLSearchParams(Object.entries({ employeeId, runId, q }).filter(([, v]) => v) as [string, string][]).toString();
+    return respond(api.get(`/hr/payroll/payslips${qs ? `?${qs}` : ''}`));
+  });
+
   registerShiftTools(server, ctx);
   registerSchedulingTools(server, ctx);
   registerWorkspaceTools(server, ctx);

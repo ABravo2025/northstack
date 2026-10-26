@@ -43,6 +43,35 @@ export async function runSummaries(tenantId: string, runIds: string[]) {
   return out;
 }
 
+// Payroll v2 (2026-10-26): what was paid in the last 6 months — confirmed runs and one-off payments
+// (never voided runs or drafts), by pay date — per month and per area (department), each per
+// currency (amounts in different currencies are never added together).
+export async function payrollCost(tenantId: string, now = new Date()) {
+  const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 5, 1));
+  const entries = await prisma.payrollEntry.findMany({
+    where: { tenantId, paymentDate: { gte: from }, OR: [{ runId: null }, { run: { status: 'confirmed' } }] },
+    select: { amountCents: true, currency: true, paymentDate: true, employee: { select: { departmentDefn: { select: { name: true } } } } },
+  });
+  const months: { month: string; totals: Record<string, number> }[] = [];
+  for (let i = 0; i < 6; i++) {
+    const d = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth() + i, 1));
+    months.push({ month: d.toISOString().slice(0, 7), totals: {} });
+  }
+  const areas = new Map<string, Record<string, number>>();
+  for (const e of entries) {
+    const m = months.find((x) => x.month === e.paymentDate.toISOString().slice(0, 7));
+    if (m) m.totals[e.currency] = (m.totals[e.currency] ?? 0) + e.amountCents;
+    const area = e.employee.departmentDefn?.name ?? '';
+    const a = areas.get(area) ?? {};
+    a[e.currency] = (a[e.currency] ?? 0) + e.amountCents;
+    areas.set(area, a);
+  }
+  const byArea = [...areas.entries()]
+    .map(([area, totals]) => ({ area: area || null, totals }))
+    .sort((x, y) => Math.max(0, ...Object.values(y.totals)) - Math.max(0, ...Object.values(x.totals)));
+  return { byMonth: months, byArea };
+}
+
 export async function getPayrollOverview(tenantId: string, now = new Date()) {
   const runs = await prisma.payrollRun.findMany({
     where: { tenantId },
@@ -93,8 +122,11 @@ export async function getPayrollOverview(tenantId: string, now = new Date()) {
     ...summaries.get(r.id)!,
   });
 
+  const cost = await payrollCost(tenantId, now);
+
   return {
     inPayroll,
+    cost,
     lastRun: last ? { ...serializeRun(last), variationPct: variationPct(summaries.get(last.id)!.totals, previousSameFrequency ? summaries.get(previousSameFrequency.id)!.totals : null) } : null,
     draft: drafts[0] ? serializeRun(drafts[0]) : null,
     recentRuns: runs.slice(0, 6).map(serializeRun),

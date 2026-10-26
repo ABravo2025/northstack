@@ -3,12 +3,15 @@ import { getDefaultStatusId } from './statusService.js';
 import { recordActivity } from '../activity/activityLogService.js';
 import { payrollRunActivityFieldConfig } from '../activity/fieldConfigs/payrollRunFieldConfig.js';
 import type { PayrollCompensationType, PayrollEntryType, PayrollRun } from '@prisma/client';
+import { suggestPayDateForFrequency } from './payDateService.js';
 
 export interface CreateRunInput {
   tenantId: string;
   payFrequencyId: string;
   periodLabel: string;
   createdByUserId: string;
+  // Payroll v2: the real pay date (YYYY-MM-DD); suggested from the frequency when left out.
+  paymentDate?: string;
 }
 
 export interface CreateRunResult {
@@ -40,6 +43,7 @@ export async function createRun(input: CreateRunInput): Promise<CreateRunResult>
     },
   });
 
+  const payDay = parsePayDate(input.paymentDate) ?? (await suggestPayDateForFrequency(input.tenantId, input.payFrequencyId)) ?? new Date();
   const run = await prisma.payrollRun.create({
     data: {
       tenantId: input.tenantId,
@@ -47,6 +51,7 @@ export async function createRun(input: CreateRunInput): Promise<CreateRunResult>
       periodLabel: input.periodLabel,
       status: 'draft',
       createdByUserId: input.createdByUserId,
+      paymentDate: payDay,
     },
   });
 
@@ -60,7 +65,7 @@ export async function createRun(input: CreateRunInput): Promise<CreateRunResult>
         amountCents: comp.compensationType === 'fixed' ? comp.rateCents : 0,
         currency: comp.currency,
         hoursQty: null,
-        paymentDate: new Date(),
+        paymentDate: payDay,
       })),
     });
   }
@@ -120,6 +125,9 @@ export interface RunDetail {
   previousTotals: Record<string, number> | null;
   unapprovedWeeks: { employeeId: string; name: string; weekStart: string; status: string }[];
   payslipsIssued: number;
+  // Payroll v2 (2026-10-26): the run this one corrects, and the corrections made to this one.
+  correctionOf: { id: string; periodLabel: string; status: string } | null;
+  corrections: { id: string; kind: string | null; status: string; createdAt: Date }[];
 }
 
 export interface GetRunDetailResult {
@@ -225,8 +233,19 @@ export async function getRunDetail(tenantId: string, runId: string): Promise<Get
         ).map((w) => ({ employeeId: w.employeeId, name: `${w.employee.firstName} ${w.employee.lastName}`.trim(), weekStart: w.weekStart.toISOString().slice(0, 10), status: w.status }))
       : [];
   const payslipsIssued = await prisma.payslip.count({ where: { tenantId, runId: run.id } });
+  const [correctionOf, corrections] = await Promise.all([
+    run.correctionOfId ? prisma.payrollRun.findFirst({ where: { id: run.correctionOfId, tenantId }, select: { id: true, periodLabel: true, status: true } }) : null,
+    prisma.payrollRun.findMany({ where: { tenantId, correctionOfId: run.id }, select: { id: true, correctionKind: true, status: true, createdAt: true }, orderBy: { createdAt: 'asc' } }),
+  ]);
 
-  return { success: true, detail: { run, employeeRows, excludedCount, hasUnloadedHours, previousTotals, unapprovedWeeks, payslipsIssued } };
+  return {
+    success: true,
+    detail: {
+      run, employeeRows, excludedCount, hasUnloadedHours, previousTotals, unapprovedWeeks, payslipsIssued,
+      correctionOf,
+      corrections: corrections.map((c) => ({ id: c.id, kind: c.correctionKind, status: c.status, createdAt: c.createdAt })),
+    },
+  };
 }
 
 export interface AddEmployeeToRunResult {
@@ -272,7 +291,7 @@ export async function addEmployeeToRun(
       amountCents: compensation.compensationType === 'fixed' ? compensation.rateCents : 0,
       currency: compensation.currency,
       hoursQty: null,
-      paymentDate: new Date(),
+      paymentDate: run.paymentDate ?? new Date(),
     },
   });
 
@@ -312,6 +331,10 @@ export async function confirmRun(tenantId: string, runId: string, changedByUserI
     return { success: false, error: 'Some hourly entries still need hours loaded before confirming.' };
   }
 
+  // Every line is paid on the run's pay date (adjustments and hours added later included).
+  if (run.paymentDate) {
+    await prisma.payrollEntry.updateMany({ where: { tenantId, runId }, data: { paymentDate: run.paymentDate } });
+  }
   const updated = await prisma.payrollRun.update({
     where: { id: runId },
     data: { status: 'confirmed', confirmedAt: new Date() },
@@ -329,6 +352,25 @@ export async function confirmRun(tenantId: string, runId: string, changedByUserI
     fieldConfig: payrollRunActivityFieldConfig,
   });
 
+  return { success: true, run: updated };
+}
+
+const parsePayDate = (raw: unknown): Date | null => {
+  if (typeof raw !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) return null;
+  const d = new Date(`${raw}T00:00:00Z`);
+  return Number.isNaN(d.getTime()) ? null : d;
+};
+
+// Payroll v2: change a draft run's pay date (YYYY-MM-DD).
+export async function setRunPaymentDate(tenantId: string, runId: string, raw: unknown, changedByUserId: string): Promise<{ success: boolean; error?: string; run?: PayrollRun }> {
+  const date = parsePayDate(raw);
+  if (!date) return { success: false, error: 'Invalid pay date' };
+  const run = await prisma.payrollRun.findFirst({ where: { id: runId, tenantId } });
+  if (!run) return { success: false, error: 'Run not found' };
+  if (run.status !== 'draft') return { success: false, error: 'Only a draft run can change its pay date' };
+  const updated = await prisma.payrollRun.update({ where: { id: runId }, data: { paymentDate: date } });
+  await prisma.payrollEntry.updateMany({ where: { tenantId, runId }, data: { paymentDate: date } });
+  await recordActivity({ tenantId, entityType: 'payrollRun', entityId: runId, entityLabel: `Payroll run: ${run.periodLabel}`, action: 'update', changedByUserId, before: run, after: updated, fieldConfig: payrollRunActivityFieldConfig });
   return { success: true, run: updated };
 }
 

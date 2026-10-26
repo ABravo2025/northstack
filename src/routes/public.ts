@@ -44,6 +44,7 @@ publicRouter.post('/api/public/contract-confirmation/:token', async (req, res) =
     paymentMethodId: req.body.paymentMethodId ?? '',
     paymentAccountSubType: req.body.paymentAccountSubType || null,
     paymentAccountData: req.body.paymentAccountData ?? '',
+    taxId: typeof req.body.taxId === 'string' ? req.body.taxId : undefined,
     acceptedContract: req.body.acceptedContract === true,
     acceptedTerms: req.body.acceptedTerms === true,
     ip: clientIp,

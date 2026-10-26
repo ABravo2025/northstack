@@ -80,7 +80,9 @@
     "subject": "Tu recibo {{number}} de {{company}}",
     "greeting": "Hola {{name}},",
     "body": "{{company}} confirmó la liquidación {{period}}. Te adjuntamos tu recibo.",
-    "open": "Ver todos tus recibos"
+    "open": "Ver todos tus recibos",
+    "voidedSubject": "Se anuló tu recibo {{number}} de {{company}}",
+    "voidedBody": "{{company}} anuló la liquidación {{period}}, así que el recibo {{number}} ya no es válido. Motivo: {{reason}}. Si se emite una liquidación corregida, te llega el recibo nuevo por email."
   },
   "passwordReset": {
     "subject": "Restablecé tu contraseña de Northstack",

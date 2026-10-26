@@ -3,7 +3,7 @@ import { createAsyncRouter } from '../lib/asyncRouter.js';
 import { validateSession } from '../lib/httpAuth.js';
 import { requirePayrollAccess } from '../lib/payrollAccess.js';
 import prisma from '../lib/prisma.js';
-import { sendPayslipEmail } from '../lib/mailer.js';
+import { sendPayslipEmail, sendPayslipVoidedEmail } from '../lib/mailer.js';
 import { canManageEmployee, canManagePayroll } from '../modules/auth/permissionService.js';
 import { getPlanLimits } from '../modules/tenant/planLimits.js';
 import { layoutFor, listPayslips, numberLabel, renderIssuedPayslip, verifyPayslip } from '../modules/hr/payslipV2Service.js';
@@ -23,6 +23,31 @@ async function ownEmployeeId(tenantId: string, userId: string): Promise<string |
 
 // Sends one payslip to its person (their login email, else the employee email). Used on confirm and
 // on "resend". Never throws: a mail problem must not undo a confirmed pay run.
+// Payroll v2 (2026-10-26): tells the person their payslip was voided (run voided).
+export async function emailPayslipVoided(payslipId: string, tenantId: string): Promise<boolean> {
+  const p = await prisma.payslip.findFirst({
+    where: { id: payslipId, tenantId },
+    include: { employee: { select: { firstName: true, email: true, user: { select: { email: true, locale: true } } } }, tenant: { select: { name: true } } },
+  });
+  if (!p || !p.voidedAt) return false;
+  const settings = await prisma.payslipSettings.findUnique({ where: { tenantId } });
+  try {
+    await sendPayslipVoidedEmail({
+      to: p.employee.user?.email ?? p.employee.email,
+      locale: p.employee.user?.locale ?? p.locale,
+      firstName: p.employee.firstName,
+      companyName: p.tenant.name,
+      period: p.periodLabel,
+      number: numberLabel(settings?.prefix ?? 1, p.number),
+      reason: p.voidReason ?? '',
+      url: `${appBaseUrl()}/payroll/mine`,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function emailPayslip(payslipId: string, tenantId: string): Promise<boolean> {
   const p = await prisma.payslip.findFirst({
     where: { id: payslipId, tenantId },
@@ -65,12 +90,15 @@ payslipsRouter.get('/api/hr/payroll/payslips', async (req, res) => {
   if (!user || !requirePayrollAccess(user, res)) return;
   const q = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 100) : undefined;
   const runId = typeof req.query.runId === 'string' ? req.query.runId : undefined;
-  return res.json(await listPayslips(user.tenantId!, { q, runId }));
+  const employeeId = typeof req.query.employeeId === 'string' ? req.query.employeeId : undefined;
+  return res.json(await listPayslips(user.tenantId!, { q, runId, employeeId }));
 });
 
 payslipsRouter.post('/api/hr/payroll/payslips/:id/resend', async (req, res) => {
   const user = await validateSession(req, res);
   if (!user || !requirePayrollAccess(user, res)) return;
+  const voided = await prisma.payslip.count({ where: { id: String(req.params.id), tenantId: user.tenantId!, voidedAt: { not: null } } });
+  if (voided) return res.status(400).json({ error: 'A void payslip is not sent again' });
   const ok = await emailPayslip(String(req.params.id), user.tenantId!);
   if (!ok) return res.status(400).json({ error: 'The payslip could not be sent' });
   return res.json({ ok: true });

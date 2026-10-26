@@ -328,6 +328,8 @@ enum PaymentAccountSubType {
 enum PayrollRunStatus {
   draft
   confirmed
+  // Payroll v2 (2026-10-26): a confirmed run undone with a reason; its payslips stay, marked void.
+  voided
 }
 
 enum PayrollEntryType {
@@ -1592,6 +1594,18 @@ model PayrollRun {
   confirmedAt     DateTime?
   createdAt       DateTime                @default(now())
   entries         PayrollEntry[]
+  // Payroll v2 (2026-10-26): the real pay date, suggested from the frequency (next business day
+  // rules in payDateService.ts) and editable while draft; every entry takes it on confirm.
+  paymentDate     DateTime?               @db.Date
+  voidedAt        DateTime?
+  voidedByUserId  String?
+  voidReason      String?
+  // A correction of another confirmed run: 'reissue' (that run was voided and this one replaces it)
+  // or 'supplement' (adjustments only, that run stays as it is).
+  correctionOfId  String?
+  correctionOf    PayrollRun?             @relation("PayrollRunCorrection", fields: [correctionOfId], references: [id], onDelete: SetNull)
+  corrections     PayrollRun[]            @relation("PayrollRunCorrection")
+  correctionKind  String?
 
   @@index([tenantId])
   payslips        Payslip[]
@@ -3242,6 +3256,9 @@ model Payslip {
   netCents        Int
   snapshot        Json
   emailedAt       DateTime?
+  // Its run was voided (2026-10-26): kept with its number, shown as void, never reissued.
+  voidedAt        DateTime?
+  voidReason      String?
   createdAt       DateTime    @default(now())
 
   @@unique([tenantId, number])

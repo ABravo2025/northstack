@@ -104,6 +104,7 @@ const L = {
     hourly: 'Por hora', fixed: 'Sueldo fijo', earnings: 'Haberes', deductions: 'Deducciones', concept: 'Concepto', qty: 'Cantidad', rate: 'Tarifa', amount: 'Importe', totalEarnings: 'Total haberes', totalDeductions: 'Total deducciones',
     net: 'Neto a cobrar', companySign: 'Firma de la empresa', received: 'Recibí conforme', verify: 'Verificar', preview: 'VISTA PREVIA - SIN EMITIR', number: 'N.º',
     notLegal: 'NO VÁLIDO COMO DOCUMENTO LEGAL',
+    voided: 'ANULADO', voidedReason: 'Anulado. Motivo:',
     legal: 'Documento interno de seguimiento emitido con Northstack. No válido como documento legal ni como recibo de sueldo hasta que se certifique según las normas de cada país.',
     taxId: { cuit: 'CUIT', cuil: 'CUIL', ein: 'EIN', ssn: 'SSN', other: 'Id. fiscal' } as Record<TaxIdKind, string>,
     lines: { base_fixed: 'Sueldo básico', base_hours: 'Horas normales', overtime: 'Horas extra', rest: 'Horas extra en descanso / feriado', night: 'Recargo nocturno', bonus: 'Bono', commission: 'Comisión', reimbursement: 'Reintegro', deduction: 'Deducción' },
@@ -115,6 +116,7 @@ const L = {
     hourly: 'Hourly', fixed: 'Salary', earnings: 'Earnings', deductions: 'Deductions', concept: 'Description', qty: 'Hours', rate: 'Rate', amount: 'Current', totalEarnings: 'Gross pay', totalDeductions: 'Total deductions',
     net: 'Net pay', companySign: 'Company signature', received: 'Received by', verify: 'Verify', preview: 'PREVIEW - NOT ISSUED', number: 'No.',
     notLegal: 'NOT VALID AS A LEGAL DOCUMENT',
+    voided: 'VOID', voidedReason: 'Voided. Reason:',
     legal: "Internal tracking document issued with Northstack. Not valid as a legal document or as an official payslip until it is certified under each country's rules.",
     taxId: { cuit: 'CUIT', cuil: 'CUIL', ein: 'EIN', ssn: 'SSN', other: 'Tax ID' } as Record<TaxIdKind, string>,
     lines: { base_fixed: 'Regular salary', base_hours: 'Regular hours', overtime: 'Overtime', rest: 'Overtime, rest day / holiday', night: 'Night differential', bonus: 'Bonus', commission: 'Commission', reimbursement: 'Reimbursement', deduction: 'Deduction' },
@@ -136,6 +138,8 @@ export interface RenderInput {
   layout: PayslipLayout;
   lang: 'es' | 'en';
   numberText: string | null; // null = preview
+  // Its run was voided (2026-10-26): "VOID" stamp + the reason under the title.
+  voided?: { reason: string } | null;
   verifyCode: string | null;
   verifyUrl: string | null;
   periodText: string;
@@ -198,6 +202,14 @@ export async function renderPayslipV2(input: RenderInput): Promise<Uint8Array> {
 
   let y = 744;
   text(page, input.numberText ? t.notLegal : `${t.preview} · ${t.notLegal}`, X0, y + 22, 9, bold, red);
+  if (input.voided) {
+    // A big boxed stamp over the header, the reason on the right of the top line.
+    const stamp = safe(t.voided);
+    const sw = bold.widthOfTextAtSize(stamp, 40);
+    page.drawRectangle({ x: 306 - sw / 2 - 12, y: 548, width: sw + 24, height: 54, borderColor: red, borderWidth: 2.5, color: rgb(1, 1, 1), opacity: 0.85, rotate: degrees(-8) });
+    page.drawText(stamp, { x: 306 - sw / 2, y: 562, size: 40, font: bold, color: red, rotate: degrees(-8) });
+    right(page, fit(`${t.voidedReason} ${input.voided.reason}`, 300, 8.5, bold), X1, y + 22, 8.5, bold, red);
+  }
   // Header: logo + company, title + number.
   let cx = X0;
   if (input.logo) {
@@ -477,6 +489,7 @@ export async function renderIssuedPayslip(payslipId: string, tenantId: string, l
     layout: p.layout === 'ar' ? 'ar' : 'us',
     lang,
     numberText: numberLabel(settings?.prefix ?? 1, p.number),
+    voided: p.voidedAt ? { reason: p.voidReason ?? '' } : null,
     verifyCode: p.verifyCode,
     verifyUrl: verifyUrl(p.verifyCode),
     periodText: periodText(p, lang),
@@ -498,7 +511,7 @@ export async function renderRunPreview(tenantId: string, runId: string, employee
   return renderPayslipV2({
     layout, lang, numberText: null, verifyCode: null, verifyUrl: null,
     periodText: periodText({ periodLabel: run.periodLabel, periodFrom: base?.hoursFrom ?? null, periodTo: base?.hoursTo ?? null }, lang),
-    paymentDate: entries[0].paymentDate.toISOString(), currency: entries[0].currency, snapshot: resolveSnapshot(snapshot),
+    paymentDate: (run.paymentDate ?? entries[0].paymentDate).toISOString(), currency: entries[0].currency, snapshot: resolveSnapshot(snapshot),
     ...(await brandingImages(tenantId)),
   });
 }
@@ -518,6 +531,8 @@ const serialize = (p: Awaited<ReturnType<typeof prisma.payslip.findFirstOrThrow>
   deductionsCents: p.deductionsCents,
   netCents: p.netCents,
   emailedAt: p.emailedAt,
+  voidedAt: p.voidedAt,
+  voidReason: p.voidReason,
   createdAt: p.createdAt,
 });
 
@@ -550,5 +565,6 @@ export async function verifyPayslip(code: unknown) {
     periodLabel: p.periodLabel,
     paymentDate: p.paymentDate.toISOString().slice(0, 10),
     issuedAt: p.createdAt,
+    voidedAt: p.voidedAt,
   };
 }

@@ -10,6 +10,9 @@
   quedó en `docs/tareas/backlog.md` bajo "Métricas", sin construir todavía. **No decidido
   todavía**: dónde vive esto en el frontend (`/overview` vs. una sección "Dashboards" nueva, sin
   spec) — este endpoint es el insumo, no la UI.
+- **Regla para toda métrica (Alejandro, 2026-10-26):** selector de período — última semana, 15, 30,
+  60, 90 días y todo — y filtro por departamento, en la consulta del backend y en la pantalla. Primera
+  aplicada: Nómina → Resumen → Pagado (`GET /api/hr/payroll/cost`).
 - Complementa a `basic-metrics-spec.md`/`saas-metrics-spec.md`, que son al revés: métricas
   **cross-tenant**, del propio negocio de Northstack sobre sus tenants (cuántos tenants hay, MRR,
   churn de Northstack, etc.) — confidenciales, nunca visibles dentro de la cuenta de un tenant.

@@ -182,7 +182,9 @@
     "addPaymentMethod": "Add payment method",
     "starting": "Starting…",
     "noPlanYet": "You haven't picked a plan yet — your trial is still active.",
-    "choosePlan": "Choose a plan"
+    "choosePlan": "Choose a plan",
+    "contractToSign": "You have a contract waiting for your signature.",
+    "reviewContract": "Review and sign"
   },
   "pagination": {
     "previous": "Previous",

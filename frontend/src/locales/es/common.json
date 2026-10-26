@@ -182,7 +182,9 @@
     "addPaymentMethod": "Agregar método de pago",
     "starting": "Iniciando…",
     "noPlanYet": "Todavía no elegiste un plan — tu prueba sigue activa.",
-    "choosePlan": "Elegir un plan"
+    "choosePlan": "Elegir un plan",
+    "contractToSign": "Tenés un contrato pendiente de firma.",
+    "reviewContract": "Revisar y firmar"
   },
   "pagination": {
     "previous": "Anterior",

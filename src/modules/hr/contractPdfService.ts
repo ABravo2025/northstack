@@ -5,6 +5,7 @@ import { buildTenantLogoUrl, type TenantBranding } from '../tenant/tenantProfile
 import type { EmployeeCompensation } from '@prisma/client';
 import { createInvitation } from '../tenant/invitationService.js';
 import { sendInvitationEmail, sendContractSignedEmail } from '../../lib/mailer.js';
+import { sendContractToSignNotice } from './contractToSignNotice.js';
 
 function formatMoney(amountCents: number, currency: string): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amountCents / 100);
@@ -195,7 +196,15 @@ export async function resendEmployeeContract(tenantId: string, employeeId: strin
   const tenant = await prisma.tenant.findUniqueOrThrow({ where: { id: tenantId } });
   const pdfBuffer = Buffer.from(compensation.contractPdf);
 
-  if (!compensation.confirmedAt) {
+  // Only a first-ever contract is ever signed — a raise's row stays confirmedAt: null for good.
+  const awaitsSignature = compensation.blocksParticipation && !compensation.confirmedAt;
+  if (awaitsSignature && employee.userId) {
+    // Unsigned, but the person already has a login — no invitation possible, point them to
+    // My contract again (same notice as on creation).
+    return sendContractToSignNotice(employee, pdfBuffer);
+  }
+
+  if (!compensation.confirmedAt && !employee.userId) {
     // Still unsigned — resend the invitation link + draft attachment. Reuse
     // the existing pending invitation if it's still valid, otherwise issue a
     // fresh one (the old token stays in the DB, simply superseded).

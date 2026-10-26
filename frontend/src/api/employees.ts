@@ -3,11 +3,13 @@ import type {
   Employee,
   EmployeeBirthday,
   EmployeeCompensationSummary,
+  EmployeeContractEntry,
   EmployeeDirectoryEntry,
   EmployeePaymentHistoryEntry,
   EmployeeTermination,
   EmployeeTerminationOptions,
   Invitation,
+  MyPendingContract,
   PayrollEntryType,
 } from './types.js';
 
@@ -119,6 +121,51 @@ export const employeesApi = {
     const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/resend-contract`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  listEmployeeContracts: async (token: string, employeeId: string): Promise<EmployeeContractEntry[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/contracts`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  getContractPdfById: async (token: string, employeeId: string, compensationId: string): Promise<Blob> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/contracts/${compensationId}/pdf`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.blob();
+  },
+
+  getMyPendingContract: async (token: string): Promise<MyPendingContract | null> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/users/me/contract`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return (await res.json()).contract;
+  },
+
+  confirmMyContract: async (
+    token: string,
+    data: {
+      compensationId: string;
+      countryOfResidence: string;
+      paymentMethodId: string;
+      paymentAccountSubType: 'iban' | 'ach' | 'username';
+      paymentAccountData: string;
+      taxId?: string;
+      acceptedContract: boolean;
+    },
+  ): Promise<{ success: true }> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/users/me/contract`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
     });
     if (!res.ok) await throwApiError(res);
     return res.json();

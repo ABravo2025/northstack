@@ -1,7 +1,7 @@
 import { asksFor } from './paymentMethodService.js';
 import { randomUUID } from 'crypto';
 import prisma from '../../lib/prisma.js';
-import type { PaymentAccountSubType, Session, Tenant, User } from '@prisma/client';
+import type { EmployeeCompensation, PaymentAccountSubType, Session, Tenant, User } from '@prisma/client';
 import { findInvitationByToken } from '../tenant/invitationService.js';
 import {
   hashPassword,
@@ -104,10 +104,7 @@ export async function getContractConfirmationDetails(token: string): Promise<Get
   const { invitation, employee, compensation } = loaded;
 
   const tenant = await prisma.tenant.findUniqueOrThrow({ where: { id: invitation.tenantId } });
-  const paymentMethods = await prisma.paymentMethodDefinition.findMany({
-    where: { tenantId: invitation.tenantId, isActive: true },
-    orderBy: { order: 'asc' },
-  });
+  const paymentMethods = await listSigningPaymentMethods(invitation.tenantId);
 
   return {
     success: true,
@@ -125,16 +122,91 @@ export async function getContractConfirmationDetails(token: string): Promise<Get
       effectiveFrom: compensation.effectiveFrom.toISOString(),
       nationality: employee.nationality,
       timeOffPolicyNames: employee.timeOffPolicies.map((a) => a.timeOffPolicy.name),
-      paymentMethods: paymentMethods.map((m) => ({ id: m.id, name: m.name, kind: m.kind, asks: asksFor(m.kind === 'other' && m.name === 'Wire transfer' ? 'bank_intl' : m.kind) })),
+      paymentMethods,
       taxId: (await taxIdAsked(tenant, employee.id, employee.personType)),
     },
   };
 }
 
-async function taxIdAsked(tenant: Tenant, employeeId: string, personType: string | null): Promise<{ kind: TaxIdKind; required: boolean } | null> {
+// Shared with My contract (employeeContractsService.ts) — both signing flows ask the same thing.
+export async function taxIdAsked(tenant: Tenant, employeeId: string, personType: string | null): Promise<{ kind: TaxIdKind; required: boolean } | null> {
   if (!getPlanLimits(tenant).payrollEnabled || !isPaymentEncryptionConfigured()) return null;
   if (await hasEmployeeTaxId(tenant.id, employeeId)) return null;
   return { kind: personTaxIdKind(tenant.country), required: personTaxIdRequired(tenant.country, personType) };
+}
+
+// The tax ID typed while signing: null when fine (or nothing to check), else the error to show.
+// Shared by both signing flows.
+export function checkSigningTaxId(ask: { kind: TaxIdKind; required: boolean } | null, raw: string): string | null {
+  if (!ask) return null;
+  if (!raw && ask.required) return `${taxIdLabel(ask.kind)} is required`;
+  if (raw) {
+    const check = validateTaxId(ask.kind, raw);
+    if (!check.ok) return check.error ?? 'Invalid tax ID';
+  }
+  return null;
+}
+
+// The payment methods a person picks from when signing — shared by the public invitation flow
+// above and the logged-in one (employeeContractsService.ts's My contract).
+export async function listSigningPaymentMethods(tenantId: string): Promise<ContractConfirmationDetails['paymentMethods']> {
+  const methods = await prisma.paymentMethodDefinition.findMany({
+    where: { tenantId, isActive: true },
+    orderBy: { order: 'asc' },
+  });
+  return methods.map((m) => ({ id: m.id, name: m.name, kind: m.kind, asks: asksFor(m.kind === 'other' && m.name === 'Wire transfer' ? 'bank_intl' : m.kind) }));
+}
+
+// The signed version of a contract (same PDF as the draft, plus the date/time/IP evidence) —
+// shared by both signing flows.
+export async function renderSignedContractPdf(
+  tenant: Parameters<typeof toTenantBranding>[0],
+  employee: { firstName: string; lastName: string; nationality: string | null },
+  compensation: EmployeeCompensation & { payFrequency: { name: string } },
+  confirmedAt: Date,
+  ip: string,
+): Promise<Buffer> {
+  const bytes = await renderContractPdf({
+    company: toTenantBranding(tenant),
+    employeeName: `${employee.firstName} ${employee.lastName}`,
+    nationality: employee.nationality,
+    jobTitle: compensation.jobTitle,
+    description: compensation.description,
+    compensationType: compensation.compensationType,
+    rateCents: compensation.rateCents,
+    currency: compensation.currency,
+    payFrequencyName: compensation.payFrequency.name,
+    effectiveFrom: compensation.effectiveFrom,
+    signed: true,
+    confirmedAt,
+    confirmedIp: ip,
+  });
+  return Buffer.from(bytes);
+}
+
+// The signer's copy, cc'd to the tenant owner and whoever created the contract — shared by both
+// signing flows. Must be awaited (see the note at the end of confirmContract).
+export async function sendSignedContractCopy(input: {
+  tenantId: string;
+  tenantName: string;
+  signer: { email: string; locale: string | null };
+  employee: { firstName: string; lastName: string };
+  createdByUserId: string;
+  pdfBuffer: Buffer;
+}): Promise<void> {
+  const [owner, creator] = await Promise.all([
+    prisma.user.findFirst({ where: { tenantId: input.tenantId, role: 'owner' } }),
+    prisma.user.findUnique({ where: { id: input.createdByUserId } }),
+  ]);
+  const cc = [...new Set([owner?.email, creator?.email].filter((e): e is string => Boolean(e) && e !== input.signer.email))];
+  await sendContractSignedEmail({
+    to: input.signer.email,
+    cc,
+    tenantName: input.tenantName,
+    employeeName: `${input.employee.firstName} ${input.employee.lastName}`,
+    pdfBuffer: input.pdfBuffer,
+    locale: input.signer.locale,
+  });
 }
 
 export interface ConfirmContractInput {
@@ -200,13 +272,8 @@ export async function confirmContract(input: ConfirmContractInput): Promise<Conf
   // Payroll v2: their tax ID, when it's asked (see taxIdAsked) — required in AR/US for employees.
   const taxIdAsk = await taxIdAsked(tenant, employee.id, employee.personType);
   const taxIdRaw = (input.taxId ?? '').trim();
-  if (taxIdAsk) {
-    if (!taxIdRaw && taxIdAsk.required) return { success: false, error: `${taxIdLabel(taxIdAsk.kind)} is required`, field: 'taxId' };
-    if (taxIdRaw) {
-      const check = validateTaxId(taxIdAsk.kind, taxIdRaw);
-      if (!check.ok) return { success: false, error: check.error, field: 'taxId' };
-    }
-  }
+  const taxIdError = checkSigningTaxId(taxIdAsk, taxIdRaw);
+  if (taxIdError) return { success: false, error: taxIdError, field: 'taxId' };
 
   // Same guard as invitationService.ts's acceptInvitation — confirming a contract creates a new
   // active seat too. Checked before the (fairly expensive) PDF render below.
@@ -217,22 +284,7 @@ export async function confirmContract(input: ConfirmContractInput): Promise<Conf
 
   const encryptedAccountData = encryptPaymentAccountData(input.paymentAccountData.trim());
   const confirmedAt = new Date();
-  const signedPdfBytes = await renderContractPdf({
-    company: toTenantBranding(tenant),
-    employeeName: `${employee.firstName} ${employee.lastName}`,
-    nationality: employee.nationality,
-    jobTitle: compensation.jobTitle,
-    description: compensation.description,
-    compensationType: compensation.compensationType,
-    rateCents: compensation.rateCents,
-    currency: compensation.currency,
-    payFrequencyName: compensation.payFrequency.name,
-    effectiveFrom: compensation.effectiveFrom,
-    signed: true,
-    confirmedAt,
-    confirmedIp: input.ip,
-  });
-  const signedPdfBuffer = Buffer.from(signedPdfBytes);
+  const signedPdfBuffer = await renderSignedContractPdf(tenant, employee, compensation, confirmedAt, input.ip);
 
   const result = await prisma.$transaction(async (tx) => {
     // Read separately rather than added to findInvitationByToken's select — that helper also backs
@@ -304,18 +356,13 @@ export async function confirmContract(input: ConfirmContractInput): Promise<Conf
   // errors (see mailer.ts's dispatchMail), but this must still be awaited, not fired-and-forgotten
   // — an un-awaited promise can be killed mid-flight by Vercel once the HTTP response is sent
   // (confirmed 2026-08-25 with signup verification emails; this call site had the same gap).
-  const [owner, creator] = await Promise.all([
-    prisma.user.findFirst({ where: { tenantId: invitation.tenantId, role: 'owner' } }),
-    prisma.user.findUnique({ where: { id: compensation.createdByUserId } }),
-  ]);
-  const cc = [...new Set([owner?.email, creator?.email].filter((e): e is string => Boolean(e) && e !== result.user.email))];
-  await sendContractSignedEmail({
-    to: result.user.email,
-    cc,
+  await sendSignedContractCopy({
+    tenantId: invitation.tenantId,
     tenantName: tenant.name,
-    employeeName: `${employee.firstName} ${employee.lastName}`,
+    signer: result.user,
+    employee,
+    createdByUserId: compensation.createdByUserId,
     pdfBuffer: signedPdfBuffer,
-    locale: result.user.locale,
   });
 
   if (taxIdAsk && taxIdRaw) await setEmployeeTaxId(tenant.id, employee.id, taxIdRaw, result.user.id);

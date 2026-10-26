@@ -1140,6 +1140,53 @@ export interface EmployeeCompensationSummary {
   hasContractPdf: boolean;
 }
 
+// Contracts tab of the People detail panel (2026-10-26) — GET /api/hr/employees/:id/contracts.
+export type ContractGroup = 'pending_signature' | 'active' | 'upcoming' | 'ended';
+export type ContractSignature = 'signed' | 'pending' | 'overdue' | 'not_required';
+
+export interface EmployeeContractEntry {
+  id: string;
+  group: ContractGroup;
+  signature: ContractSignature;
+  compensationType: PayrollCompensationType;
+  rateCents: number;
+  currency: string;
+  payFrequencyName: string;
+  jobTitle: string;
+  description: string;
+  effectiveFrom: string;
+  effectiveTo: string | null;
+  note: string | null;
+  confirmedAt: string | null;
+  confirmedIp: string | null;
+  paymentMethodName: string | null;
+  createdAt: string;
+  createdByName: string | null;
+  hasContractPdf: boolean;
+  isCurrent: boolean;
+}
+
+// My contract (2026-10-26) — a first contract waiting for the signed-in person's signature.
+export interface MyPendingContract {
+  compensationId: string;
+  tenantName: string;
+  employeeFirstName: string;
+  employeeLastName: string;
+  jobTitle: string;
+  description: string;
+  compensationType: PayrollCompensationType;
+  rateCents: number;
+  currency: string;
+  payFrequencyName: string;
+  effectiveFrom: string;
+  nationality: string | null;
+  countryOfResidence: string | null;
+  timeOffPolicyNames: string[];
+  paymentMethods: { id: string; name: string; kind: string; asks: string }[];
+  // Asked only when it's missing and collected (Payroll + encryption key) — same as the invitation flow.
+  taxId: { kind: 'cuit' | 'cuil' | 'ein' | 'ssn' | 'other'; required: boolean } | null;
+}
+
 export interface CompensationStatusEntry {
   employeeId: string;
   employeeFirstName: string;

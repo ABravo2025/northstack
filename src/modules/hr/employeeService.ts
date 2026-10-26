@@ -303,7 +303,7 @@ export async function listEmployees(tenantId: string | null | undefined, visible
       activeTimeOffTag: activeTimeOff
         ? { policyName: activeTimeOff.timeOffPolicy.name, color: activeTimeOff.timeOffPolicy.color }
         : null,
-      contractStatus: computeContractStatus(employee.personType, employee.userId, compensations[0]),
+      contractStatus: computeContractStatus(employee.personType, compensations[0]),
       payFrequencyName: currentCompensation?.payFrequency.name ?? null,
       tags: tags.filter((tag) => tag.entityId === employee.id),
     };
@@ -320,8 +320,7 @@ const CONTRACT_EXPIRY_DAYS = 3;
 
 function computeContractStatus(
   personType: PersonType | null,
-  userId: string | null,
-  firstCompensation: { createdAt: Date } | undefined,
+  firstCompensation: { createdAt: Date; confirmedAt: Date | null } | undefined,
 ): 'sin_compensacion' | 'confirmado' | 'pendiente' | 'vencido' | null {
   if (personType !== 'contractor' && personType !== 'employee') {
     return null;
@@ -329,7 +328,9 @@ function computeContractStatus(
   if (!firstCompensation) {
     return 'sin_compensacion';
   }
-  if (userId) {
+  // The first contract's own signature, not "has a linked User" (2026-10-26) — someone with a
+  // login can still have an unsigned first contract (My contract).
+  if (firstCompensation.confirmedAt) {
     return 'confirmado';
   }
   const ageMs = Date.now() - firstCompensation.createdAt.getTime();

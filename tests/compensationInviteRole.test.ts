@@ -23,12 +23,16 @@ vi.mock('../src/lib/prisma.js', () => ({
 vi.mock('../src/modules/tenant/invitationService.js', () => ({
   createInvitation: vi.fn(async () => ({ success: true, invitation: { token: 'tok' } })),
 }));
+vi.mock('../src/modules/hr/contractToSignNotice.js', () => ({
+  sendContractToSignNotice: vi.fn(async () => ({ success: true })),
+}));
 vi.mock('../src/modules/hr/contractPdfService.js', () => ({ renderContractPdf: vi.fn(async () => new Uint8Array([1])) }));
 vi.mock('../src/modules/tenant/tenantProfileService.js', () => ({ toTenantBranding: vi.fn(() => ({})) }));
 vi.mock('../src/modules/activity/activityLogService.js', () => ({ recordActivity: vi.fn(async () => {}) }));
 
 import { createCompensation } from '../src/modules/hr/employeeCompensationService.js';
 import { createInvitation } from '../src/modules/tenant/invitationService.js';
+import { sendContractToSignNotice } from '../src/modules/hr/contractToSignNotice.js';
 
 const baseInput = {
   tenantId: 't-1',
@@ -46,6 +50,7 @@ const baseInput = {
 describe('createCompensation — contract-confirmation invitation role', () => {
   beforeEach(() => {
     vi.mocked(createInvitation).mockClear();
+    vi.mocked(sendContractToSignNotice).mockClear();
     existingCompensations = 0;
     employee.userId = null;
   });
@@ -66,5 +71,20 @@ describe('createCompensation — contract-confirmation invitation role', () => {
     existingCompensations = 1;
     await createCompensation({ ...baseInput, inviteRoleId: 'role-admin' });
     expect(createInvitation).not.toHaveBeenCalled();
+  });
+
+  it('tells someone who already has a login to sign in the app instead of inviting them', async () => {
+    employee.userId = 'u-ana';
+    await createCompensation(baseInput);
+    expect(createInvitation).not.toHaveBeenCalled();
+    expect(sendContractToSignNotice).toHaveBeenCalledTimes(1);
+  });
+
+  it('sends nothing on a raise for someone with a login', async () => {
+    employee.userId = 'u-ana';
+    existingCompensations = 1;
+    await createCompensation(baseInput);
+    expect(createInvitation).not.toHaveBeenCalled();
+    expect(sendContractToSignNotice).not.toHaveBeenCalled();
   });
 });

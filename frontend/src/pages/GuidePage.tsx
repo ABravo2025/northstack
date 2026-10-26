@@ -1123,7 +1123,7 @@ export default function GuidePage() {
                 </div>
                 <div className="help-fielddef">
                   <dt>Contractor / Employee</dt>
-                  <dd>Necesita un contrato de pago inicial (tarifa, moneda, frecuencia) completado en el mismo formulario "Add Person" (Agregar persona) antes de guardar.</dd>
+                  <dd>Necesita un contrato de pago inicial (tarifa, moneda, frecuencia) — en el formulario "Add Person" (Agregar persona), o al cambiarle el Tipo desde su perfil.</dd>
                 </div>
               </dl>
               <p>
@@ -1154,6 +1154,25 @@ export default function GuidePage() {
                 Un Contractor o Empleado nuevo no necesita este paso: al guardarlo se le envía el contrato, y al
                 confirmarlo se le crea el login. Elegí su <strong>Rol en la plataforma</strong> en el mismo formulario
                 de "Add Person" (junto a los campos del contrato) — Member por defecto.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Cambiar el tipo de una persona y ver sus contratos</h3>
+              <p>
+                En el perfil de una persona, el campo <strong>Tipo</strong> (sección Contrato) cambia entre Profile,
+                Contractor y Employee. Si pasás un Profile a Contractor o Employee y todavía no tiene contrato, se
+                abre el <strong>contrato inicial</strong> con los mismos campos que en "Add Person": al guardarlo se le
+                envía el contrato para firmar. Si esa persona ya tiene login, en vez de una invitación le llega un
+                email y un aviso en la app ("Tenés un contrato pendiente de firma") que la lleva a{' '}
+                <strong>Mi contrato</strong>, donde carga sus datos de cobro y lo firma sin salir de Northstack.
+              </p>
+              <p>
+                La pestaña <strong>Contratos</strong> del perfil muestra todo el historial, agrupado en Pendientes de
+                firma, Activos, Próximos y Finalizados. Hacé clic en uno para ver sus condiciones, quién lo creó,
+                cuándo y desde qué IP se firmó, abrir o descargar su PDF, y reenviarlo si es el contrato vigente. Solo
+                el primer contrato de cada persona se firma; un aumento o cambio posterior figura como "No requiere
+                firma". El campo Tipo y la pestaña Contratos son para quien gestiona la nómina.
               </p>
             </div>
 
@@ -1238,7 +1257,7 @@ export default function GuidePage() {
                 </div>
                 <div className="help-fielddef">
                   <dt>Contractor / Employee</dt>
-                  <dd>Requires an initial pay contract (rate, currency, frequency) filled in the same "Add Person" form before saving.</dd>
+                  <dd>Requires an initial pay contract (rate, currency, frequency) — in the "Add Person" form, or when switching their Type from their profile.</dd>
                 </div>
               </dl>
               <p>
@@ -1268,6 +1287,26 @@ export default function GuidePage() {
                 A new Contractor or Employee doesn't need this step: saving them sends their contract, and confirming
                 it creates their login. Choose their <strong>Platform role</strong> in the same "Add Person" form
                 (next to the contract fields) — Member by default.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Changing someone's type, and their contracts</h3>
+              <p>
+                On a person's profile, the <strong>Type</strong> field (Contract section) switches between Profile,
+                Contractor and Employee. Switching a Profile to Contractor or Employee when they have no contract yet
+                opens the <strong>initial contract</strong>, with the same fields as "Add Person" — saving it sends
+                them their contract to sign. If that person already has a login, instead of an invitation they get an
+                email and an in-app notice ("You have a contract waiting for your signature") that takes them to{' '}
+                <strong>My contract</strong>, where they add their payment details and sign it without leaving
+                Northstack.
+              </p>
+              <p>
+                The profile's <strong>Contracts</strong> tab shows the whole history, grouped into Pending signature,
+                Active, Upcoming and Ended. Click one to see its terms, who created it, when and from which IP it was
+                signed, open or download its PDF, and resend it if it's the current contract. Only a person's first
+                contract is signed; a later raise or change shows as "No signature needed". The Type field and the
+                Contracts tab are for whoever manages payroll.
               </p>
             </div>
 

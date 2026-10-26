@@ -52,6 +52,13 @@
     "body": "El contrato de {{employeeName}} con {{tenantName}} acaba de confirmarse y firmarse.",
     "attachmentNote": "El contrato firmado está adjunto a este correo."
   },
+  "contractToSign": {
+    "subject": "Tenés un contrato para firmar — {{tenantName}}",
+    "greeting": "Hola {{name}},",
+    "body": "{{tenantName}} preparó un contrato para vos. Ingresá a Northstack para revisarlo, cargar tus datos de cobro y firmarlo.",
+    "linkText": "Revisar y firmar tu contrato",
+    "attachmentNote": "Te adjuntamos un borrador del contrato para que lo tengas."
+  },
   "twoStep": {
     "greeting": "Hola {{name}},",
     "notYou": "Si no fuiste vos, cambiá tu contraseña ya mismo y avisale al administrador de tu empresa o a info@joinnorthstack.com.",

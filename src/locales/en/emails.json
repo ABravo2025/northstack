@@ -52,6 +52,13 @@
     "body": "{{employeeName}}'s contract with {{tenantName}} was just confirmed and signed.",
     "attachmentNote": "The signed contract is attached to this email."
   },
+  "contractToSign": {
+    "subject": "You have a contract to sign — {{tenantName}}",
+    "greeting": "Hi {{name}},",
+    "body": "{{tenantName}} prepared a contract for you. Sign in to Northstack to review it, add your payment details and sign it.",
+    "linkText": "Review and sign your contract",
+    "attachmentNote": "A draft of the contract is attached to this email for your records."
+  },
   "twoStep": {
     "greeting": "Hi {{name}},",
     "notYou": "If this wasn't you, change your password right away and contact your company's admin or info@joinnorthstack.com.",

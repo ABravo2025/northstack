@@ -478,6 +478,40 @@ export async function sendContractSignedEmail(input: SendContractSignedEmailInpu
   }, 'Failed to send contract signed email:', lng);
 }
 
+// A first contract for someone who already has a Northstack login (e.g. a Profile switched to
+// Contractor/Employee, 2026-10-26): no invitation can go out (they already belong to the tenant),
+// so this points them to /my-contract, where they sign it logged in. Transactional, no category.
+export async function sendContractToSignEmail(input: {
+  to: string;
+  locale?: string | null;
+  firstName: string;
+  tenantName: string;
+  logoUrl?: string | null;
+  url: string;
+  pdfBuffer: Buffer;
+}): Promise<void> {
+  if (!mailerConfigured()) return;
+  const lng = resolveEmailLocale(input.locale);
+  const t = (key: string, opts?: Record<string, unknown>) => i18n.t(`contractToSign.${key}`, { lng, ns: 'emails', ...opts });
+  const vars = { name: input.firstName, tenantName: input.tenantName };
+  await dispatchMail({
+    from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
+    to: input.to,
+    subject: t('subject', vars),
+    text: [t('greeting', vars), '', t('body', vars), '', `${t('linkText')}: ${input.url}`, '', t('attachmentNote')].join('\n'),
+    html: [
+      input.logoUrl
+        ? `<p><img src="${escapeHtml(input.logoUrl)}" alt="${escapeHtml(input.tenantName)}" style="max-height:48px;max-width:160px" /></p>`
+        : '',
+      `<p>${t('greeting', { ...vars, name: escapeHtml(input.firstName) })}</p>`,
+      `<p>${t('body', { ...vars, tenantName: strong(input.tenantName) })}</p>`,
+      `<p><a href="${input.url}">${t('linkText')}</a></p>`,
+      `<p>${t('attachmentNote')}</p>`,
+    ].join('\n'),
+    attachments: [{ filename: 'contract-draft.pdf', content: input.pdfBuffer, contentType: 'application/pdf' }],
+  }, 'Failed to send contract-to-sign email:', lng);
+}
+
 export interface SendPaymentMethodReminderEmailInput {
   to: string;
   tenantName: string;

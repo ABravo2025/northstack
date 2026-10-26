@@ -49,7 +49,8 @@ import {
 import { requirePayrollAccess } from '../lib/payrollAccess.js';
 import { redactEntityFields, redactEntityListFields } from '../modules/auth/fieldVisibilityService.js';
 import { exportEmployeesToCsv, getEmployeesCsvTemplate, importEmployeesFromCsv } from '../modules/csv/csvService.js';
-import { validateSession } from '../lib/httpAuth.js';
+import { getClientIp, validateSession } from '../lib/httpAuth.js';
+import { confirmMyContract, getContractPdfById, getMyPendingContract, listEmployeeContracts } from '../modules/hr/employeeContractsService.js';
 import type { AuthenticatedUser } from '../modules/auth/authService.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 import { checkTaxIdForTenant, maskedTaxIds, setEmployeeTaxId } from '../modules/hr/employeeTaxIdService.js';
@@ -534,6 +535,82 @@ employeesRouter.post('/api/hr/employees/:employeeId/resend-contract', async (req
   const result = await resendEmployeeContract(user.tenantId!, req.params.employeeId, user.id);
   if (!result.success) {
     return res.status(400).json({ error: result.error });
+  }
+  return res.json({ success: true });
+});
+
+// Contracts tab of the People detail panel (2026-10-26) — every contract of the person, grouped by
+// where it stands; payroll data, so the same gate as /compensation.
+employeesRouter.get('/api/hr/employees/:employeeId/contracts', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (!requirePayrollAccess(user, res)) {
+    return;
+  }
+
+  const result = await listEmployeeContracts(user.tenantId!, req.params.employeeId);
+  if (!result.success) {
+    return res.status(404).json({ error: result.error });
+  }
+  return res.json(result.contracts);
+});
+
+employeesRouter.get('/api/hr/employees/:employeeId/contracts/:compensationId/pdf', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (!requirePayrollAccess(user, res)) {
+    return;
+  }
+
+  const result = await getContractPdfById(user.tenantId!, req.params.employeeId, req.params.compensationId);
+  if (!result.success) {
+    return res.status(404).json({ error: result.error });
+  }
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', 'inline; filename="contract.pdf"');
+  return res.send(Buffer.from(result.pdfBytes!));
+});
+
+// My contract (2026-10-26): a first contract waiting for the signature of someone who already has
+// a login — any signed-in user, only ever their own. { contract: null } when there's nothing to sign.
+employeesRouter.get('/api/users/me/contract', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (!user.tenantId) {
+    return res.json({ contract: null });
+  }
+  return res.json({ contract: await getMyPendingContract(user.id, user.tenantId) });
+});
+
+employeesRouter.post('/api/users/me/contract', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (!user.tenantId) {
+    return res.status(404).json({ error: 'This contract is no longer waiting for your signature' });
+  }
+  const body = req.body ?? {};
+  const result = await confirmMyContract({
+    userId: user.id,
+    tenantId: user.tenantId,
+    compensationId: String(body.compensationId ?? ''),
+    countryOfResidence: String(body.countryOfResidence ?? ''),
+    paymentMethodId: String(body.paymentMethodId ?? ''),
+    paymentAccountSubType: ['iban', 'ach', 'username'].includes(body.paymentAccountSubType) ? body.paymentAccountSubType : null,
+    paymentAccountData: String(body.paymentAccountData ?? ''),
+    taxId: typeof body.taxId === 'string' ? body.taxId : undefined,
+    acceptedContract: body.acceptedContract === true,
+    ip: getClientIp(req),
+  });
+  if (!result.success) {
+    return res.status(400).json({ error: result.error, field: result.field });
   }
   return res.json({ success: true });
 });

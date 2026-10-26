@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../api';
-import type { EmployeeCompensationSummary, EmployeePaymentHistoryEntry } from '../../api';
+import type { EmployeeCompensationSummary, EmployeeContractEntry, EmployeePaymentHistoryEntry } from '../../api';
 import { useToast } from '../common/ToastProvider';
 import Avatar from '../common/Avatar';
 import StatusChip from '../common/StatusChip';
@@ -18,6 +18,10 @@ import TagInput from '../common/TagInput';
 import type { TagAssignmentLite, EmployeeTerminationOptions } from '../../api';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import EntityProjectsSection from '../projects/EntityProjectsSection';
+import TableBody from '../common/TableBody';
+import InitialContractModal from './InitialContractModal';
+import ContractDetailsModal from './ContractDetailsModal';
+import { CONTRACT_GROUP_COLORS, CONTRACT_GROUP_ORDER } from './contractGroups';
 
 interface EmployeeOverviewPanelProps {
   employee: any;
@@ -101,7 +105,12 @@ export default function EmployeeOverviewPanel({
   const [tags, setTags] = useState<TagAssignmentLite[]>([]);
   const [terminationOptions, setTerminationOptions] = useState<EmployeeTerminationOptions | null>(null);
   const [terminateModalOpen, setTerminateModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'payments'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'payments' | 'contracts'>('overview');
+  // Contracts tab + Type switch (2026-10-26). null = not loaded yet.
+  const [contracts, setContracts] = useState<EmployeeContractEntry[] | null>(null);
+  const [openContract, setOpenContract] = useState<EmployeeContractEntry | null>(null);
+  const [initialContractType, setInitialContractType] = useState<'contractor' | 'employee' | null>(null);
+  const [savingPersonType, setSavingPersonType] = useState(false);
   const [paymentHistory, setPaymentHistory] = useState<EmployeePaymentHistoryEntry[]>([]);
   const [loadingPaymentHistory, setLoadingPaymentHistory] = useState(false);
   const hasContract = canManagePayroll && HAS_CONTRACT_STATUSES.has(employee.contractStatus);
@@ -113,7 +122,7 @@ export default function EmployeeOverviewPanel({
   // make the desktop mini-toggle-row (Overview vs Payment History) show neither as active the
   // moment someone picks Notes/Tasks/Activity on the right column — those are genuinely
   // independent selections on desktop and must stay that way.
-  const [mobileSection, setMobileSection] = useState<'overview' | 'payments' | 'notes' | 'tasks' | 'activity'>('overview');
+  const [mobileSection, setMobileSection] = useState<'overview' | 'payments' | 'contracts' | 'notes' | 'tasks' | 'activity'>('overview');
   const [sidebarCounts, setSidebarCounts] = useState({ notes: 0, tasks: 0, activity: 0 });
   const isMobile = useIsMobile();
 
@@ -144,6 +153,37 @@ export default function EmployeeOverviewPanel({
       .finally(() => setLoadingPaymentHistory(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [employee.id, canManagePayroll]);
+
+  const loadContracts = () => {
+    if (!canManagePayroll) return;
+    api
+      .listEmployeeContracts(token, employee.id)
+      .then(setContracts)
+      .catch(() => setContracts([]));
+  };
+
+  useEffect(() => {
+    setContracts(null);
+    loadContracts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [employee.id, canManagePayroll, employee.contractStatus]);
+
+  // Profile -> Contractor/Employee with no contract yet needs the initial contract first (that's
+  // what sends them their contract to sign); every other change is a plain save.
+  const handlePersonTypeChange = async (next: string) => {
+    if ((next === 'contractor' || next === 'employee') && contracts !== null && contracts.length === 0) {
+      setInitialContractType(next);
+      return;
+    }
+    setSavingPersonType(true);
+    try {
+      await save({ personType: next || null });
+    } catch (error) {
+      toast.error(t('employeeOverview.toasts.personTypeFailed', { error: (error as Error).message }));
+    } finally {
+      setSavingPersonType(false);
+    }
+  };
 
   const handleCancelTermination = async () => {
     if (!terminationOptions?.pendingTermination) return;
@@ -242,8 +282,72 @@ export default function EmployeeOverviewPanel({
   // Whichever toggle is relevant for the current layout picks this — see the mobileSection
   // comment above for why desktop and mobile read from different state here.
   const showingPayments = isMobile ? mobileSection === 'payments' : activeTab === 'payments';
+  const showingContracts = isMobile ? mobileSection === 'contracts' : activeTab === 'contracts';
 
-  const overviewContent = showingPayments ? (
+  const contractsContent = (
+    <div className="overview-panel-left">
+      {CONTRACT_GROUP_ORDER.map((group) => {
+        const rows = (contracts ?? []).filter((c) => c.group === group);
+        return (
+          <div key={group} className="field-group">
+            <h4 className="field-group-title">
+              {t(`employeeOverview.contracts.groups.${group}`)}
+              {rows.length > 0 ? ` (${rows.length})` : ''}
+            </h4>
+            <div className="overview-field overview-field-full">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>{t('employeeOverview.contracts.columns.jobTitle')}</th>
+                    <th>{t('employeeOverview.contracts.columns.rate')}</th>
+                    <th>{t('employeeOverview.contracts.columns.payFrequency')}</th>
+                    <th>{t('employeeOverview.contracts.columns.period')}</th>
+                    <th>{t('employeeOverview.contracts.columns.signature')}</th>
+                  </tr>
+                </thead>
+                <TableBody
+                  colSpan={5}
+                  isEmpty={contracts !== null && rows.length === 0}
+                  empty={{ title: t(`employeeOverview.contracts.empty.${group}`) }}
+                >
+                  {contracts === null ? (
+                    <tr>
+                      <td colSpan={5}>
+                        <span className="skeleton-bar" style={{ width: 160 }} />
+                      </td>
+                    </tr>
+                  ) : (
+                    rows.map((c) => (
+                      <tr key={c.id} className="cursor-pointer" onClick={() => setOpenContract(c)}>
+                        <td className="font-medium">{c.jobTitle}</td>
+                        <td>{formatMoney(c.rateCents, c.currency)}</td>
+                        <td>{c.payFrequencyName}</td>
+                        <td>
+                          {c.effectiveFrom.slice(0, 10)} → {c.effectiveTo ? c.effectiveTo.slice(0, 10) : t('employeeOverview.contracts.openEnded')}
+                        </td>
+                        <td>
+                          {c.signature === 'not_required' ? (
+                            <span className="text-ink-faint dark:text-dark-ink-faint">—</span>
+                          ) : (
+                            <StatusChip
+                              color={c.signature === 'signed' ? CONTRACT_GROUP_COLORS.active : c.signature === 'overdue' ? '#dc2626' : CONTRACT_GROUP_COLORS.pending_signature}
+                              label={t(`employeeOverview.contracts.signature.${c.signature}`)}
+                            />
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </TableBody>
+              </table>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  const overviewContent = showingContracts ? contractsContent : showingPayments ? (
     <div className="overview-panel-left">
       <div className="field-group">
         <h4 className="field-group-title">{t('employeeOverview.sections.paymentHistory')}</h4>
@@ -376,6 +480,29 @@ export default function EmployeeOverviewPanel({
       <div className="field-group">
         <h4 className="field-group-title">{t('employeeOverview.sections.contract')}</h4>
         <div className="field-group-body">
+          <Field label={t('employeeOverview.fields.personType')}>
+            {/* Payroll data (a Contractor/Employee gets a contract), so only for someone who manages
+                payroll — read-only for everyone else. Plain select, not AutoSaveSelect: switching
+                a Profile with no contract yet opens the initial-contract modal instead of saving. */}
+            {canManagePayroll && canManageEmployees ? (
+              <select
+                className="overview-field-input"
+                value={employee.personType || ''}
+                disabled={savingPersonType || contracts === null}
+                onChange={(e) => handlePersonTypeChange(e.target.value)}
+                aria-label={t('employeeOverview.fields.personType')}
+              >
+                {!employee.personType && <option value="">{t('common.selectPlaceholder')}</option>}
+                <option value="profile">{t('employees.personTypeOptions.profile')}</option>
+                <option value="contractor">{t('employees.personTypeOptions.contractor')}</option>
+                <option value="employee">{t('employees.personTypeOptions.employee')}</option>
+              </select>
+            ) : (
+              <span className="overview-field-value">
+                {employee.personType ? t(`employees.personTypeOptions.${employee.personType}`) : '—'}
+              </span>
+            )}
+          </Field>
           <Field label={t('employeeOverview.fields.contractType')}>
             <AutoSaveSelect
               label={t('employeeOverview.fields.contractType')}
@@ -644,6 +771,13 @@ export default function EmployeeOverviewPanel({
             >
               {t('employeeOverview.tabs.paymentHistory')}
             </button>
+            <button
+              type="button"
+              className={`mini-toggle-opt ${activeTab === 'contracts' ? 'active' : ''}`}
+              onClick={() => setActiveTab('contracts')}
+            >
+              {t('employeeOverview.tabs.contracts')}
+            </button>
           </div>
         )}
 
@@ -664,6 +798,15 @@ export default function EmployeeOverviewPanel({
                   onClick={() => setMobileSection('payments')}
                 >
                   {t('employeeOverview.tabs.payments')}
+                </button>
+              )}
+              {canManagePayroll && (
+                <button
+                  type="button"
+                  className={mobileSection === 'contracts' ? 'active' : ''}
+                  onClick={() => setMobileSection('contracts')}
+                >
+                  {t('employeeOverview.tabs.contracts')}
                 </button>
               )}
               <button
@@ -692,7 +835,7 @@ export default function EmployeeOverviewPanel({
                 (.overview-panel-left, itself `flex flex-1`) becomes a direct flex child of
                 .overview-panel-mobile-body and sizes/scrolls against its bounded height —
                 a plain wrapper div here would swallow that flex-1 with no parent to grow into. */}
-            <div style={{ display: mobileSection === 'overview' || mobileSection === 'payments' ? 'contents' : 'none' }}>
+            <div style={{ display: mobileSection === 'overview' || mobileSection === 'payments' || mobileSection === 'contracts' ? 'contents' : 'none' }}>
               {overviewContent}
             </div>
             <DetailSidebar
@@ -729,6 +872,24 @@ export default function EmployeeOverviewPanel({
           title={t('employeeOverview.payslipModal.contractTitle')}
           downloadFilename="contract.pdf"
           helperText={t('employeeOverview.payslipModal.contractHelperText')}
+        />
+      )}
+      {openContract && (
+        <ContractDetailsModal token={token} employeeId={employee.id} contract={openContract} onClose={() => setOpenContract(null)} />
+      )}
+      {initialContractType && (
+        <InitialContractModal
+          open
+          token={token}
+          employee={employee}
+          targetType={initialContractType}
+          onClose={() => setInitialContractType(null)}
+          onDone={(updated) => {
+            setInitialContractType(null);
+            if (updated) onSaved(updated);
+            onChanged();
+            loadContracts();
+          }}
         />
       )}
       {paymentPayslipEntryId && (

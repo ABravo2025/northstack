@@ -1,6 +1,7 @@
 import prisma from '../../lib/prisma.js';
 import type { EmployeeCompensation, PayrollCompensationType, PersonType } from '@prisma/client';
 import { createInvitation } from '../tenant/invitationService.js';
+import { sendContractToSignNotice } from './contractToSignNotice.js';
 import { renderContractPdf } from './contractPdfService.js';
 import { toTenantBranding } from '../tenant/tenantProfileService.js';
 import { recordActivity } from '../activity/activityLogService.js';
@@ -117,7 +118,11 @@ export async function createCompensation(input: CreateCompensationInput): Promis
   // Unidad 6: only the person's very first-ever contract, while they have no
   // linked User yet, sends the contract-confirmation invitation — a
   // reassignment/raise for someone already active doesn't re-invite them.
-  if (isFirstEver && !employee.userId) {
+  // Someone who already has a login (e.g. a Profile switched to Contractor) can't be invited
+  // again — they're told to sign it in the app instead (My contract, 2026-10-26).
+  if (isFirstEver && employee.userId) {
+    await sendContractToSignNotice(employee, draftPdfBuffer);
+  } else if (isFirstEver) {
     await createInvitation({
       tenantId: input.tenantId,
       invitedByUserId: input.createdByUserId,
@@ -202,11 +207,13 @@ export interface CompensationStatusEntry {
   // Payroll v2: tax ID (CUIL / SSN / other), only ever masked; required in AR/US for employees.
   taxIdMasked: string | null;
   taxIdRequired: boolean;
-  // Whether this person has ever confirmed a first-ever contract (has a
-  // linked User) — the right signal for a Draft/Confirmed split, since a
-  // reassignment (Unidad 10) never re-triggers confirmation: a raise's new
-  // EmployeeCompensation row always has confirmedAt: null, even for someone
-  // who's been an active, confirmed team member for years.
+  // Whether this person signed their first-ever contract — the right signal
+  // for a Draft/Confirmed split, since a reassignment (Unidad 10) never
+  // re-triggers confirmation: a raise's new EmployeeCompensation row always
+  // has confirmedAt: null, even for someone who's been an active, confirmed
+  // team member for years. Read from the first contract's own confirmedAt,
+  // not "has a linked User" (2026-10-26) — someone with a login can now
+  // still have an unsigned first contract (My contract).
   isConfirmed: boolean;
   personType: PersonType | null;
   currentCompensation: {
@@ -235,6 +242,11 @@ export async function getCompensationStatus(tenantId: string): Promise<Compensat
     },
     orderBy: { firstName: 'asc' },
   });
+  const firstContracts = await prisma.employeeCompensation.findMany({
+    where: { tenantId, blocksParticipation: true, employeeId: { in: employees.map((e) => e.id) } },
+    select: { employeeId: true, confirmedAt: true },
+  });
+  const signedFirstContract = new Set(firstContracts.filter((c) => c.confirmedAt).map((c) => c.employeeId));
 
   return employees.map((employee) => ({
     employeeId: employee.id,
@@ -244,7 +256,7 @@ export async function getCompensationStatus(tenantId: string): Promise<Compensat
     fileNumber: employee.fileNumber,
     taxIdMasked: employee.taxId ? maskTaxId(employee.taxId.kind as TaxIdKind, employee.taxId.last4) : null,
     taxIdRequired: personTaxIdRequired(tenant.country, employee.personType),
-    isConfirmed: Boolean(employee.userId),
+    isConfirmed: signedFirstContract.has(employee.id),
     personType: employee.personType,
     currentCompensation: employee.compensations[0]
       ? {

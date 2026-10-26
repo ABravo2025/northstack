@@ -197,7 +197,8 @@
       "contractType": "Tipo de contrato",
       "startDate": "Fecha de inicio",
       "endDate": "Fecha de fin",
-      "contractUrl": "URL del contrato"
+      "contractUrl": "URL del contrato",
+      "personType": "Tipo"
     },
     "contractTypeOptions": {
       "partTime": "Medio tiempo",
@@ -238,7 +239,8 @@
       "payments": "Pagos",
       "notes": "Notas",
       "tasks": "Tareas",
-      "activity": "Actividad"
+      "activity": "Actividad",
+      "contracts": "Contratos"
     },
     "contractStatusChips": {
       "confirmed": "Contrato confirmado",
@@ -251,11 +253,56 @@
       "resendContractSuccess": "Contrato reenviado.",
       "resendContractFailed": "Error al reenviar el contrato: {{error}}",
       "unassignPolicyFailed": "Error al quitar la política: {{error}}",
-      "assignPolicyFailed": "Error al asignar la política: {{error}}"
+      "assignPolicyFailed": "Error al asignar la política: {{error}}",
+      "personTypeFailed": "No se pudo cambiar el tipo: {{error}}"
     },
     "payslipModal": {
       "contractTitle": "Contrato",
       "contractHelperText": "Este es el documento exacto generado para este contrato."
+    },
+    "initialContract": {
+      "title": "Contrato inicial — {{type}}",
+      "introInvitation": "Para que {{name}} pase a {{type}}, cargá su primer contrato. Al guardarlo le llega una invitación por email para revisarlo, cargar sus datos de cobro y firmarlo.",
+      "introSignInApp": "Para que {{name}} pase a {{type}}, cargá su primer contrato. Ya usa Northstack, así que le llega un email y un aviso en la app para revisarlo, cargar sus datos de cobro y firmarlo.",
+      "submit": "Guardar y enviar contrato",
+      "saving": "Guardando…",
+      "sentInvitation": "Contrato guardado — se envió la invitación para firmarlo.",
+      "sentToSignInApp": "Contrato guardado — se le pidió que lo firme en la app."
+    },
+    "contracts": {
+      "groups": {
+        "pending_signature": "Pendientes de firma",
+        "active": "Activos",
+        "upcoming": "Próximos",
+        "ended": "Finalizados"
+      },
+      "signature": {
+        "signed": "Firmado",
+        "pending": "Esperando firma",
+        "overdue": "Firma vencida",
+        "not_required": "No requiere firma"
+      },
+      "columns": {
+        "jobTitle": "Puesto",
+        "rate": "Monto",
+        "payFrequency": "Frecuencia de pago",
+        "period": "Período",
+        "signature": "Firma"
+      },
+      "empty": {
+        "pending_signature": "Nada pendiente de firma.",
+        "active": "Sin contrato activo.",
+        "upcoming": "Sin contratos próximos.",
+        "ended": "Sin contratos finalizados."
+      },
+      "openEnded": "sin fecha de fin",
+      "termsSection": "Condiciones",
+      "evidenceSection": "Firma",
+      "createdBy": "Creado por",
+      "signedOn": "Firmado el",
+      "signedIp": "Firmado desde la IP",
+      "paymentMethod": "Medio de cobro",
+      "signatureNotRequired": "No hace falta — solo se firma el primer contrato de cada persona."
     }
   },
   "terminateModal": {

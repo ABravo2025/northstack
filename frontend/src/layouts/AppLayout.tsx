@@ -24,6 +24,7 @@ import { TimeOffTabProvider } from '../contexts/TimeOffTabContext';
 import { useNewVersionAvailable } from '../hooks/useNewVersionAvailable';
 import TaskTimePrompt from '../components/tasks/TaskTimePrompt';
 import { rememberReturnTo } from '../lib/returnTo';
+import { api } from '../api';
 
 interface AppLayoutProps {
   user: any;
@@ -56,6 +57,18 @@ export default function AppLayout({ user, token, tenant, onLogout }: AppLayoutPr
   useEffect(() => {
     setMobileSidebarOpen(false);
   }, [location.pathname]);
+
+  // My contract (2026-10-26): a first contract waiting for this person's signature. Re-checked on
+  // leaving /my-contract, so the banner goes away right after signing.
+  const onMyContractPage = location.pathname === '/my-contract';
+  const [hasContractToSign, setHasContractToSign] = useState(false);
+  useEffect(() => {
+    if (!token || getSupportToken()) return;
+    api
+      .getMyPendingContract(token)
+      .then((contract) => setHasContractToSign(Boolean(contract)))
+      .catch(() => setHasContractToSign(false));
+  }, [token, onMyContractPage]);
 
   if (!token || !user) {
     rememberReturnTo(`${location.pathname}${location.search}`);
@@ -189,6 +202,14 @@ export default function AppLayout({ user, token, tenant, onLogout }: AppLayoutPr
               <span>{t('banners.twoStepRequired')}</span>
               <Link to="/settings/profile#two-step" className="btn btn-outline btn-sm whitespace-nowrap">
                 {t('banners.twoStepTurnOn')}
+              </Link>
+            </div>
+          )}
+          {hasContractToSign && !onMyContractPage && (
+            <div className="alert alert-info mx-4 mt-4 sm:mx-6 flex items-center justify-between gap-3">
+              <span>{t('banners.contractToSign')}</span>
+              <Link to="/my-contract" className="btn btn-outline btn-sm whitespace-nowrap">
+                {t('banners.reviewContract')}
               </Link>
             </div>
           )}

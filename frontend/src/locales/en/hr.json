@@ -197,7 +197,8 @@
       "contractType": "Contract Type",
       "startDate": "Start Date",
       "endDate": "End Date",
-      "contractUrl": "Contract URL"
+      "contractUrl": "Contract URL",
+      "personType": "Type"
     },
     "contractTypeOptions": {
       "partTime": "Part Time",
@@ -238,7 +239,8 @@
       "payments": "Payments",
       "notes": "Notes",
       "tasks": "Tasks",
-      "activity": "Activity"
+      "activity": "Activity",
+      "contracts": "Contracts"
     },
     "contractStatusChips": {
       "confirmed": "Contract confirmed",
@@ -251,11 +253,56 @@
       "resendContractSuccess": "Contract resent.",
       "resendContractFailed": "Failed to resend contract: {{error}}",
       "unassignPolicyFailed": "Failed to unassign policy: {{error}}",
-      "assignPolicyFailed": "Failed to assign policy: {{error}}"
+      "assignPolicyFailed": "Failed to assign policy: {{error}}",
+      "personTypeFailed": "Could not change the type: {{error}}"
     },
     "payslipModal": {
       "contractTitle": "Contract",
       "contractHelperText": "This is the exact document generated for this contract."
+    },
+    "initialContract": {
+      "title": "Initial contract — {{type}}",
+      "introInvitation": "To make {{name}} a {{type}}, add their first contract. Saving it emails them an invitation to review it, add their payment details and sign it.",
+      "introSignInApp": "To make {{name}} a {{type}}, add their first contract. They already use Northstack, so they'll get an email and a notice in the app to review it, add their payment details and sign it.",
+      "submit": "Save and send contract",
+      "saving": "Saving…",
+      "sentInvitation": "Contract saved — invitation sent to sign it.",
+      "sentToSignInApp": "Contract saved — they've been asked to sign it in the app."
+    },
+    "contracts": {
+      "groups": {
+        "pending_signature": "Pending signature",
+        "active": "Active",
+        "upcoming": "Upcoming",
+        "ended": "Ended"
+      },
+      "signature": {
+        "signed": "Signed",
+        "pending": "Waiting for signature",
+        "overdue": "Signature overdue",
+        "not_required": "No signature needed"
+      },
+      "columns": {
+        "jobTitle": "Job title",
+        "rate": "Rate",
+        "payFrequency": "Pay frequency",
+        "period": "Period",
+        "signature": "Signature"
+      },
+      "empty": {
+        "pending_signature": "Nothing waiting for a signature.",
+        "active": "No active contract.",
+        "upcoming": "No upcoming contracts.",
+        "ended": "No ended contracts."
+      },
+      "openEnded": "no end date",
+      "termsSection": "Terms",
+      "evidenceSection": "Signature",
+      "createdBy": "Created by",
+      "signedOn": "Signed on",
+      "signedIp": "Signed from IP",
+      "paymentMethod": "Payment method",
+      "signatureNotRequired": "Not needed — only a person's first contract is signed."
     }
   },
   "terminateModal": {

@@ -49,6 +49,7 @@ import ShiftsSettingsPage from './pages/ShiftsSettingsPage';
 import PayrollOverviewPage from './pages/payroll/PayrollOverviewPage';
 import PayslipsPage from './pages/payroll/PayslipsPage';
 import MyPayslipsPage from './pages/payroll/MyPayslipsPage';
+import MyContractPage from './pages/MyContractPage';
 import VerifyPayslipPage from './pages/payroll/VerifyPayslipPage';
 import ShiftsSchedulePage from './pages/shifts/ShiftsSchedulePage';
 import MyShiftsPage from './pages/shifts/MyShiftsPage';
@@ -456,6 +457,7 @@ export default function App() {
         <Route path="/payroll/people" element={featureOnly('payroll', <PayrollPage token={token ?? ''} section="people" />, '/')} />
         <Route path="/payroll/payslips" element={featureOnly('payroll', <PayslipsPage token={token ?? ''} />, '/')} />
         <Route path="/payroll/mine" element={featureOnly('payroll', <MyPayslipsPage token={token ?? ''} />, '/')} />
+        <Route path="/my-contract" element={<MyContractPage token={token ?? ''} />} />
         <Route path="/hr/payroll" element={<Navigate to="/payroll" replace />} />
         <Route path="/hr/payroll/runs/:runId" element={<LegacyRunRedirect />} />
         <Route path="/companies" element={<CompaniesPage user={user} token={token ?? ''} />} />

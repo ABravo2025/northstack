@@ -105,6 +105,7 @@ https://claude.ai/artifact/VBRYwMv89TezGmnZqHkzGH (se regenera con `tools/linked
 | 2026-10 s05 | mar 27/10 | Dolor + producto | CRM: las ventas que se pierden en el correo | Imagen |
 | 2026-10 s05 | mié 28/10 | Consejos | Checklist de onboarding en 4 etapas | Imagen |
 | 2026-10 s05 | jue 29/10 | Producto | Roles y permisos: no todos ven los sueldos | Imagen |
+| 2026-10 s05 | vie 30/10 | Producto | Video RR.HH. sin planillas (37 s) | Video 1:1 |
 | 2026-11 s01 | mar 3/11 | Dolor + producto | Calendario del equipo: ¿quién está esta semana? | Imagen |
 | 2026-11 s01 | mié 4/11 | Producto | Lo que reemplaza Northstack (6 → 1) | Imagen |
 

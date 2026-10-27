@@ -56,7 +56,7 @@ section.week > h2 { font: 600 13px var(--body); letter-spacing: 0.12em; text-tra
 .post + .post { margin-top: 16px; }
 .post.done { opacity: 0.62; }
 .visual { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
-.visual img { width: 100%; border-radius: 12px; border: 1px solid var(--line); display: block; background: var(--text-box); }
+.visual img, .visual video { width: 100%; border-radius: 12px; border: 1px solid var(--line); display: block; background: var(--text-box); }
 .vnote { font-size: 13px; color: var(--muted); }
 .vnote a { color: var(--accent); font-weight: 600; }
 .copy { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
@@ -87,7 +87,7 @@ h3 { margin: 0; font-size: 22px; line-height: 1.2; text-wrap: balance; }
 footer { margin-top: 48px; color: var(--muted); font-size: 14px; max-width: 70ch; }
 @media (max-width: 720px) {
   .post { grid-template-columns: minmax(0, 1fr); }
-  .visual img { max-width: 360px; }
+  .visual img, .visual video { max-width: 360px; }
   .tips { margin-left: 0; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
@@ -120,17 +120,17 @@ footer { margin-top: 48px; color: var(--muted); font-size: 14px; max-width: 70ch
 <script>
 const POSTS = /*__DATA__*/[];
 const UI = {
-  es: { lede: 'Diez posts listos para copiar y pegar. El español va en tu perfil; el inglés, solo en la página de Northstack. Cada uno tiene su imagen, el texto y el primer comentario.',
-    tips: 'GIF: súbelo con el botón de <b>foto</b> · Carrusel: botón de <b>documento</b>', post: 'Texto del post', comment: 'Primer comentario',
+  es: { lede: 'Once posts listos para copiar y pegar. El español va en tu perfil; el inglés, solo en la página de Northstack. Cada uno tiene su imagen, el texto y el primer comentario.',
+    tips: 'GIF: súbelo con el botón de <b>foto</b> · Carrusel: botón de <b>documento</b> · Video: botón de <b>video</b>', post: 'Texto del post', comment: 'Primer comentario',
     copy: 'Copiar', copied: 'Copiado', done: 'Publicado', today: 'Hoy', late: 'Pendiente', pub: 'Publicado', progress: (n, t) => `<b>${n}</b> de ${t} publicados`,
-    gif: 'GIF animado: súbelo con el botón de foto.', png: 'Imagen 1080 × 1350.', pdf: 'Carrusel PDF: súbelo como documento.', openPdf: 'Abrir el PDF',
+    gif: 'GIF animado: súbelo con el botón de foto.', png: 'Imagen 1080 × 1350.', pdf: 'Carrusel PDF: súbelo como documento.', openPdf: 'Abrir el PDF', video: 'Video MP4 1:1 (está en la rama marketing, carpeta video). Súbelo con el botón de video.',
     noComment: 'Este post no lleva primer comentario.', file: 'Archivo',
     weeks: { 'Semana del 12 oct': 'Semana del 12 de octubre', 'Semana del 19 oct': 'Semana del 19 de octubre', 'Semana del 26 oct': 'Semana del 26 de octubre', 'Semana del 2 nov': 'Semana del 2 de noviembre' },
     foot: 'Los archivos originales están en la rama <code>marketing</code> (carpeta <code>C:\\tmp\\ns-marketing</code>). Para subir una imagen o GIF a LinkedIn, ábrela con un clic y guárdala, o tómala directo de esa carpeta. La marca de "Publicado" queda guardada solo en este navegador.' },
-  en: { lede: 'Ten posts ready to copy and paste. Spanish goes on your profile; English only on the Northstack company page. Each one has its image, the post text and the first comment.',
-    tips: 'GIF: upload with the <b>photo</b> button · Carousel: <b>document</b> button', post: 'Post text', comment: 'First comment',
+  en: { lede: 'Eleven posts ready to copy and paste. Spanish goes on your profile; English only on the Northstack company page. Each one has its image, the post text and the first comment.',
+    tips: 'GIF: upload with the <b>photo</b> button · Carousel: <b>document</b> button · Video: <b>video</b> button', post: 'Post text', comment: 'First comment',
     copy: 'Copy', copied: 'Copied', done: 'Published', today: 'Today', late: 'Pending', pub: 'Published', progress: (n, t) => `<b>${n}</b> of ${t} published`,
-    gif: 'Animated GIF: upload it with the photo button.', png: 'Image 1080 × 1350.', pdf: 'PDF carousel: upload it as a document.', openPdf: 'Open the PDF',
+    gif: 'Animated GIF: upload it with the photo button.', png: 'Image 1080 × 1350.', pdf: 'PDF carousel: upload it as a document.', openPdf: 'Open the PDF', video: 'Square MP4 video (on the marketing branch, video folder). Upload it with the video button.',
     noComment: 'This post has no first comment.', file: 'File',
     weeks: { 'Semana del 12 oct': 'Week of October 12', 'Semana del 19 oct': 'Week of October 19', 'Semana del 26 oct': 'Week of October 26', 'Semana del 2 nov': 'Week of November 2' },
     foot: 'The source files are on the <code>marketing</code> branch (folder <code>C:\\tmp\\ns-marketing</code>). To upload an image or GIF to LinkedIn, open it with a click and save it, or take it straight from that folder. "Published" marks are saved in this browser only.' },
@@ -169,9 +169,9 @@ function render() {
   list.innerHTML = weeks.map((w) => `<section class="week"><h2>${t.weeks[w] ?? w}</h2>${POSTS.map((p, i) => [p, i]).filter(([p]) => p.week === w).map(([p, i]) => {
     const c = p[lang], isDone = !!done[key(p)];
     const status = isDone ? `<span class="pill ok">${t.pub}</span>` : p.date === todayIso ? `<span class="pill today">${t.today}</span>` : p.date < todayIso ? `<span class="pill late">${t.late}</span>` : '';
-    const vnote = p.pdf ? `${t.pdf} <a href="${c.pdf}" target="_blank" rel="noopener">${t.openPdf}</a>` : c.isGif ? t.gif : t.png;
+    const vnote = p.pdf ? `${t.pdf} <a href="${c.pdf}" target="_blank" rel="noopener">${t.openPdf}</a>` : c.isVideo ? t.video : c.isGif ? t.gif : t.png;
     return `<article class="post${isDone ? ' done' : ''}" id="p${i}">
-      <div class="visual"><a href="${c.visual}" target="_blank" rel="noopener"><img src="${c.visual}" alt="${esc(c.title)}" loading="lazy"></a><div class="vnote">${vnote}</div></div>
+      <div class="visual">${c.isVideo ? `<video src="${c.visual}" controls muted playsinline preload="metadata"></video>` : `<a href="${c.visual}" target="_blank" rel="noopener"><img src="${c.visual}" alt="${esc(c.title)}" loading="lazy"></a>`}<div class="vnote">${vnote}</div></div>
       <div class="copy">
         <div class="meta"><span class="date">${fmtDate(p.date)}</span><span class="pill">${esc(c.pillar)}</span>${status}</div>
         <h3>${esc(c.title)}</h3>

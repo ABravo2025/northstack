@@ -16,6 +16,7 @@ const POSTS = [
   ['Semana del 26 oct', '2026-10-27', '2026-10/semana-05/linkedin/01-crm', '2026-10/semana-05/imagenes/crm-{l}.png'],
   ['Semana del 26 oct', '2026-10-28', '2026-10/semana-05/linkedin/02-onboarding', '2026-10/semana-05/imagenes/onboarding-{l}.png'],
   ['Semana del 26 oct', '2026-10-29', '2026-10/semana-05/linkedin/03-roles', '2026-10/semana-05/imagenes/roles-{l}.png'],
+  ['Semana del 26 oct', '2026-10-30', '2026-10/semana-05/linkedin/04-video-rrhh', '2026-10/semana-05/video/northstack-rrhh-{l}-1x1.mp4'],
   ['Semana del 2 nov', '2026-11-03', '2026-11/semana-01/linkedin/01-calendario', '2026-11/semana-01/imagenes/calendario-{l}.png'],
   ['Semana del 2 nov', '2026-11-04', '2026-11/semana-01/linkedin/02-reemplaza', '2026-11/semana-01/imagenes/reemplaza-{l}.png'],
 ];
@@ -42,6 +43,7 @@ const data = POSTS.map(([week, date, base, visual, pdf]) => {
     assets[v] = v;
     p[l].visual = v;
     p[l].isGif = v.endsWith('.gif');
+    p[l].isVideo = v.endsWith('.mp4');
     if (pdf) { const d = pdf.replace('{l}', l); assets[d] = d; p[l].pdf = d; }
     p[l].source = `${base}-${l}.md`;
   }

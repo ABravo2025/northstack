@@ -5,3 +5,9 @@ Thumbs.db
 tools/gif/frames-*/
 tools/gif/tmp-*/
 tools/gif/seed.out.json
+tools/video/frames-hr-*
+tools/video/tmp-hr-*
+tools/video/tmp-sheet-*
+tools/video/sheet-*.png
+tools/video/check-*.png
+tools/video/.hr-takes.lock/

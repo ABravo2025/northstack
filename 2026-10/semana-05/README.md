@@ -8,13 +8,13 @@ https://claude.ai/artifact/VBRYwMv89TezGmnZqHkzGH
 | CRM: las ventas que se pierden en el correo ES / EN | `linkedin/01-crm-es.md`, `-en.md` · `imagenes/crm-*.png` | mar 27/10 | Perfil de Alejandro | Borrador, para revisar |
 | Consejos: checklist de onboarding en 4 etapas ES / EN | `linkedin/02-onboarding-es.md`, `-en.md` · `imagenes/onboarding-*.png` | mié 28/10 | Perfil de Alejandro | Borrador, para revisar |
 | Roles y permisos: no todos tienen que ver los sueldos ES / EN | `linkedin/03-roles-es.md`, `-en.md` · `imagenes/roles-*.png` | jue 29/10 | Página Northstack | Borrador, para revisar |
-| Video RR.HH. (37 s): legajo, onboarding, vacaciones, quién falta, turnos + QR, horas ES / EN | `linkedin/04-video-rrhh-es.md`, `-en.md` · `video/northstack-rrhh-*.mp4` | vie 30/10 | ES perfil de Alejandro · EN página Northstack | Video listo, para revisar |
+| Video RR.HH. (38 s): legajo, onboarding, vacaciones, quién falta, turnos + QR, horas ES / EN | `linkedin/04-video-rrhh-es.md`, `-en.md` · `video/northstack-rrhh-*.mp4` | vie 30/10 | ES perfil de Alejandro · EN página Northstack | Video listo, para revisar |
 
 Imágenes 1080×1350 generadas con `tools/cards/cards.mjs`.
 
 ## Video RR.HH.
 
-`video/northstack-rrhh-{es,en}-{1x1,16x9}.mp4`: 37 s, sin voz, textos en pantalla. Música propia, generada
+`video/northstack-rrhh-{es,en}-{1x1,16x9}.mp4`: 38 s, sin voz, textos en pantalla. Música propia, generada
 con `tools/video/music4.py` (funk-pop a 132 BPM, sin licencias). Para LinkedIn usar el 1:1; el 16:9 sirve
 para la web, YouTube o presentaciones. Se grabó la app real (versión de producción) contra staging, con la
 empresa de demostración "Acme Latam".

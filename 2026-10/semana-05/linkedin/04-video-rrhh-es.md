@@ -2,7 +2,7 @@
 **Publicar:** viernes 30/10, 8–10 h · **Dónde:** perfil de Alejandro (solo en español; la página de Northstack lo comparte) ·
 **Pilar:** producto · **Visual:** `video/northstack-rrhh-es-1x1.mp4` (subirlo con el botón de video, no como enlace)
 
-> Video de 37 s, sin voz: los textos están en pantalla, así que se entiende aunque LinkedIn lo reproduzca sin sonido.
+> Video de 38 s, sin voz: los textos están en pantalla, así que se entiende aunque LinkedIn lo reproduzca sin sonido.
 
 ---
 
@@ -10,7 +10,7 @@
 
 Legajos en una carpeta. Vacaciones en un Excel. Turnos en un grupo de WhatsApp. Las horas, en otra planilla que alguien revisa a fin de mes.
 
-En este video de 37 segundos te muestro cómo se ve todo eso junto en Northstack:
+En este video de 38 segundos te muestro cómo se ve todo eso junto en Northstack:
 
 👤 El legajo de cada persona, completo
 🧭 El ingreso de alguien nuevo, ordenado del día 1 al mes 1

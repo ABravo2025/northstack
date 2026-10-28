@@ -5,9 +5,9 @@ import type { EntityType, StatusDefinition } from '@prisma/client';
 
 type PrismaTx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
-const DEFAULT_STATUSES: Record<EntityType, { name: string; order: number; isDefault: boolean }[]> = {
+const DEFAULT_STATUSES: Record<EntityType, { name: string; order: number; isDefault: boolean; color?: string }[]> = {
   employee: [
-    { name: 'Active', order: 0, isDefault: true },
+    { name: 'Active', order: 0, isDefault: true, color: '#059669' },
     { name: 'Inactive', order: 1, isDefault: false },
     { name: 'Pending', order: 2, isDefault: false },
   ],
@@ -44,7 +44,7 @@ export async function seedDefaultStatusDefinitions(tx: PrismaTx, tenantId: strin
   for (const entityType of Object.keys(DEFAULT_STATUSES) as EntityType[]) {
     for (const def of DEFAULT_STATUSES[entityType]) {
       await tx.statusDefinition.create({
-        data: { tenantId, entityType, name: def.name, order: def.order, isDefault: def.isDefault },
+        data: { tenantId, entityType, name: def.name, order: def.order, isDefault: def.isDefault, color: def.color ?? null },
       });
     }
   }

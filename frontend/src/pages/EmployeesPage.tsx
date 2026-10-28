@@ -26,6 +26,7 @@ import EmployeeOverviewPanel from '../components/hr/EmployeeOverviewPanel';
 import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar';
 import Avatar, { getInitials } from '../components/common/Avatar';
 import StatusChip from '../components/common/StatusChip';
+import { statusColor } from '../lib/statusColor';
 import CategoryChip from '../components/common/CategoryChip';
 import Field from '../components/common/Field';
 import { ChevronDownIcon, MailIcon, PeopleIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/common/Icons';
@@ -938,7 +939,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       key: 'status',
       label: t('employees.columns.status'),
       render: (emp: any) =>
-        emp.statusDefn && <StatusChip color={emp.statusDefn.color || '#6b7280'} label={emp.statusDefn.name} />,
+        emp.statusDefn && <StatusChip color={statusColor(emp.statusDefn)} label={emp.statusDefn.name} />,
     },
     {
       key: 'startDate',
@@ -1740,7 +1741,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
             getInitials={(emp) => getInitials(emp.firstName, emp.lastName)}
             getName={(emp) => `${emp.firstName} ${emp.lastName}`}
             getMeta={(emp) => [emp.jobTitleDefn?.name, emp.departmentDefn?.name].filter(Boolean).join(' · ')}
-            getStatusColor={(emp) => emp.statusDefn?.color || '#6b7280'}
+            getStatusColor={(emp) => statusColor(emp.statusDefn)}
             onSelect={(emp) => setOverviewEmployeeId(emp.id)}
           />
           <div className={`full-table-wrap${tableIsEmpty ? '' : ' has-mobile-cards'}`} ref={tableWrapRef}>

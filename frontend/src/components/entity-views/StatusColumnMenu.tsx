@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { api } from '../../api';
 import { useToast } from '../common/ToastProvider';
 import ColorPicker from '../common/ColorPicker';
+import { statusColor } from '../../lib/statusColor';
 import Popover from '../common/Popover';
 import RequiredMark from '../common/RequiredMark';
 import { DotsVerticalIcon, GripIcon } from '../common/Icons';
@@ -162,7 +163,7 @@ export default function StatusColumnMenu({ token, entityType, statuses, onChange
                 >
                   <GripIcon className="h-3.5 w-3.5" />
                 </span>
-                <ColorPicker value={status.color || '#9ca3af'} onChange={(color) => handleColorChange(status, color)} />
+                <ColorPicker value={statusColor(status)} onChange={(color) => handleColorChange(status, color)} />
                 <span className={`status-manage-name ${!status.isActive ? 'inactive' : ''}`}>{status.name}</span>
                 {status.isDefault ? (
                   <span className="chip-linked">{t('entityViews.status.default')}</span>

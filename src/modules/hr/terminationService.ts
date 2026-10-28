@@ -46,6 +46,7 @@ async function getOrCreateTerminatedStatusId(tenantId: string): Promise<string> 
       tenantId,
       entityType: 'employee',
       name: 'Terminated',
+      color: '#dc2626',
       order: (maxOrder._max.order ?? 0) + 1,
       isDefault: false,
       isTerminatedStatus: true,

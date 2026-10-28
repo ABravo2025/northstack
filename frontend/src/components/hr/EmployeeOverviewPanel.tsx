@@ -5,6 +5,7 @@ import type { EmployeeCompensationSummary, EmployeeContractEntry, EmployeePaymen
 import { useToast } from '../common/ToastProvider';
 import Avatar from '../common/Avatar';
 import StatusChip from '../common/StatusChip';
+import { statusColor } from '../../lib/statusColor';
 import AutoSaveField from '../common/AutoSaveField';
 import AutoSaveSelect from '../common/AutoSaveSelect';
 import DetailSidebar from '../layout/DetailSidebar';
@@ -440,7 +441,7 @@ export default function EmployeeOverviewPanel({
         <div className="field-group-body">
           <Field label={t('employeeOverview.fields.status')}>
             {employee.statusDefn?.isTerminatedStatus ? (
-              <StatusChip color={employee.statusDefn.color || '#6b7280'} label={employee.statusDefn.name} />
+              <StatusChip color={statusColor(employee.statusDefn)} label={employee.statusDefn.name} />
             ) : (
               <AutoSaveSelect
                 label={t('employeeOverview.fields.status')}
@@ -563,6 +564,7 @@ export default function EmployeeOverviewPanel({
               ))}
               {unassignedPolicies.length > 0 && (
                 <select
+                  className="overview-field-input mt-1 w-full"
                   value=""
                   onChange={(e) => handleAssignPolicy(e.target.value)}
                   aria-label={t('employeeOverview.assignPolicyAriaLabel')}
@@ -738,7 +740,7 @@ export default function EmployeeOverviewPanel({
             <p>{employee.email}</p>
             <div className="flex items-center gap-1.5">
               {employee.statusDefn && (
-                <StatusChip color={employee.statusDefn.color || '#6b7280'} label={employee.statusDefn.name} />
+                <StatusChip color={statusColor(employee.statusDefn)} label={employee.statusDefn.name} />
               )}
               {employee.contractStatus && CONTRACT_STATUS_CHIPS[employee.contractStatus as keyof typeof CONTRACT_STATUS_CHIPS] && (
                 <StatusChip {...CONTRACT_STATUS_CHIPS[employee.contractStatus as keyof typeof CONTRACT_STATUS_CHIPS]} />

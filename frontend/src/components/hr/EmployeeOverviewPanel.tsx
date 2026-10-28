@@ -284,66 +284,71 @@ export default function EmployeeOverviewPanel({
   const showingPayments = isMobile ? mobileSection === 'payments' : activeTab === 'payments';
   const showingContracts = isMobile ? mobileSection === 'contracts' : activeTab === 'contracts';
 
+  // One list, pending signature first, then active, upcoming and ended (newest first within each).
+  const sortedContracts = (contracts ?? [])
+    .slice()
+    .sort(
+      (a, b) =>
+        CONTRACT_GROUP_ORDER.indexOf(a.group) - CONTRACT_GROUP_ORDER.indexOf(b.group) ||
+        b.effectiveFrom.localeCompare(a.effectiveFrom),
+    );
+
   const contractsContent = (
     <div className="overview-panel-left">
-      {CONTRACT_GROUP_ORDER.map((group) => {
-        const rows = (contracts ?? []).filter((c) => c.group === group);
-        return (
-          <div key={group} className="field-group">
-            <h4 className="field-group-title">
-              {t(`employeeOverview.contracts.groups.${group}`)}
-              {rows.length > 0 ? ` (${rows.length})` : ''}
-            </h4>
-            <div className="overview-field overview-field-full">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>{t('employeeOverview.contracts.columns.jobTitle')}</th>
-                    <th>{t('employeeOverview.contracts.columns.rate')}</th>
-                    <th>{t('employeeOverview.contracts.columns.payFrequency')}</th>
-                    <th>{t('employeeOverview.contracts.columns.period')}</th>
-                    <th>{t('employeeOverview.contracts.columns.signature')}</th>
+      <div className="field-group">
+        <h4 className="field-group-title">{t('employeeOverview.tabs.contracts')}</h4>
+        <div className="overview-field overview-field-full">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>{t('employeeOverview.contracts.columns.status')}</th>
+                <th>{t('employeeOverview.contracts.columns.jobTitle')}</th>
+                <th>{t('employeeOverview.contracts.columns.rate')}</th>
+                <th>{t('employeeOverview.contracts.columns.payFrequency')}</th>
+                <th>{t('employeeOverview.contracts.columns.period')}</th>
+                <th>{t('employeeOverview.contracts.columns.signature')}</th>
+              </tr>
+            </thead>
+            <TableBody
+              colSpan={6}
+              isEmpty={contracts !== null && sortedContracts.length === 0}
+              empty={{ title: t('employeeOverview.contracts.empty') }}
+            >
+              {contracts === null ? (
+                <tr>
+                  <td colSpan={6}>
+                    <span className="skeleton-bar" style={{ width: 160 }} />
+                  </td>
+                </tr>
+              ) : (
+                sortedContracts.map((c) => (
+                  <tr key={c.id} className="cursor-pointer" onClick={() => setOpenContract(c)}>
+                    <td>
+                      <StatusChip color={CONTRACT_GROUP_COLORS[c.group]} label={t(`employeeOverview.contracts.groups.${c.group}`)} />
+                    </td>
+                    <td className="font-medium">{c.jobTitle}</td>
+                    <td>{formatMoney(c.rateCents, c.currency)}</td>
+                    <td>{c.payFrequencyName}</td>
+                    <td>
+                      {c.effectiveFrom.slice(0, 10)} → {c.effectiveTo ? c.effectiveTo.slice(0, 10) : t('employeeOverview.contracts.openEnded')}
+                    </td>
+                    <td>
+                      {c.signature === 'not_required' ? (
+                        <span className="text-ink-faint dark:text-dark-ink-faint">—</span>
+                      ) : (
+                        <StatusChip
+                          color={c.signature === 'signed' ? CONTRACT_GROUP_COLORS.active : c.signature === 'overdue' ? '#dc2626' : CONTRACT_GROUP_COLORS.pending_signature}
+                          label={t(`employeeOverview.contracts.signature.${c.signature}`)}
+                        />
+                      )}
+                    </td>
                   </tr>
-                </thead>
-                <TableBody
-                  colSpan={5}
-                  isEmpty={contracts !== null && rows.length === 0}
-                  empty={{ title: t(`employeeOverview.contracts.empty.${group}`) }}
-                >
-                  {contracts === null ? (
-                    <tr>
-                      <td colSpan={5}>
-                        <span className="skeleton-bar" style={{ width: 160 }} />
-                      </td>
-                    </tr>
-                  ) : (
-                    rows.map((c) => (
-                      <tr key={c.id} className="cursor-pointer" onClick={() => setOpenContract(c)}>
-                        <td className="font-medium">{c.jobTitle}</td>
-                        <td>{formatMoney(c.rateCents, c.currency)}</td>
-                        <td>{c.payFrequencyName}</td>
-                        <td>
-                          {c.effectiveFrom.slice(0, 10)} → {c.effectiveTo ? c.effectiveTo.slice(0, 10) : t('employeeOverview.contracts.openEnded')}
-                        </td>
-                        <td>
-                          {c.signature === 'not_required' ? (
-                            <span className="text-ink-faint dark:text-dark-ink-faint">—</span>
-                          ) : (
-                            <StatusChip
-                              color={c.signature === 'signed' ? CONTRACT_GROUP_COLORS.active : c.signature === 'overdue' ? '#dc2626' : CONTRACT_GROUP_COLORS.pending_signature}
-                              label={t(`employeeOverview.contracts.signature.${c.signature}`)}
-                            />
-                          )}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </TableBody>
-              </table>
-            </div>
-          </div>
-        );
-      })}
+                ))
+              )}
+            </TableBody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 

@@ -1168,8 +1168,8 @@ export default function GuidePage() {
                 <strong>Mi contrato</strong>, donde carga sus datos de cobro y lo firma sin salir de Northstack.
               </p>
               <p>
-                La pestaña <strong>Contratos</strong> del perfil muestra todo el historial, agrupado en Pendientes de
-                firma, Activos, Próximos y Finalizados. Hacé clic en uno para ver sus condiciones, quién lo creó,
+                La pestaña <strong>Contratos</strong> del perfil muestra todo el historial en una sola lista, con
+                el estado de cada uno (Pendiente de firma, Activo, Próximo o Finalizado). Hacé clic en uno para ver sus condiciones, quién lo creó,
                 cuándo y desde qué IP se firmó, abrir o descargar su PDF, y reenviarlo si es el contrato vigente. Solo
                 el primer contrato de cada persona se firma; un aumento o cambio posterior figura como "No requiere
                 firma". El campo Tipo y la pestaña Contratos son para quien gestiona la nómina.
@@ -1302,8 +1302,8 @@ export default function GuidePage() {
                 Northstack.
               </p>
               <p>
-                The profile's <strong>Contracts</strong> tab shows the whole history, grouped into Pending signature,
-                Active, Upcoming and Ended. Click one to see its terms, who created it, when and from which IP it was
+                The profile's <strong>Contracts</strong> tab shows the whole history in one list, with each
+                contract's status (Pending signature, Active, Upcoming or Ended). Click one to see its terms, who created it, when and from which IP it was
                 signed, open or download its PDF, and resend it if it's the current contract. Only a person's first
                 contract is signed; a later raise or change shows as "No signature needed". The Type field and the
                 Contracts tab are for whoever manages payroll.

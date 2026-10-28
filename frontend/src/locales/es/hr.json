@@ -271,10 +271,10 @@
     },
     "contracts": {
       "groups": {
-        "pending_signature": "Pendientes de firma",
-        "active": "Activos",
-        "upcoming": "Próximos",
-        "ended": "Finalizados"
+        "pending_signature": "Pendiente de firma",
+        "active": "Activo",
+        "upcoming": "Próximo",
+        "ended": "Finalizado"
       },
       "signature": {
         "signed": "Firmado",
@@ -283,18 +283,14 @@
         "not_required": "No requiere firma"
       },
       "columns": {
+        "status": "Estado",
         "jobTitle": "Puesto",
         "rate": "Monto",
         "payFrequency": "Frecuencia de pago",
         "period": "Período",
         "signature": "Firma"
       },
-      "empty": {
-        "pending_signature": "Nada pendiente de firma.",
-        "active": "Sin contrato activo.",
-        "upcoming": "Sin contratos próximos.",
-        "ended": "Sin contratos finalizados."
-      },
+      "empty": "Todavía no tiene contratos.",
       "openEnded": "sin fecha de fin",
       "termsSection": "Condiciones",
       "evidenceSection": "Firma",

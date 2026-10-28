@@ -283,18 +283,14 @@
         "not_required": "No signature needed"
       },
       "columns": {
+        "status": "Status",
         "jobTitle": "Job title",
         "rate": "Rate",
         "payFrequency": "Pay frequency",
         "period": "Period",
         "signature": "Signature"
       },
-      "empty": {
-        "pending_signature": "Nothing waiting for a signature.",
-        "active": "No active contract.",
-        "upcoming": "No upcoming contracts.",
-        "ended": "No ended contracts."
-      },
+      "empty": "No contracts yet.",
       "openEnded": "no end date",
       "termsSection": "Terms",
       "evidenceSection": "Signature",

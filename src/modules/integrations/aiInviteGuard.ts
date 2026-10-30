@@ -15,6 +15,7 @@ export const AI_SENSITIVE_ROLE_PERMISSIONS = [
   'manage_api_access',
   // Salaries and payments
   'manage_payroll',
+  'manage_expenses',
   'manage_payments',
   'manage_billing',
 ] as const;

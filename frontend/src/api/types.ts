@@ -39,6 +39,8 @@ export interface PlanFeatures {
   billableHours?: boolean;
   // Phase 2, block B: clocking in and out (Growth).
   clockIn?: boolean;
+  // Gastos / Expenses (2026-10-30, Growth). Optional on the wire, same as above.
+  expenses?: boolean;
 }
 
 export interface AuthResponse {
@@ -1606,6 +1608,7 @@ export interface PublicPlanLimits {
   shiftSkillsEnabled: boolean;
   billableHoursEnabled: boolean;
   clockInEnabled: boolean;
+  expensesEnabled?: boolean;
 }
 
 // Shifts module (docs/general/spec-shifts.md, 2026-10-04).

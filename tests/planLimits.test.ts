@@ -41,6 +41,7 @@ describe('getPlanLimits', () => {
       shiftSkillsEnabled: false,
       billableHoursEnabled: false,
       clockInEnabled: false,
+      expensesEnabled: false,
     });
   });
 

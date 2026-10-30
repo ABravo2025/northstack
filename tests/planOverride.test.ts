@@ -14,7 +14,7 @@ describe('plan + per-client agreement (getPlanLimits)', () => {
   it('turns a module on for Starter or off for Growth', () => {
     const starterWithPayroll = { plan: 'starter' as const, planOverride: agreement({ modules: { payroll: true } }) };
     expect(isPayrollAllowed(starterWithPayroll)).toBe(true);
-    expect(planFeatures(starterWithPayroll)).toEqual({ payroll: true, payments: false, apiAccess: false, projectTemplates: false, shiftSkills: false, billableHours: false, clockIn: false });
+    expect(planFeatures(starterWithPayroll)).toEqual({ payroll: true, payments: false, apiAccess: false, projectTemplates: false, shiftSkills: false, billableHours: false, clockIn: false, expenses: false });
     const growthWithoutApi = { plan: 'growth' as const, planOverride: agreement({ modules: { apiAccess: false } }) };
     expect(isApiAccessAllowed(growthWithoutApi)).toBe(false);
     expect(isPayrollAllowed(growthWithoutApi)).toBe(true);
@@ -33,7 +33,7 @@ describe('plan + per-client agreement (getPlanLimits)', () => {
     const l = getPlanLimits({ plan: 'starter', planOverride: o }, now);
     expect(l.maxActiveLocations).toBe(3);
     expect(l.maxActiveProjects).toBeNull();
-    expect(planFeatures({ plan: 'starter', planOverride: o })).toEqual({ payroll: false, payments: false, apiAccess: false, projectTemplates: true, shiftSkills: true, billableHours: true, clockIn: true });
+    expect(planFeatures({ plan: 'starter', planOverride: o })).toEqual({ payroll: false, payments: false, apiAccess: false, projectTemplates: true, shiftSkills: true, billableHours: true, clockIn: true, expenses: false });
     const growthNoClock = getPlanLimits({ plan: 'growth', planOverride: agreement({ modules: { clockIn: false } }) }, now);
     expect(growthNoClock.clockInEnabled).toBe(false);
     expect(growthNoClock.billableHoursEnabled).toBe(true);

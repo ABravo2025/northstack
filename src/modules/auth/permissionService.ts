@@ -95,6 +95,12 @@ export function canManagePayroll(role: RoleContext): boolean {
   return has(role, 'manage_payroll');
 }
 
+// Gastos / Expenses (2026-10-30) — owner-only by default like Payroll: not in the Admin/Member
+// seed permissions, toggleable from Roles & Permissions. The route also requires the Growth plan.
+export function canManageExpenses(role: RoleContext): boolean {
+  return has(role, 'manage_expenses');
+}
+
 // Owner-only, same reasoning as canManagePayroll above — Subscription Plans
 // (spec-subscription-plans.md) treats choosing/changing the tenant's plan as an
 // ownership-level decision, not something an admin does on the owner's behalf.

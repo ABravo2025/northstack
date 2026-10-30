@@ -406,6 +406,11 @@ model Tenant {
   timeOffYearCloses         TimeOffYearClose[]
   savedViews                SavedView[]
   forms                     Form[]
+  expenseAccounts           ExpenseAccount[]
+  expenseCategories         ExpenseCategory[]
+  expenseMovements          ExpenseMovement[]
+  fixedExpenses             FixedExpense[]
+  expenseCategoryRules      ExpenseCategoryRule[]
   fieldCatalogDefinitions   FieldCatalogDefinition[]
   companies                 Company[]
   contacts                  Contact[]
@@ -797,8 +802,6 @@ model Employee {
   clockEntries             ClockEntry[]
   timeEntries              TimeEntry[]
   timeSuggestionDismissals TimeSuggestionDismissal[]
-
-  @@unique([tenantId, email])
   // spec-overtime.md: paid all hours at the base rate (e.g. management, outside the agreement).
   overtimeExempt           Boolean                    @default(false)
   // Payroll v2: file number ("legajo"), printed on payslips. Assigned on creation from
@@ -807,6 +810,7 @@ model Employee {
   payslips                 Payslip[]
   taxId                    EmployeeTaxId?
 
+  @@unique([tenantId, email])
   @@unique([tenantId, fileNumber])
 }
 
@@ -1169,20 +1173,22 @@ enum CatalogKind {
 }
 
 model FieldCatalogDefinition {
-  id                        String        @id @default(uuid())
+  id                        String            @id @default(uuid())
   tenantId                  String
-  tenant                    Tenant        @relation(fields: [tenantId], references: [id])
+  tenant                    Tenant            @relation(fields: [tenantId], references: [id])
   kind                      CatalogKind
   name                      String
-  order                     Int           @default(0)
-  isActive                  Boolean       @default(true)
-  createdAt                 DateTime      @default(now())
-  employeesByDepartment     Employee[]    @relation("EmployeeDepartment")
-  employeesByJobTitle       Employee[]    @relation("EmployeeJobTitle")
+  order                     Int               @default(0)
+  isActive                  Boolean           @default(true)
+  createdAt                 DateTime          @default(now())
+  employeesByDepartment     Employee[]        @relation("EmployeeDepartment")
+  employeesByJobTitle       Employee[]        @relation("EmployeeJobTitle")
   contactsByLeadSource      Contact[]
-  opportunitiesByLossReason Opportunity[] @relation("OpportunityLossReason")
-  opportunitiesByWinReason  Opportunity[] @relation("OpportunityWinReason")
+  opportunitiesByLossReason Opportunity[]     @relation("OpportunityLossReason")
+  opportunitiesByWinReason  Opportunity[]     @relation("OpportunityWinReason")
   companiesBySize           Company[]
+  expenseMovementsByDept    ExpenseMovement[] @relation("ExpenseMovementDepartment")
+  fixedExpensesByDept       FixedExpense[]    @relation("FixedExpenseDepartment")
 
   @@index([tenantId, kind])
 }
@@ -1606,33 +1612,33 @@ model PayrollRun {
   correctionOf    PayrollRun?             @relation("PayrollRunCorrection", fields: [correctionOfId], references: [id], onDelete: SetNull)
   corrections     PayrollRun[]            @relation("PayrollRunCorrection")
   correctionKind  String?
+  payslips        Payslip[]
 
   @@index([tenantId])
-  payslips        Payslip[]
 }
 
 model PayrollEntry {
-  id          String           @id @default(uuid())
-  tenantId    String
-  tenant      Tenant           @relation(fields: [tenantId], references: [id])
-  employeeId  String
-  employee    Employee         @relation(fields: [employeeId], references: [id])
-  runId       String? // null = a loose entry (off-cycle payment), not part of a PayrollRun
-  run         PayrollRun?      @relation(fields: [runId], references: [id])
-  type        PayrollEntryType
-  amountCents Int // can be negative (deductions)
-  currency    String
-  hoursQty    Float? // only when compensationType: hourly
+  id                 String           @id @default(uuid())
+  tenantId           String
+  tenant             Tenant           @relation(fields: [tenantId], references: [id])
+  employeeId         String
+  employee           Employee         @relation(fields: [employeeId], references: [id])
+  runId              String? // null = a loose entry (off-cycle payment), not part of a PayrollRun
+  run                PayrollRun?      @relation(fields: [runId], references: [id])
+  type               PayrollEntryType
+  amountCents        Int // can be negative (deductions)
+  currency           String
+  hoursQty           Float? // only when compensationType: hourly
   // Timesheet → Payroll (2026-10-21): the period the hours were brought from (approved weeks only).
   // Cleared to false when someone edits the hours by hand.
-  hoursFrom          DateTime? @db.Date
-  hoursTo            DateTime? @db.Date
-  hoursFromTimesheet Boolean   @default(false)
+  hoursFrom          DateTime?        @db.Date
+  hoursTo            DateTime?        @db.Date
+  hoursFromTimesheet Boolean          @default(false)
   // spec-overtime.md: 'weekday' | 'rest' | 'night' on a generated overtime line (replaced on every import).
   overtimeKind       String?
-  label       String?
-  paymentDate DateTime
-  createdAt   DateTime         @default(now())
+  label              String?
+  paymentDate        DateTime
+  createdAt          DateTime         @default(now())
 
   @@index([tenantId, employeeId])
   @@index([tenantId, runId])
@@ -1812,36 +1818,36 @@ enum ProjectTemplateNiche {
 }
 
 model Project {
-  id              String           @id @default(uuid())
-  tenantId        String
-  tenant          Tenant           @relation(fields: [tenantId], references: [id])
-  name            String
-  description     String?
-  companyId       String?
-  company         Company?         @relation(fields: [companyId], references: [id])
-  ownerEmployeeId String
-  ownerEmployee   Employee         @relation("ProjectOwner", fields: [ownerEmployeeId], references: [id])
-  status          ProjectStatus    @default(active)
-  startDate       DateTime?        @db.Date
-  dueDate         DateTime?        @db.Date
-  completedAt     DateTime?
+  id                String           @id @default(uuid())
+  tenantId          String
+  tenant            Tenant           @relation(fields: [tenantId], references: [id])
+  name              String
+  description       String?
+  companyId         String?
+  company           Company?         @relation(fields: [companyId], references: [id])
+  ownerEmployeeId   String
+  ownerEmployee     Employee         @relation("ProjectOwner", fields: [ownerEmployeeId], references: [id])
+  status            ProjectStatus    @default(active)
+  startDate         DateTime?        @db.Date
+  dueDate           DateTime?        @db.Date
+  completedAt       DateTime?
   // Informational only (the project is a copy, never re-synced): which template it came from.
   // SetNull so deleting a tenant template never touches the projects made from it.
-  templateId      String?
-  template        ProjectTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
-  isActive        Boolean          @default(true) // archived when false
+  templateId        String?
+  template          ProjectTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  isActive          Boolean          @default(true) // archived when false
   // Shifts phase 2, block C (Growth): hours sold/planned for the project, in minutes, and the last
   // threshold (80 or 100 %) the owner was told about — reset when the budget changes.
   budgetMinutes     Int?
-  budgetNoticeLevel Int            @default(0)
-  createdById     String
-  createdBy       User             @relation("ProjectCreatedBy", fields: [createdById], references: [id])
-  updatedById     String?
-  updatedBy       User?            @relation("ProjectUpdatedBy", fields: [updatedById], references: [id])
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  phases          ProjectPhase[]
-  members         ProjectMember[]
+  budgetNoticeLevel Int              @default(0)
+  createdById       String
+  createdBy         User             @relation("ProjectCreatedBy", fields: [createdById], references: [id])
+  updatedById       String?
+  updatedBy         User?            @relation("ProjectUpdatedBy", fields: [updatedById], references: [id])
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  phases            ProjectPhase[]
+  members           ProjectMember[]
 
   @@index([tenantId, status])
   @@index([tenantId, companyId])
@@ -1948,34 +1954,34 @@ model ProjectTemplateTask {
 // One row per tenant, created with these defaults the first time anything reads it
 // (shiftsSettingsService.ts's getShiftsSettings) — no row = all defaults.
 model ShiftsSettings {
-  id                  String   @id @default(uuid())
-  tenantId            String   @unique
-  tenant              Tenant   @relation(fields: [tenantId], references: [id])
+  id                     String   @id @default(uuid())
+  tenantId               String   @unique
+  tenant                 Tenant   @relation(fields: [tenantId], references: [id])
   // false = assigned shifts are confirmed on publish, nobody is asked to accept.
-  requireConfirmation Boolean  @default(true)
+  requireConfirmation    Boolean  @default(true)
   // Daily cron (Vercel Hobby = once a day, spec §0.4): nudge whoever hasn't answered yet...
-  remindUnanswered    Boolean  @default(true)
+  remindUnanswered       Boolean  @default(true)
   // ...and tell everyone about tomorrow's shifts.
-  remindDayBefore     Boolean  @default(true)
+  remindDayBefore        Boolean  @default(true)
   // Minimum hours between one shift's end and the same person's next start. null = no rule.
   // Breaking it is a warning the manager can override, never a hard block (spec §3).
-  minRestHours        Int?     @default(12)
+  minRestHours           Int?     @default(12)
   // 0 = Sunday … 6 = Saturday — first column of the weekly grid and the timesheet week.
-  weekStartsOn        Int      @default(1)
-  timesheetEnabled    Boolean  @default(true)
-  timesheetReminder   Boolean  @default(true)
+  weekStartsOn           Int      @default(1)
+  timesheetEnabled       Boolean  @default(true)
+  timesheetReminder      Boolean  @default(true)
   // Schedule cost (hours × rate from EmployeeCompensation) — opt-in, off by default, and only ever
   // shown to roles with payroll access (Alejandro, 2026-10-04).
-  showScheduleCost    Boolean  @default(false)
+  showScheduleCost       Boolean  @default(false)
   // Phase 2 (spec-shifts-fase2.md, block A): people can give away and swap their shifts.
-  allowSwaps          Boolean  @default(true)
+  allowSwaps             Boolean  @default(true)
   // A swap or a handed-over shift waits for a manager's approval (Alejandro's default, 2026-10-14)…
-  swapNeedsApproval      Boolean @default(true)
+  swapNeedsApproval      Boolean  @default(true)
   // …while an open shift goes to whoever takes it first unless this is on.
-  openShiftNeedsApproval Boolean @default(false)
+  openShiftNeedsApproval Boolean  @default(false)
   // Phase 2, block B: minutes after a shift's start before a clock-in counts as late.
-  lateToleranceMinutes   Int     @default(5)
-  updatedAt           DateTime @updatedAt
+  lateToleranceMinutes   Int      @default(5)
+  updatedAt              DateTime @updatedAt
 }
 
 model Location {
@@ -2042,13 +2048,13 @@ enum ShiftAssignmentStatus {
 }
 
 model Shift {
-  id               String            @id @default(uuid())
+  id               String               @id @default(uuid())
   tenantId         String
-  tenant           Tenant            @relation(fields: [tenantId], references: [id])
+  tenant           Tenant               @relation(fields: [tenantId], references: [id])
   locationId       String
-  location         Location          @relation(fields: [locationId], references: [id])
+  location         Location             @relation(fields: [locationId], references: [id])
   // Local calendar day the shift STARTS on, in the location's timezone.
-  date             DateTime          @db.Date
+  date             DateTime             @db.Date
   startMinute      Int
   // <= startMinute = ends the next day (22:00 → 06:00).
   endMinute        Int
@@ -2058,21 +2064,21 @@ model Shift {
   position         String?
   notes            String?
   // People needed. Fewer accepted/pending assignees than this = an open slot on the schedule.
-  headcount        Int               @default(1)
-  status           ShiftStatus       @default(draft)
+  headcount        Int                  @default(1)
+  status           ShiftStatus          @default(draft)
   publishedAt      DateTime?
   // Growth only (Skill catalog). Missing or expired = a warning when assigning, never a block.
-  requiredSkillIds String[]          @default([])
+  requiredSkillIds String[]             @default([])
   createdById      String
-  createdBy        User              @relation("ShiftCreatedBy", fields: [createdById], references: [id])
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  createdBy        User                 @relation("ShiftCreatedBy", fields: [createdById], references: [id])
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
   assignments      ShiftAssignment[]
   // Phase 2, block A: published with free places that anyone eligible can take (My shifts → Available).
-  openToClaim      Boolean           @default(false)
+  openToClaim      Boolean              @default(false)
   // Phase 2, block B: created by clocking in without a shift (Alejandro: "se agrega automáticamente
   // en el calendario como tiempo extra"). Published and accepted on creation.
-  isOvertime       Boolean           @default(false)
+  isOvertime       Boolean              @default(false)
   changeRequests   ShiftChangeRequest[] @relation("ShiftChangeRequestShift")
   swapOffers       ShiftChangeRequest[] @relation("ShiftChangeRequestTargetShift")
 
@@ -2103,28 +2109,28 @@ enum ClockEntryStatus {
 }
 
 model ClockEntry {
-  id                String           @id @default(uuid())
+  id                String            @id @default(uuid())
   tenantId          String
-  tenant            Tenant           @relation(fields: [tenantId], references: [id])
+  tenant            Tenant            @relation(fields: [tenantId], references: [id])
   employeeId        String
-  employee          Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employee          Employee          @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   locationId        String
-  location          Location         @relation(fields: [locationId], references: [id])
+  location          Location          @relation(fields: [locationId], references: [id])
   // The shift this punch belongs to (plain id; an overtime shift is created at clock-out when null).
   shiftAssignmentId String?
   clockInAt         DateTime
   clockOutAt        DateTime?
   method            ClockEntryMethod
   // Breaks: minutes typed at clock-out, or the sum of ClockBreak rows when the buttons were used.
-  breakMinutes      Int              @default(0)
-  status            ClockEntryStatus @default(open)
-  needsReview       Boolean          @default(false)
+  breakMinutes      Int               @default(0)
+  status            ClockEntryStatus  @default(open)
+  needsReview       Boolean           @default(false)
   // Distance from the location when it asks for the phone's position; null = not checked.
   inDistanceMeters  Int?
   outDistanceMeters Int?
-  awayFromLocation  Boolean          @default(false)
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
+  awayFromLocation  Boolean           @default(false)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
   breaks            ClockBreak[]
   corrections       ClockCorrection[]
 
@@ -2162,19 +2168,19 @@ model ClockCorrection {
 // timesheet hours logged to a company (optionally one project) in a period. Shared as a PDF by email
 // or through a private read-only link that expires; only the token's hash is stored.
 model ClientHoursReport {
-  id          String    @id @default(uuid())
+  id          String   @id @default(uuid())
   tenantId    String
-  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
   companyId   String
   projectId   String?
-  from        DateTime  @db.Date
-  to          DateTime  @db.Date
-  showPeople  Boolean   @default(true)
-  tokenHash   String    @unique
+  from        DateTime @db.Date
+  to          DateTime @db.Date
+  showPeople  Boolean  @default(true)
+  tokenHash   String   @unique
   expiresAt   DateTime
   emailedTo   String?
   createdById String
-  createdAt   DateTime  @default(now())
+  createdAt   DateTime @default(now())
 
   @@index([tenantId, companyId])
 }
@@ -2535,14 +2541,14 @@ enum LegalPolicyType {
 // and an in-app notification" for policy changes) — feature_update does not, to avoid the
 // unconditional-email-spam pattern already flagged in Sales v2 Unit 8 (docs/tareas/backlog.md).
 model PlatformAnnouncement {
-  id          String                   @id @default(uuid())
-  type        PlatformAnnouncementType
-  title       String
-  summary     String // one line, shown in the bell dropdown row
-  body        String // full description of what changed, shown in the detail modal
-  policyType  LegalPolicyType? // set only when type = policy_change
-  publishedAt DateTime                 @default(now())
-  createdAt   DateTime                 @default(now())
+  id              String                   @id @default(uuid())
+  type            PlatformAnnouncementType
+  title           String
+  summary         String // one line, shown in the bell dropdown row
+  body            String // full description of what changed, shown in the detail modal
+  policyType      LegalPolicyType? // set only when type = policy_change
+  publishedAt     DateTime                 @default(now())
+  createdAt       DateTime                 @default(now())
   // Admin Center v2, stage 4 (2026-10-04): written from the Admin instead of only by script.
   // title/summary/body above are the English text; the Es fields are optional Spanish versions
   // (users with locale "es" see them when present). publishedAt in the future = scheduled.
@@ -2550,9 +2556,9 @@ model PlatformAnnouncement {
   titleEs         String?
   summaryEs       String?
   bodyEs          String?
-  targetPlans     String[]  @default([])
-  targetCountries String[]  @default([])
-  targetTenantIds String[]  @default([])
+  targetPlans     String[]                 @default([])
+  targetCountries String[]                 @default([])
+  targetTenantIds String[]                 @default([])
   createdByUserId String?
 
   @@index([publishedAt])
@@ -2661,12 +2667,12 @@ model PlatformTask {
 }
 
 model Session {
-  id        String   @id @default(uuid())
-  token     String   @unique
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  createdAt DateTime @default(now())
-  expiresAt DateTime
+  id                     String                @id @default(uuid())
+  token                  String                @unique
+  userId                 String
+  user                   User                  @relation(fields: [userId], references: [id])
+  createdAt              DateTime              @default(now())
+  expiresAt              DateTime
   // Admin Center v2, stage 5: set only on a support session — Northstack staff seeing the customer's
   // account as `userId`, under an access that user accepted. No sliding expiry, read-only unless the
   // customer allowed edits, ended the moment the customer ends the access.
@@ -2823,19 +2829,19 @@ model ApiKey {
 // kept nullable to match the spec's schema exactly rather than assume that never changes. No
 // partition/retention from day one; a purge cron is Unit 5.
 model ApiRequestLog {
-  id         String   @id @default(uuid())
-  tenantId   String
-  tenant     Tenant   @relation(fields: [tenantId], references: [id])
-  apiKeyId   String?
-  apiKey     ApiKey?  @relation(fields: [apiKeyId], references: [id])
+  id             String        @id @default(uuid())
+  tenantId       String
+  tenant         Tenant        @relation(fields: [tenantId], references: [id])
+  apiKeyId       String?
+  apiKey         ApiKey?       @relation(fields: [apiKeyId], references: [id])
   // Set instead of apiKeyId when the call came from an AI assistant (spec-mcp-server.md §2b).
   aiConnectionId String?
   aiConnection   AiConnection? @relation(fields: [aiConnectionId], references: [id])
-  method     String
-  path       String
-  statusCode Int
-  ipAddress  String
-  createdAt  DateTime @default(now())
+  method         String
+  path           String
+  statusCode     Int
+  ipAddress      String
+  createdAt      DateTime      @default(now())
 
   @@index([tenantId, createdAt])
   @@index([apiKeyId, createdAt])
@@ -2853,29 +2859,29 @@ enum AiConnectionKind {
 // app. `personal_token` today; `oauth` (Unit 4) fills the access/refresh columns instead. Every
 // token is stored only as a SHA-256 hash, same reasoning as ApiKey.keyHash.
 model AiConnection {
-  id                    String           @id @default(uuid())
-  tenantId              String
-  tenant                Tenant           @relation(fields: [tenantId], references: [id])
-  userId                String
-  user                  User             @relation(fields: [userId], references: [id])
-  kind                  AiConnectionKind
+  id                       String           @id @default(uuid())
+  tenantId                 String
+  tenant                   Tenant           @relation(fields: [tenantId], references: [id])
+  userId                   String
+  user                     User             @relation(fields: [userId], references: [id])
+  kind                     AiConnectionKind
   // Shown in the Activity Log as "AI · <clientName>" — the user's own label for a personal token,
   // the registered client's name ("Claude", "ChatGPT") for OAuth.
-  clientName            String
-  tokenPrefix           String?          // "nk_mcp_ab12cd" — the only fragment shown again
-  personalTokenHash     String?          @unique
-  oauthClientId         String?
-  accessTokenHash       String?          @unique
-  accessTokenExpiresAt  DateTime?
-  refreshTokenHash      String?          @unique
-  refreshTokenExpiresAt DateTime?
+  clientName               String
+  tokenPrefix              String? // "nk_mcp_ab12cd" — the only fragment shown again
+  personalTokenHash        String?          @unique
+  oauthClientId            String?
+  accessTokenHash          String?          @unique
+  accessTokenExpiresAt     DateTime?
+  refreshTokenHash         String?          @unique
+  refreshTokenExpiresAt    DateTime?
   // The refresh token this connection rotated away from last (OAuth 2.1 refresh-token rotation):
   // if it's ever presented again, someone replayed a stolen token, so the whole connection is revoked.
-  previousRefreshTokenHash String?       @unique
-  oauthClient           OAuthClient?     @relation(fields: [oauthClientId], references: [clientId])
-  lastUsedAt            DateTime?
-  revokedAt             DateTime?
-  createdAt             DateTime         @default(now())
+  previousRefreshTokenHash String?          @unique
+  oauthClient              OAuthClient?     @relation(fields: [oauthClientId], references: [clientId])
+  lastUsedAt               DateTime?
+  revokedAt                DateTime?
+  createdAt                DateTime         @default(now())
 
   requestLogs ApiRequestLog[]
 
@@ -3299,4 +3305,160 @@ model PayslipSettings {
   signatureData Bytes?
   signatureMime String?
   updatedAt     DateTime @updatedAt
+}
+
+// =============================================================================================
+// Gastos / Expenses (docs/general/spec-clientes-gastos-formularios.md, Fase A, 2026-10-30).
+// Everything a user types or imports that says what was spent — account names (they carry card
+// and account numbers), descriptions, merchants, amounts, notes, category-rule patterns — is
+// encrypted with EXPENSES_DATA_ENCRYPTION_KEY (src/lib/expenseEncryption.ts), its own key, not
+// Payroll's. Only what filters need stays in clear: dates, account/category/department ids,
+// direction, kind and flags. Totals are therefore computed in the app after decrypting, never in
+// SQL. Amounts are integer cents, always positive; `direction` says which way the money went.
+// =============================================================================================
+
+enum ExpenseAccountType {
+  credit_card
+  bank
+  cash
+  other
+}
+
+enum ExpenseDirection {
+  debit // money out of the company
+  credit // money in (a refund, a bonus, a transfer received)
+}
+
+enum ExpenseKind {
+  expense // counts as company spending
+  credit // money in; never counts as spending
+  internal // a card payment or a transfer between the company's own accounts: counted on one side only
+}
+
+enum ExpenseMovementSource {
+  manual
+  csv_import
+  fixed_auto // booked by the daily job on a fixed expense's charge day (auto debit or card)
+  fixed_paid // a manual-payment fixed expense marked as paid
+}
+
+enum FixedExpensePaymentMethod {
+  auto_debit
+  card
+  manual
+}
+
+model ExpenseAccount {
+  id            String             @id @default(uuid())
+  tenantId      String
+  tenant        Tenant             @relation(fields: [tenantId], references: [id])
+  nameEnc       String // "Visa Galicia ···· 4821" — encrypted, it carries card/account digits
+  type          ExpenseAccountType
+  // The saved CSV import profile (sign convention, column map, number and date format). Format
+  // metadata only, nothing from the file itself. Null until the first import.
+  importProfile Json?
+  lastImportAt  DateTime?
+  isActive      Boolean            @default(true)
+  createdById   String?
+  createdAt     DateTime           @default(now())
+  movements     ExpenseMovement[]
+  fixedExpenses FixedExpense[]
+
+  @@index([tenantId])
+}
+
+model ExpenseCategory {
+  id            String                @id @default(uuid())
+  tenantId      String
+  tenant        Tenant                @relation(fields: [tenantId], references: [id])
+  // A category name is a company's own label ("Marketing", "Alquiler"), not a spending detail —
+  // kept in clear like the department catalog. Seeded categories carry a systemKey so the UI can
+  // translate them; user-created ones have none and are shown as typed.
+  name          String
+  systemKey     String?
+  order         Int                   @default(0)
+  isActive      Boolean               @default(true)
+  createdAt     DateTime              @default(now())
+  movements     ExpenseMovement[]
+  fixedExpenses FixedExpense[]
+  rules         ExpenseCategoryRule[]
+
+  @@unique([tenantId, systemKey])
+  @@index([tenantId])
+}
+
+model ExpenseMovement {
+  id             String                  @id @default(uuid())
+  tenantId       String
+  tenant         Tenant                  @relation(fields: [tenantId], references: [id])
+  accountId      String
+  account        ExpenseAccount          @relation(fields: [accountId], references: [id])
+  date           DateTime                @db.Date
+  descriptionEnc String
+  amountEnc      String // integer cents as a string, encrypted
+  // Keyed HMAC of (accountId, amount in cents): lets the CSV import find a duplicate or the
+  // estimated charge a real one confirms by equality, without decrypting every row or storing the
+  // amount in clear.
+  amountHash     String
+  direction      ExpenseDirection
+  kind           ExpenseKind             @default(expense)
+  categoryId     String?
+  category       ExpenseCategory?        @relation(fields: [categoryId], references: [id])
+  departmentId   String?
+  department     FieldCatalogDefinition? @relation("ExpenseMovementDepartment", fields: [departmentId], references: [id])
+  source         ExpenseMovementSource   @default(manual)
+  // A fixed expense's charge booked automatically on its day, until a CSV import confirms it with
+  // the real amount and date (then false). Only fixed_auto movements are ever estimated.
+  isEstimated    Boolean                 @default(false)
+  fixedExpenseId String?
+  fixedExpense   FixedExpense?           @relation(fields: [fixedExpenseId], references: [id])
+  // The month (YYYY-MM) of the fixed expense this movement pays. Unique with fixedExpenseId, so the
+  // daily job can never book the same charge twice, however many times it runs.
+  fixedPeriod    String?
+  installment    String? // "03/12" read from the statement — not a spending detail on its own
+  noteEnc        String?
+  importBatchId  String?
+  createdById    String?
+  createdAt      DateTime                @default(now())
+
+  @@unique([fixedExpenseId, fixedPeriod])
+  @@index([tenantId, date])
+  @@index([tenantId, accountId, amountHash])
+}
+
+model FixedExpense {
+  id            String                    @id @default(uuid())
+  tenantId      String
+  tenant        Tenant                    @relation(fields: [tenantId], references: [id])
+  nameEnc       String
+  amountEnc     String // expected amount in cents, encrypted; the real charge can differ
+  dayOfMonth    Int // 1-31; a 31 in a 30-day month is charged on the last day
+  paymentMethod FixedExpensePaymentMethod @default(manual)
+  accountId     String?
+  account       ExpenseAccount?           @relation(fields: [accountId], references: [id])
+  categoryId    String?
+  category      ExpenseCategory?          @relation(fields: [categoryId], references: [id])
+  departmentId  String?
+  department    FieldCatalogDefinition?   @relation("FixedExpenseDepartment", fields: [departmentId], references: [id])
+  isActive      Boolean                   @default(true)
+  createdById   String?
+  createdAt     DateTime                  @default(now())
+  movements     ExpenseMovement[]
+
+  @@index([tenantId])
+}
+
+// Learned from a user's category corrections: "anything containing UBER → Viáticos". The pattern
+// is a merchant name, so it's encrypted too; rules are matched in the app after decrypting.
+model ExpenseCategoryRule {
+  id          String          @id @default(uuid())
+  tenantId    String
+  tenant      Tenant          @relation(fields: [tenantId], references: [id])
+  patternEnc  String
+  categoryId  String
+  category    ExpenseCategory @relation(fields: [categoryId], references: [id])
+  createdById String?
+  createdAt   DateTime        @default(now())
+
+  @@index([tenantId])
 }

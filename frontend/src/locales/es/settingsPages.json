@@ -1122,6 +1122,7 @@
         "manage_payroll": { "label": "Gestionar nómina", "description": "Compensación, liquidaciones de nómina, y la exportación CSV de datos de empleados." },
         "manage_billing": { "label": "Gestionar facturación", "description": "Cambiar de plan, método de pago, y cancelar la suscripción." },
         "manage_payments": { "label": "Gestionar pagos", "description": "Conectar Stripe y ver el historial de pagos de clientes." },
+        "manage_expenses": { "label": "Gestionar gastos", "description": "Gastos de la empresa: cuentas, tarjetas, gastos fijos, importación de CSV y el dashboard de Gastos." },
         "manage_api_access": { "label": "Gestionar API y webhooks", "description": "Crear y revocar claves de API privadas y webhooks salientes." },
         "use_ai_assistants": {
           "label": "Usar asistentes de IA",

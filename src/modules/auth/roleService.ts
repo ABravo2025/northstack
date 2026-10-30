@@ -51,6 +51,11 @@ export const MANAGE_TENANT_SETTINGS = 'manage_tenant_settings';
 export const MANAGE_SHARED_VIEWS = 'manage_shared_views';
 export const DECIDE_TIME_OFF = 'decide_time_off';
 
+// Gastos / Expenses (spec-clientes-gastos-formularios.md, Fase A, 2026-10-30): the whole module
+// (accounts, movements, fixed expenses, CSV import, its dashboard). Owner-only by default, same as
+// manage_payroll — not in ADMIN_SEED_PERMISSIONS/MEMBER_SEED_PERMISSIONS.
+export const MANAGE_EXPENSES = 'manage_expenses';
+
 // Private API + outbound webhooks (spec-private-api-webhooks.md, decision #5) — self-service,
 // owner-only by default: not in ADMIN_SEED_PERMISSIONS/MEMBER_SEED_PERMISSIONS below (same
 // treatment as manage_payroll/manage_billing/manage_payments), so a fresh Admin/Member role
@@ -111,6 +116,7 @@ export const PERMISSION_KEYS = [
   'manage_payroll',
   'manage_billing',
   'manage_payments',
+  MANAGE_EXPENSES,
   MANAGE_API_ACCESS,
   USE_AI_ASSISTANTS,
   'view_sales_leaderboard',
@@ -155,6 +161,7 @@ export const TOGGLEABLE_PERMISSION_KEYS = [
   'manage_payroll',
   'manage_billing',
   'manage_payments',
+  MANAGE_EXPENSES,
   MANAGE_API_ACCESS,
   USE_AI_ASSISTANTS,
   'view_sales_leaderboard',

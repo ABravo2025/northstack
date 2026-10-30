@@ -15,6 +15,8 @@ const PERMISSION_FEATURE: Record<string, keyof PlanFeatures> = {
   manage_api_access: 'apiAccess',
   // use_ai_assistants joined 2026-10-02 (spec-mcp-server.md §2b) — same module as the API.
   use_ai_assistants: 'apiAccess',
+  // Gastos / Expenses (2026-10-30): permission AND Growth plan, like Payroll.
+  manage_expenses: 'expenses',
 };
 
 // Custom Roles Fase G — the frontend counterpart to permissionService.ts/fieldVisibilityService.ts.
@@ -44,7 +46,7 @@ interface PermissionsContextValue {
 const DEFAULT_VALUE: PermissionsContextValue = {
   isOwner: false,
   growthPlan: true,
-  features: { payroll: true, payments: true, apiAccess: true, projectTemplates: true, shiftSkills: true, billableHours: true, clockIn: true },
+  features: { payroll: true, payments: true, apiAccess: true, projectTemplates: true, shiftSkills: true, billableHours: true, clockIn: true, expenses: true },
   roleName: '',
   has: () => false,
   isFieldHidden: () => false,
@@ -65,10 +67,10 @@ export function PermissionsProvider({
   children: React.ReactNode;
 }) {
   // Primitive deps: callers build `features` fresh on every render.
-  const { payroll, payments, apiAccess, projectTemplates, shiftSkills, billableHours, clockIn } = features;
+  const { payroll, payments, apiAccess, projectTemplates, shiftSkills, billableHours, clockIn, expenses } = features;
   const value = useMemo<PermissionsContextValue>(() => {
     if (!payload) return DEFAULT_VALUE;
-    const features = { payroll, payments, apiAccess, projectTemplates, shiftSkills, billableHours, clockIn };
+    const features = { payroll, payments, apiAccess, projectTemplates, shiftSkills, billableHours, clockIn, expenses };
     return {
       isOwner: payload.isOwner,
       growthPlan,
@@ -81,7 +83,7 @@ export function PermissionsProvider({
         !payload.isOwner && (payload.hiddenFields[entityType]?.includes(fieldKey) ?? false),
       twoStep: payload.twoStep ?? { enabled: false, required: false },
     };
-  }, [payload, growthPlan, payroll, payments, apiAccess, projectTemplates, shiftSkills, billableHours, clockIn]);
+  }, [payload, growthPlan, payroll, payments, apiAccess, projectTemplates, shiftSkills, billableHours, clockIn, expenses]);
 
   return <PermissionsContext.Provider value={value}>{children}</PermissionsContext.Provider>;
 }

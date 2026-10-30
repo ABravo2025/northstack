@@ -1117,6 +1117,7 @@
         "manage_payroll": { "label": "Manage payroll", "description": "Compensation, payroll runs, and the CSV export of employee data." },
         "manage_billing": { "label": "Manage billing", "description": "Change plan, payment method, and cancel the subscription." },
         "manage_payments": { "label": "Manage payments", "description": "Connect Stripe and view customer payment history." },
+        "manage_expenses": { "label": "Manage expenses", "description": "Company expenses: accounts, cards, fixed expenses, CSV imports and the Expenses dashboard." },
         "manage_api_access": { "label": "Manage API & webhooks", "description": "Create and revoke private API keys and outbound webhooks." },
         "use_ai_assistants": {
           "label": "Use AI assistants",

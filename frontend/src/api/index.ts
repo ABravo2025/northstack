@@ -36,6 +36,7 @@ import { activityApi } from './activity.js';
 import { rolesApi } from './roles.js';
 import { shiftsApi } from './shifts.js';
 import { projectsApi } from './projects.js';
+import { expensesApi } from './expenses.js';
 
 export { ApiError, API_BASE_URL } from './http.js';
 export * from './types.js';
@@ -78,5 +79,6 @@ export const api = {
   ...activityApi,
   ...rolesApi,
   ...shiftsApi,
+  ...expensesApi,
   ...projectsApi,
 };

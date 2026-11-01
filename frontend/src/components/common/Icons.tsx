@@ -496,3 +496,15 @@ export function TaskCheckIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+// Gastos / Expenses — the main nav entry (Finance group) and its own sidebar.
+export function ReceiptIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M6 3h12v18l-3-2-3 2-3-2-3 2z" />
+      <path d="M9 8h6" />
+      <path d="M9 12h6" />
+      <path d="M9 16h3" />
+    </svg>
+  );
+}

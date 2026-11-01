@@ -1976,3 +1976,90 @@ export interface ClockBoardLocation {
   }[];
   unscheduled: ClockEntry[];
 }
+
+// Gastos / Expenses (spec-clientes-gastos-formularios.md, Fase A). Amounts are integer cents,
+// always positive; `direction` says which way the money went.
+export type ExpenseAccountType = 'credit_card' | 'bank' | 'cash' | 'other';
+export type ExpenseDirection = 'debit' | 'credit';
+export type ExpenseKind = 'expense' | 'credit' | 'internal';
+export type ExpenseSource = 'manual' | 'csv_import' | 'fixed_auto' | 'fixed_paid';
+export type FixedPaymentMethod = 'auto_debit' | 'card' | 'manual';
+export type FixedStatus = 'paid' | 'estimated' | 'scheduled' | 'due' | 'overdue';
+
+export interface ExpenseAccount {
+  id: string;
+  name: string;
+  type: ExpenseAccountType;
+  importProfile: Record<string, unknown> | null;
+  lastImportAt: string | null;
+  isActive: boolean;
+}
+
+export interface ExpenseCategory {
+  id: string;
+  name: string;
+  systemKey: string | null;
+  order: number;
+  isActive: boolean;
+}
+
+export interface ExpensesMeta {
+  accounts: ExpenseAccount[];
+  categories: ExpenseCategory[];
+  departments: { id: string; name: string }[];
+  currency: string;
+  ruleCount: number;
+  today: string;
+}
+
+export interface ExpenseMovement {
+  id: string;
+  accountId: string;
+  date: string;
+  description: string;
+  amountCents: number;
+  direction: ExpenseDirection;
+  kind: ExpenseKind;
+  categoryId: string | null;
+  departmentId: string | null;
+  source: ExpenseSource;
+  isEstimated: boolean;
+  fixedExpenseId: string | null;
+  fixedPeriod: string | null;
+  installment: string | null;
+  note: string | null;
+}
+
+export interface FixedExpense {
+  id: string;
+  name: string;
+  amountCents: number;
+  dayOfMonth: number;
+  paymentMethod: FixedPaymentMethod;
+  accountId: string | null;
+  categoryId: string | null;
+  departmentId: string | null;
+  isActive: boolean;
+  period: string;
+  chargeDate: string;
+  status: FixedStatus;
+  movementId: string | null;
+  bookedAmountCents: number | null;
+  bookedDate: string | null;
+}
+
+export interface ExpensesSummary {
+  period: string;
+  previousPeriod: string;
+  totalCents: number;
+  fixedCents: number;
+  variableCents: number;
+  creditsCents: number;
+  previousTotalCents: number;
+  estimatedCount: number;
+  fixedPaidCount: number;
+  fixedCount: number;
+  byCategory: { categoryId: string | null; cents: number }[];
+  due: FixedExpense[];
+  movementCount: number;
+}

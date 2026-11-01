@@ -70,6 +70,10 @@ import PublicFormPage from './pages/PublicFormPage';
 import ApiDocsPage from './pages/ApiDocsPage';
 import BillingPage from './pages/BillingPage';
 import PaymentsOverviewPage from './pages/PaymentsOverviewPage';
+import ExpensesSummaryPage from './pages/expenses/ExpensesSummaryPage';
+import ExpensesMovementsPage from './pages/expenses/ExpensesMovementsPage';
+import ExpensesFixedPage from './pages/expenses/ExpensesFixedPage';
+import ExpensesAccountsPage from './pages/expenses/ExpensesAccountsPage';
 import PayrollPage from './pages/PayrollPage';
 import PayrollRunDetailPage from './pages/PayrollRunDetailPage';
 import AppLayout from './layouts/AppLayout';
@@ -464,6 +468,11 @@ export default function App() {
         <Route path="/contacts" element={<ContactsPage user={user} token={token ?? ''} />} />
         <Route path="/opportunities" element={<OpportunitiesPage user={user} token={token ?? ''} />} />
         <Route path="/payments" element={featureOnly('payments', <PaymentsOverviewPage token={token ?? ''} />, '/')} />
+        {/* Gastos (spec-clientes-gastos-formularios.md): its own sidebar under /expenses. */}
+        <Route path="/expenses" element={featureOnly('expenses', <ExpensesSummaryPage token={token ?? ''} />, '/')} />
+        <Route path="/expenses/movements" element={featureOnly('expenses', <ExpensesMovementsPage token={token ?? ''} />, '/')} />
+        <Route path="/expenses/fixed" element={featureOnly('expenses', <ExpensesFixedPage token={token ?? ''} />, '/')} />
+        <Route path="/expenses/accounts" element={featureOnly('expenses', <ExpensesAccountsPage token={token ?? ''} />, '/')} />
         <Route path="/referrals" element={<ReferralsPage token={token ?? ''} />} />
         <Route path="/profile" element={<Navigate to="/settings/profile" replace />} />
         <Route path="/company" element={<Navigate to="/settings/company" replace />} />

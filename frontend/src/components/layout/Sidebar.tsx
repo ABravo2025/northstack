@@ -20,8 +20,7 @@ import {
   TargetIcon,
   TaskCircleIcon,
   UserCircleIcon,
-  XIcon,
-} from '../common/Icons';
+  XIcon, ReceiptIcon } from '../common/Icons';
 
 interface SidebarProps {
   mobileOpen: boolean;
@@ -48,6 +47,8 @@ export default function Sidebar({ mobileOpen, onMobileClose, tenant }: SidebarPr
   const canSeeContact = permissions.has('view_contact');
   const canSeeOpportunity = canSeeCompany && canSeeContact;
   const canSeePayments = permissions.has('manage_payments');
+  // Gastos (spec-clientes-gastos-formularios.md): its own Finance group, Growth-only, owner-only by default.
+  const canSeeExpenses = permissions.features.expenses && permissions.has('manage_expenses');
   const showSalesGroup = canSeeCompany || canSeeContact || canSeeOpportunity || canSeePayments;
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -149,6 +150,16 @@ export default function Sidebar({ mobileOpen, onMobileClose, tenant }: SidebarPr
                 {label(t('sidebar.payments'))}
               </NavLink>
             )}
+          </div>
+        )}
+
+        {canSeeExpenses && (
+          <div className="sidebar-divider">
+            {!collapsed && <p className="sidebar-group-label">{t('sidebar.finance')}</p>}
+            <NavLink to="/expenses" className={linkClass} title={t('sidebar.expenses')} onClick={onMobileClose}>
+              <ReceiptIcon className="h-4 w-4 shrink-0" />
+              {label(t('sidebar.expenses'))}
+            </NavLink>
           </div>
         )}
 

@@ -130,11 +130,11 @@
 
 Inicio y fin reales se registran al cerrar cada unidad.
 
-- [ ] A1 Schema + cifrado + plan + permiso — inicio 2026-10-30
-- [ ] A2 Backend CRUD
-- [ ] A3 Cobros automáticos
+- [x] A1 Schema + cifrado + plan + permiso — 2026-10-30 17:15 → 17:39 (bc28588)
+- [x] A2 Backend CRUD — 2026-11-01 ≈17:50 → 18:10
+- [x] A3 Cobros automáticos — 2026-11-01, junto con A2 (cron diario 13:00 UTC + corrida perezosa al abrir Gastos, idempotente)
 - [ ] A4 Importación CSV
-- [ ] A5 Frontend hub y pantallas
+- [x] A5 Frontend hub y pantallas — 2026-11-01 ≈18:10 → 18:20 (se adelantó a A4 para verlo en vivo; "Importar CSV" deshabilitado hasta A4/A6)
 - [ ] A6 Asistente de importación
 - [ ] A7 Dashboards → Gastos
 - [ ] A8 Cierre Gastos

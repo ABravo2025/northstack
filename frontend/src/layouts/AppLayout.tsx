@@ -9,6 +9,7 @@ import DashboardsSidebar from '../components/layout/DashboardsSidebar';
 import TimeOffSidebar from '../components/layout/TimeOffSidebar';
 import ShiftsSidebar from '../components/layout/ShiftsSidebar';
 import PayrollSidebar from '../components/layout/PayrollSidebar';
+import ExpensesSidebar from '../components/layout/ExpensesSidebar';
 import TopBar from '../components/layout/TopBar';
 import MobileTabbar from '../components/layout/MobileTabbar';
 import PrimaryActionFab from '../components/layout/PrimaryActionFab';
@@ -149,6 +150,8 @@ export default function AppLayout({ user, token, tenant, onLogout }: AppLayoutPr
           <TimeOffSidebar mobileOpen={mobileSidebarOpen} onMobileClose={() => setMobileSidebarOpen(false)} />
         ) : location.pathname.startsWith('/payroll') ? (
           <PayrollSidebar token={token} mobileOpen={mobileSidebarOpen} onMobileClose={() => setMobileSidebarOpen(false)} />
+        ) : location.pathname.startsWith('/expenses') ? (
+          <ExpensesSidebar mobileOpen={mobileSidebarOpen} onMobileClose={() => setMobileSidebarOpen(false)} />
         ) : location.pathname.startsWith('/shifts') ? (
           <ShiftsSidebar token={token} mobileOpen={mobileSidebarOpen} onMobileClose={() => setMobileSidebarOpen(false)} />
         ) : (

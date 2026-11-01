@@ -8,6 +8,8 @@ import { runScheduledTerminations } from '../modules/hr/terminationService.js';
 import { runActivityLogRetention } from '../modules/activity/activityLogRetentionService.js';
 import { runWebhookDeliveryRetries } from '../modules/integrations/webhookDispatchService.js';
 import { runShiftReminders } from '../modules/shifts/shiftReminderService.js';
+import { bookDueFixedExpenses } from '../modules/expenses/expenseService.js';
+import { isExpenseEncryptionConfigured } from '../lib/expenseEncryption.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 import type express from 'express';
 
@@ -128,6 +130,18 @@ internalRouter.get('/api/internal/shifts/reminders/run', async (req, res) => {
   if (!checkCronSecret(req, res, '/api/internal/shifts/reminders/run')) return;
 
   const result = await runShiftReminders();
+  return res.json(result);
+});
+
+// Triggered once a day by Vercel Cron — Gastos (spec-clientes-gastos-formularios.md, A3): books
+// every auto-debit / card fixed expense whose charge day has come as an estimated expense, for all
+// tenants. Idempotent (unique fixedExpenseId + fixedPeriod), so it's also run lazily when someone
+// opens Gastos. Skipped while EXPENSES_DATA_ENCRYPTION_KEY isn't set.
+internalRouter.get('/api/internal/expenses/fixed-charges/run', async (req, res) => {
+  if (!checkCronSecret(req, res, '/api/internal/expenses/fixed-charges/run')) return;
+  if (!isExpenseEncryptionConfigured()) return res.json({ skipped: 'expenses_not_configured' });
+
+  const result = await bookDueFixedExpenses();
   return res.json(result);
 });
 

@@ -103,7 +103,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
     <main>
       <h1>Northstack Privacy Policy</h1>
-      <p class="effective-date">Effective Date: October 25, 2026</p>
+      <p class="effective-date">Effective Date: November 2, 2026</p>
 
       <p>
         This Privacy Policy explains how Northstack ("<strong>Northstack</strong>,"
@@ -222,6 +222,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           that Tenant's own connected Stripe account so Stripe can deliver and collect the
           invoice; see Section 4.5.
         </li>
+        <li>
+          If the Tenant uses Clients: leads (name, email, phone, company, job title, notes, how they arrived — including the campaign parameters of the link, such as utm_source — and each contact attempt), support tickets from its clients (the requester's name and email, subject, and conversation), check-in notes, the products each client has contracted, and quotes.
+        </li>
+        <li>
+          If the Tenant uses Expenses: its own company's bank account, card, and cash movements, fixed expenses, categories, budgets, and, optionally, a receipt file for a movement. When a Tenant imports a bank or card statement, the CSV file is read in the user's browser and is never uploaded to Northstack — only the rows the user confirms are sent. Account names, movement descriptions, amounts (including the original amount of a charge in another currency), notes, fixed-expense names and amounts, budgets, categorization rules, and receipt files and their names are stored encrypted with a key used only for this module. Dates, categories, the exchange rate, and the client or department a movement is assigned to are not encrypted. A movement description can name other people or businesses (for example, the recipient of a transfer); that information is Processed Data controlled by the Tenant.
+        </li>
+        <li>
+          If the Tenant uses Forms and surveys: the answers people submit (see Section 2.5), stored encrypted with a key used only for this module, together with the date, how it was answered (public link or personal link), the campaign parameters of the link, and — when the Tenant configures it — the record the answer created or updated (for example, a lead, a contact, a support ticket, or a task), into which some answers are copied. Score questions (such as NPS) are also stored as a number, for reporting.
+        </li>
       </ul>
 
       <h3>2.3 Information collected automatically</h3>
@@ -281,6 +290,25 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         is in use, we will update this section, our Cookie Policy and Section 4.1, and post a
         new effective date.
       </p>
+
+      <h3>2.5 People who answer a form or survey, or receive a quote</h3>
+      <p>
+        A Tenant can publish forms on its own website or share them by link, send surveys to its clients or employees, and send its clients a quote to accept online. The people who answer or accept are usually not Northstack users, and their information is Processed Data controlled by that Tenant (Section 1); the Tenant is responsible for telling them how it uses their answers.
+      </p>
+      <ul>
+        <li>
+          <strong>Public forms.</strong> Anyone with the link, or visiting a website where the Tenant embedded the form, can answer it. We use the visitor's IP address only to limit repeated submissions, in a counter that expires on its own within an hour at most (Section 4.1); it is not stored with the answer. These pages do not set cookies and do not load analytics or advertising tools.
+        </li>
+        <li>
+          <strong>Personal links.</strong> A survey or form sent to one specific person (a client contact or an employee) uses a personal link that can be answered once and expires after 30 days. We store only a one-way hash of the link, not the link itself, and the invitation is sent by email (Section 4.1). The same person is not sent the same survey again within 60 days.
+        </li>
+        <li>
+          <strong>Anonymous surveys.</strong> Employee surveys are anonymous by default, and a Tenant may make other surveys anonymous too. For an anonymous survey we do not store who answered with the answer, the answer is not linked to the invitation, and its time is kept only to the day. The answer keeps the respondent's department so results can be grouped; results and individual answers stay hidden until there are at least three answers (or the higher minimum the Tenant sets), and a department's result is hidden whenever it could be worked out from the others. Anonymity also depends on the questions the Tenant asks: an answer to an open question can identify someone by what it says.
+        </li>
+        <li>
+          <strong>Quotes.</strong> A quote link shows the quote to whoever has the link. When the recipient accepts it, we record the name they type, the date and time, and their IP address, as a record of the acceptance; when they decline it, the date and the optional reason they give.
+        </li>
+      </ul>
 
       <hr />
 
@@ -351,10 +379,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             <td>Zoho Mail</td>
             <td>Transactional email delivery (e.g., invitations)</td>
             <td>
-              Recipient email address, name, and email content, including a payslip PDF
+              Recipient email address, name, and email content (including survey and form invitations a Tenant sends), including a payslip PDF
               attachment, which on an Argentine payslip carries the person's full tax
               identification number
             </td>
+          </tr>
+          <tr>
+            <td>Upstash</td>
+            <td>Abuse protection: temporary request counters, for example for sign-in attempts and public form submissions</td>
+            <td>IP address, kept only in counters that expire on their own within an hour at most</td>
           </tr>
           <tr>
             <td>Dodo Payments</td>
@@ -494,6 +527,25 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         issued — <strong>never an amount or a tax identification number.</strong>
       </p>
 
+      <h3>4.8 Expenses, forms, and client data within a Tenant</h3>
+      <p>
+        Within a Tenant, these modules follow the roles the Tenant configures (Section 4.2), with these limits built in:
+      </p>
+      <ul>
+        <li>
+          Expenses — movements, receipts, budgets, and the Expenses dashboard — are visible only to the owner and roles with "Manage expenses" permission.
+        </li>
+        <li>
+          Client profitability combines a client's revenue with the cost of the hours worked for it and the expenses assigned to it. Each part is shown only to those who can already see it: the cost of hours only to the owner and roles with "Manage payroll", and expenses only to those with "Manage expenses".
+        </li>
+        <li>
+          Forms, surveys, and their answers are managed by the owner and roles with "Manage custom fields &amp; catalogs" permission. Anonymous survey results are shown only as described in Section 2.5.
+        </li>
+        <li>
+          Health scores and upsell signals are calculated, when they are viewed, from the Tenant's own data (activity, tickets, check-ins, survey scores, and contracted products). They are not shared outside the Tenant, and Northstack does not use them for any other purpose.
+        </li>
+      </ul>
+
       <hr />
 
       <h2>5. Data Retention</h2>
@@ -545,6 +597,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <p>
         You (or your Tenant's owner/admin) can request earlier deletion by contacting
         <a href="mailto:info@joinnorthstack.com">info@joinnorthstack.com</a>.
+      </p>
+      <p>
+        Expense records and receipts, form and survey answers, leads, support tickets, and quotes are Processed Data and are deleted with the Tenant account, as described above. A receipt is also deleted when the Tenant removes it or deletes its movement. The IP counters described in Section 2.5 expire on their own within an hour at most.
       </p>
 
       <hr />
@@ -626,6 +681,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         cannot guarantee absolute security. If we become aware of a security
         incident affecting your data that we are required by law to notify you of, we will
         do so without undue delay.
+      </p>
+      <p>
+        Expense records and receipts, and form and survey answers, are additionally encrypted at rest (AES-256-GCM) with keys specific to each of those modules, separate from the keys used for other data. Personal survey links and quote links are stored only as a one-way hash.
       </p>
 
       <hr />

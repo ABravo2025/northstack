@@ -103,7 +103,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
     <main>
       <h1>Política de Privacidad de Northstack</h1>
-      <p class="effective-date">Fecha de vigencia: 25 de octubre de 2026</p>
+      <p class="effective-date">Fecha de vigencia: 2 de noviembre de 2026</p>
 
       <p>
         Esta Política de Privacidad explica cómo Northstack ("<strong>Northstack</strong>,"
@@ -226,6 +226,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           se envían a la propia cuenta de Stripe conectada por ese Tenant para que Stripe
           pueda entregar y cobrar la factura; ver la Sección 4.5.
         </li>
+        <li>
+          Si el Tenant usa Clientes: leads (nombre, email, teléfono, empresa, cargo, notas, cómo llegaron — incluyendo los parámetros de campaña del link, como utm_source — y cada intento de contacto), tickets de soporte de sus clientes (nombre y email de quien lo pide, asunto y conversación), notas de check-ins, los productos que tiene contratados cada cliente, y presupuestos.
+        </li>
+        <li>
+          Si el Tenant usa Gastos: los movimientos de las cuentas bancarias, tarjetas y efectivo de su propia empresa, gastos fijos, categorías, presupuestos y, opcionalmente, un archivo de comprobante por movimiento. Cuando un Tenant importa un resumen bancario o de tarjeta, el archivo CSV se lee en el navegador del usuario y nunca se sube a Northstack — solo se envían las filas que el usuario confirma. Los nombres de las cuentas, las descripciones de los movimientos, los montos (incluyendo el monto original de un cargo en otra moneda), las notas, los nombres y montos de los gastos fijos, los presupuestos, las reglas de categorización, y los archivos de comprobantes y sus nombres se guardan encriptados con una clave que se usa solo para este módulo. Las fechas, las categorías, el tipo de cambio, y el cliente o departamento al que se asigna un movimiento no se encriptan. La descripción de un movimiento puede nombrar a otras personas o empresas (por ejemplo, el destinatario de una transferencia); esa información son Datos Procesados controlados por el Tenant.
+        </li>
+        <li>
+          Si el Tenant usa Formularios y encuestas: las respuestas que envían las personas (ver la Sección 2.5), guardadas encriptadas con una clave que se usa solo para este módulo, junto con la fecha, cómo se respondió (link público o link personal), los parámetros de campaña del link y — cuando el Tenant lo configura — el registro que la respuesta creó o actualizó (por ejemplo, un lead, un contacto, un ticket de soporte o una tarea), al que se copian algunas respuestas. Las preguntas de puntaje (como NPS) también se guardan como número, para los reportes.
+        </li>
       </ul>
 
       <h3>2.3 Información recolectada automáticamente</h3>
@@ -288,6 +297,25 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         sección, nuestra Política de Cookies y la Sección 4.1, y publicar una nueva fecha de
         vigencia.
       </p>
+
+      <h3>2.5 Personas que responden un formulario o encuesta, o reciben un presupuesto</h3>
+      <p>
+        Un Tenant puede publicar formularios en su propio sitio web o compartirlos por link, enviar encuestas a sus clientes o empleados, y mandarles a sus clientes un presupuesto para aceptar online. Las personas que responden o aceptan normalmente no son usuarios de Northstack, y su información son Datos Procesados controlados por ese Tenant (Sección 1); el Tenant es responsable de informarles cómo usa sus respuestas.
+      </p>
+      <ul>
+        <li>
+          <strong>Formularios públicos.</strong> Cualquiera que tenga el link, o que visite un sitio web donde el Tenant insertó el formulario, puede responderlo. Usamos la dirección IP del visitante solo para limitar envíos repetidos, en un contador que vence solo en una hora como máximo (Sección 4.1); no se guarda con la respuesta. Estas páginas no usan cookies ni cargan herramientas de analítica o publicidad.
+        </li>
+        <li>
+          <strong>Links personales.</strong> Una encuesta o formulario enviado a una persona específica (un contacto de un cliente o un empleado) usa un link personal que se puede responder una sola vez y vence a los 30 días. Guardamos solo un hash de una sola vía del link, no el link en sí, y la invitación se envía por email (Sección 4.1). A la misma persona no se le vuelve a enviar la misma encuesta dentro de los 60 días.
+        </li>
+        <li>
+          <strong>Encuestas anónimas.</strong> Las encuestas a empleados son anónimas por defecto, y un Tenant también puede hacer anónimas otras encuestas. En una encuesta anónima no guardamos quién respondió junto con la respuesta, la respuesta no queda vinculada a la invitación, y su hora se guarda solo con el día. La respuesta conserva el departamento de quien respondió para poder agrupar resultados; los resultados y las respuestas individuales quedan ocultos hasta que haya al menos tres respuestas (o el mínimo mayor que fije el Tenant), y el resultado de un departamento se oculta siempre que se pueda deducir a partir de los demás. El anonimato también depende de las preguntas que haga el Tenant: la respuesta a una pregunta abierta puede identificar a alguien por lo que dice.
+        </li>
+        <li>
+          <strong>Presupuestos.</strong> Un link de presupuesto le muestra el presupuesto a quien tenga el link. Cuando el destinatario lo acepta, registramos el nombre que escribe, la fecha y hora, y su dirección IP, como constancia de la aceptación; cuando lo rechaza, la fecha y el motivo opcional que indique.
+        </li>
+      </ul>
 
       <hr />
 
@@ -360,10 +388,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             <td>Zoho Mail</td>
             <td>Entrega de email transaccional (ej. invitaciones)</td>
             <td>
-              Dirección de email, nombre, y contenido del email del destinatario, incluyendo
+              Dirección de email, nombre, y contenido del email del destinatario (incluyendo las invitaciones a encuestas y formularios que envía un Tenant), incluyendo
               un PDF adjunto de recibo de sueldo, que en un recibo argentino lleva el número
               de identificación tributaria completo de la persona
             </td>
+          </tr>
+          <tr>
+            <td>Upstash</td>
+            <td>Protección contra abusos: contadores temporales de pedidos, por ejemplo de intentos de inicio de sesión y de envíos de formularios públicos</td>
+            <td>Dirección IP, guardada solo en contadores que vencen solos en una hora como máximo</td>
           </tr>
           <tr>
             <td>Dodo Payments</td>
@@ -512,6 +545,25 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <strong>nunca un monto ni un número de identificación tributaria.</strong>
       </p>
 
+      <h3>4.8 Gastos, formularios y datos de clientes dentro de un Tenant</h3>
+      <p>
+        Dentro de un Tenant, estos módulos siguen los roles que configura el Tenant (Sección 4.2), con estos límites incorporados:
+      </p>
+      <ul>
+        <li>
+          Gastos — movimientos, comprobantes, presupuestos y el dashboard de Gastos — solo lo ven el owner y los roles con el permiso "Gestionar gastos".
+        </li>
+        <li>
+          La rentabilidad por cliente combina lo que factura un cliente con el costo de las horas trabajadas para él y los gastos asignados a él. Cada parte se muestra solo a quien ya puede verla: el costo de las horas solo al owner y a los roles con "Gestionar nómina", y los gastos solo a quienes tienen "Gestionar gastos".
+        </li>
+        <li>
+          Los formularios, las encuestas y sus respuestas los gestionan el owner y los roles con el permiso "Gestionar campos personalizados y catálogos". Los resultados de las encuestas anónimas se muestran solo como se describe en la Sección 2.5.
+        </li>
+        <li>
+          Los puntajes de salud y las señales de upsell se calculan, en el momento en que se miran, a partir de los propios datos del Tenant (actividad, tickets, check-ins, puntajes de encuestas y productos contratados). No se comparten fuera del Tenant, y Northstack no los usa para ningún otro fin.
+        </li>
+      </ul>
+
       <hr />
 
       <h2>5. Conservación de datos</h2>
@@ -567,6 +619,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <p>
         Vos (o el owner/admin de tu Tenant) pueden pedir una eliminación anticipada
         escribiendo a <a href="mailto:info@joinnorthstack.com">info@joinnorthstack.com</a>.
+      </p>
+      <p>
+        Los registros de gastos y sus comprobantes, las respuestas a formularios y encuestas, los leads, los tickets de soporte y los presupuestos son Datos Procesados y se eliminan junto con la cuenta del Tenant, como se describe arriba. Un comprobante también se elimina cuando el Tenant lo quita o elimina su movimiento. Los contadores de IP descritos en la Sección 2.5 vencen solos en una hora como máximo.
       </p>
 
       <hr />
@@ -652,6 +707,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         100% seguro, y no podemos garantizar seguridad absoluta. Si tomamos conocimiento de
         un incidente de seguridad que afecte tus datos y que la ley nos exija notificarte,
         lo vamos a hacer sin demora indebida.
+      </p>
+      <p>
+        Los registros de gastos y sus comprobantes, y las respuestas a formularios y encuestas, además se encriptan en reposo (AES-256-GCM) con claves propias de cada uno de esos módulos, separadas de las claves que se usan para otros datos. Los links personales de encuestas y los links de presupuestos se guardan solo como un hash de una sola vía.
       </p>
 
       <hr />

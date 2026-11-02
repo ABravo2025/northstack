@@ -257,6 +257,7 @@
   },
   "responses": {
     "allForms": "Todos los formularios",
+    "anonymousHint": "Encuesta anónima: las respuestas se ven recién cuando hay al menos {{count}}, para que nadie pueda reconocer quién respondió.",
     "hint": "Hacé clic en una respuesta para ver todas las preguntas y respuestas.",
     "empty": "Sin respuestas todavía.",
     "columns": {
@@ -335,7 +336,7 @@
     "status": {
       "pending": "sin responder",
       "responded": "respondió",
-      "closed": "cerrado",
+      "sent": "enviada",
       "expired": "venció"
     }
   },

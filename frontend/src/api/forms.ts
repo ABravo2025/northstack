@@ -143,7 +143,7 @@ export interface FormCandidate {
 export interface FormInvitesSummary {
   total: number;
   responded: number;
-  invites: { id: string; recipientName: string; trigger: string; sentAt: string; status: 'pending' | 'responded' | 'closed' | 'expired' }[];
+  invites: { id: string; recipientName: string; trigger: string; sentAt: string; status: 'pending' | 'responded' | 'sent' | 'expired' }[];
 }
 
 export interface FormsDashboard {

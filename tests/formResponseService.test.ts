@@ -2,16 +2,18 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 
 vi.mock('../src/lib/prisma.js', () => ({
   default: {
-    contact: { findUnique: vi.fn(), findFirst: vi.fn(), update: vi.fn() },
+    contact: { findUnique: vi.fn(), findFirst: vi.fn(), update: vi.fn(), findMany: vi.fn(async () => []) },
     company: { findFirst: vi.fn(), create: vi.fn() },
-    employee: { findFirst: vi.fn(), update: vi.fn() },
-    task: { create: vi.fn() },
+    employee: { findFirst: vi.fn(), update: vi.fn(), findMany: vi.fn(async () => []) },
+    task: { create: vi.fn(), findMany: vi.fn(async () => []) },
+    clientTicket: { findMany: vi.fn(async () => []) },
     tenant: { findUnique: vi.fn() },
     fieldCatalogDefinition: { findFirst: vi.fn() },
     customFieldDefinition: { findMany: vi.fn() },
     customFieldValue: { findFirst: vi.fn(), update: vi.fn() },
-    formResponse: { create: vi.fn() },
-    lead: { findFirst: vi.fn() },
+    formResponse: { create: vi.fn(), count: vi.fn(), findMany: vi.fn(), findFirst: vi.fn() },
+    form: { findMany: vi.fn() },
+    lead: { findFirst: vi.fn(), findMany: vi.fn(async () => []) },
   },
 }));
 vi.mock('../src/modules/crm/contactService.js', () => ({ createContact: vi.fn() }));
@@ -24,7 +26,7 @@ import prisma from '../src/lib/prisma.js';
 import { decryptAnswers } from '../src/lib/formsEncryption.js';
 import { createContact } from '../src/modules/crm/contactService.js';
 import { createOpportunity } from '../src/modules/crm/opportunityService.js';
-import { submitResponse } from '../src/modules/forms/formResponseService.js';
+import { getResponse, listResponses, submitResponse } from '../src/modules/forms/formResponseService.js';
 import { createLead as createInboxLead } from '../src/modules/crm/leadService.js';
 
 const db = prisma as unknown as Record<string, Record<string, ReturnType<typeof vi.fn>>>;
@@ -140,5 +142,22 @@ describe('submitResponse', () => {
   it('support tickets wait for the Clients phase', async () => {
     const f = form({ module: 'support', action: 'create_ticket', fields: [{ id: 'q1', label: 'Asunto', type: 'short_text', required: true, mapTo: 'ticket.subject' }] });
     await expect(submitResponse(f, { q1: 'No anda' }, { source: 'public_link' })).rejects.toMatchObject({ status: 409 });
+  });
+});
+
+describe('anonymous surveys under their threshold', () => {
+  it('keep their single answers out of the list and the modal', async () => {
+    db.form.findMany.mockResolvedValue([
+      { id: 'enps', surveySettings: { anonymous: true, minAnonymousGroup: 3 } },
+      { id: 'nps', surveySettings: { anonymous: false } },
+    ]);
+    db.formResponse.count.mockResolvedValue(2);
+    db.formResponse.findMany.mockResolvedValue([]);
+    expect(await listResponses('t1', { formId: 'enps' })).toEqual([]);
+    expect(db.formResponse.findMany).not.toHaveBeenCalled();
+    await listResponses('t1', {});
+    expect(db.formResponse.findMany.mock.calls[0][0].where).toEqual({ tenantId: 't1', formId: { notIn: ['enps'] } });
+    db.formResponse.findFirst.mockResolvedValue({ id: 'r1', formId: 'enps' });
+    await expect(getResponse('t1', 'r1')).rejects.toMatchObject({ status: 404 });
   });
 });

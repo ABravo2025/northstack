@@ -175,6 +175,7 @@ export async function listInvites(tenantId: string, formId: string) {
     (await recipientsById(tenantId, type ?? 'contact', [...new Set(invites.map((i) => i.recipientId))])).map((r) => [r.id, r.name]),
   );
   const now = Date.now();
+  const anonymous = form.kind === 'survey' && (form.surveySettings as { anonymous?: boolean } | null)?.anonymous === true;
   return {
     total: invites.length,
     responded: invites.filter((i) => i.respondedAt).length,
@@ -183,8 +184,8 @@ export async function listInvites(tenantId: string, formId: string) {
       recipientName: names.get(i.recipientId) ?? '—',
       trigger: i.trigger,
       sentAt: i.sentAt,
-      // Anonymous surveys never say who answered, not even here.
-      status: i.respondedAt ? ((form.surveySettings as { anonymous?: boolean } | null)?.anonymous && form.kind === 'survey' ? 'closed' : 'responded') : i.expiresAt.getTime() < now ? 'expired' : 'pending',
+      // Anonymous surveys never say who answered, not even here: only the total above.
+      status: anonymous ? 'sent' : i.respondedAt ? 'responded' : i.expiresAt.getTime() < now ? 'expired' : 'pending',
     })),
   };
 }
@@ -200,20 +201,28 @@ export async function findInvite(token: string) {
   return { invite, form: invite.form, tenant: invite.tenant, state, firstName: recipient?.firstName ?? null };
 }
 
+function startOfUtcDay() {
+  const d = new Date();
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+}
+
 export async function submitInvite(token: string, answers: Record<string, unknown>) {
   const found = await findInvite(token);
   if (!found) throw new FormError('Link not found', 404, 'not_found');
   if (found.state === 'answered') throw new FormError('This link was already answered', 409, 'already_answered');
   if (found.state === 'expired') throw new FormError('This link expired', 410, 'expired');
+  // An anonymous survey never ties the link to the answer: no responseId, and the answer time is
+  // kept only to the day on both sides, so the two can't be matched by timestamp either.
+  const anonymous = found.form.kind === 'survey' && (found.form.surveySettings as { anonymous?: boolean } | null)?.anonymous === true;
   // Claim the invite first, so two tabs submitting at once can't both answer it.
-  const claimed = await prisma.formInvite.updateMany({ where: { id: found.invite.id, respondedAt: null }, data: { respondedAt: new Date() } });
+  const claimed = await prisma.formInvite.updateMany({ where: { id: found.invite.id, respondedAt: null }, data: { respondedAt: anonymous ? startOfUtcDay() : new Date() } });
   if (claimed.count === 0) throw new FormError('This link was already answered', 409, 'already_answered');
   try {
     const result = await submitResponse(found.form, answers, {
       source: 'personal_link',
       respondent: { type: found.invite.recipientType as RecipientType, id: found.invite.recipientId },
     });
-    await prisma.formInvite.update({ where: { id: found.invite.id }, data: { responseId: result.responseId } });
+    if (!anonymous) await prisma.formInvite.update({ where: { id: found.invite.id }, data: { responseId: result.responseId } });
     return { form: found.form, result };
   } catch (error) {
     await prisma.formInvite.update({ where: { id: found.invite.id }, data: { respondedAt: null } });

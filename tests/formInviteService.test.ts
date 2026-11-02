@@ -111,6 +111,16 @@ describe('submitInvite', () => {
     expect(db.formInvite.update).toHaveBeenCalledWith({ where: { id: 'i1' }, data: { responseId: 'r1' } });
   });
 
+  it('never ties an anonymous answer to its link, not even by time', async () => {
+    db.formInvite.findUnique.mockResolvedValue(invite({ recipientType: 'employee', recipientId: 'e1', form: survey({ module: 'employees', surveySettings: { anonymous: true } }) }));
+    db.employee.findMany.mockResolvedValue([{ id: 'e1', firstName: 'Ana', lastName: 'Paz' }]);
+    db.formInvite.updateMany.mockResolvedValue({ count: 1 });
+    await submitInvite(token, { q1: 9 });
+    const respondedAt = db.formInvite.updateMany.mock.calls[0][0].data.respondedAt as Date;
+    expect(respondedAt.toISOString()).toMatch(/T00:00:00\.000Z$/);
+    expect(db.formInvite.update).not.toHaveBeenCalled();
+  });
+
   it('refuses an answered or expired link, and a race lost to another tab', async () => {
     db.formInvite.findUnique.mockResolvedValueOnce(invite({ respondedAt: new Date() }));
     await expect(submitInvite(token, {})).rejects.toMatchObject({ code: 'already_answered' });

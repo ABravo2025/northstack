@@ -340,6 +340,8 @@ export async function submitResponse(form: Form, rawAnswers: Record<string, unkn
       utmSource: ctx.utm?.source?.slice(0, 100) || null,
       utmMedium: ctx.utm?.medium?.slice(0, 100) || null,
       utmCampaign: ctx.utm?.campaign?.slice(0, 100) || null,
+      // Anonymous: the day only, so the answer can't be matched to a link by its exact time.
+      ...(anonymous ? { createdAt: new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00Z') } : {}),
     },
   });
   return { responseId: response.id, linked };
@@ -365,9 +367,26 @@ async function linkedLabels(tenantId: string, rows: { linkedEntityType: string |
   return labels;
 }
 
+// Anonymous surveys with fewer answers than their threshold (min 3): their single answers stay
+// hidden in the list and the modal too, not only in the dashboard, or one or two people could be
+// recognised by what they wrote.
+export async function hiddenAnonymousFormIds(tenantId: string): Promise<string[]> {
+  const surveys = await prisma.form.findMany({ where: { tenantId, kind: 'survey' }, select: { id: true, surveySettings: true } });
+  const anonymous = surveys.filter((f) => (f.surveySettings as { anonymous?: boolean } | null)?.anonymous === true);
+  const hidden: string[] = [];
+  for (const f of anonymous) {
+    const min = Math.max(3, (f.surveySettings as { minAnonymousGroup?: number } | null)?.minAnonymousGroup ?? 3);
+    if ((await prisma.formResponse.count({ where: { tenantId, formId: f.id } })) < min) hidden.push(f.id);
+  }
+  return hidden;
+}
+
 export async function listResponses(tenantId: string, filter: { formId?: string; limit?: number }) {
+  const hidden = await hiddenAnonymousFormIds(tenantId);
+  if (filter.formId && hidden.includes(filter.formId)) return [];
+  const formId = filter.formId ?? (hidden.length ? { notIn: hidden } : undefined);
   const rows = await prisma.formResponse.findMany({
-    where: { tenantId, ...(filter.formId ? { formId: filter.formId } : {}) },
+    where: { tenantId, ...(formId ? { formId } : {}) },
     orderBy: { createdAt: 'desc' },
     take: Math.min(filter.limit ?? 200, 500),
     include: { form: { select: { id: true, name: true, kind: true, module: true, fields: true } } },
@@ -399,7 +418,7 @@ export async function getResponse(tenantId: string, id: string) {
     where: { id, tenantId },
     include: { form: { select: { id: true, name: true, kind: true, module: true, action: true, fields: true } } },
   });
-  if (!r) throw new FormError('Response not found', 404);
+  if (!r || (await hiddenAnonymousFormIds(tenantId)).includes(r.formId)) throw new FormError('Response not found', 404);
   const questions = (r.form.fields as unknown as FormQuestion[] | null) ?? [];
   const answers = decryptAnswers(r.answersEnc);
   const copied = new Map(((r.copiedFields as { questionId: string; mapTo: string }[] | null) ?? []).map((c) => [c.questionId, c.mapTo]));

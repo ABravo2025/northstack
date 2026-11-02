@@ -89,6 +89,9 @@ export default function FormResponsesPage({ token }: { token: string }) {
             </div>
           )}
           <p className="ex-muted m-0 text-sm">{t('responses.hint')}</p>
+          {form?.kind === 'survey' && form.surveySettings?.anonymous && (
+            <p className="ex-muted m-0 text-sm">{t('responses.anonymousHint', { count: Math.max(3, form.surveySettings.minAnonymousGroup ?? 3) })}</p>
+          )}
           <div className="full-table-wrap">
             <table className="table full-table to-table">
               <thead>

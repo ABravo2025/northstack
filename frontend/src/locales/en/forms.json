@@ -257,6 +257,7 @@
   },
   "responses": {
     "allForms": "All forms",
+    "anonymousHint": "Anonymous survey: answers show up only once there are at least {{count}}, so no one can tell who answered.",
     "hint": "Click a response to see every question and answer.",
     "empty": "No responses yet.",
     "columns": {
@@ -335,7 +336,7 @@
     "status": {
       "pending": "not answered",
       "responded": "answered",
-      "closed": "closed",
+      "sent": "sent",
       "expired": "expired"
     }
   },

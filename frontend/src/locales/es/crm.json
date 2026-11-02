@@ -722,7 +722,9 @@
     "loading": "Cargando…",
     "cancel": "Cancelar",
     "tabs": {
-      "products": "Productos"
+      "products": "Productos",
+      "timeline": "Línea de tiempo",
+      "onboarding": "Onboarding"
     },
     "billing": {
       "monthly": "Mensual",
@@ -747,6 +749,35 @@
       "price": "Precio unitario ({{currency}})",
       "renewal": "Renovación (opcional)",
       "add": "Agregar"
+    },
+    "timeline": {
+      "empty": "Todavía no pasó nada con esta empresa.",
+      "kind": {
+        "opportunity_created": "Oportunidad nueva",
+        "stage_changed": "Cambió de etapa",
+        "won": "Ganada",
+        "lost": "Perdida",
+        "handoff": "Traspaso al responsable",
+        "lead_converted": "Lead convertido",
+        "product_added": "Producto agregado",
+        "product_cancelled": "Producto dado de baja",
+        "note": "Nota",
+        "task_done": "Tarea terminada",
+        "survey_answered": "Encuesta respondida"
+      }
+    },
+    "onboarding": {
+      "empty": "No tiene proyectos. El de onboarding se crea en el traspaso de una oportunidad ganada.",
+      "badge": "Onboarding",
+      "progress": "{{done}} de {{total}} tareas ({{pct}} %)",
+      "due": "vence {{date}}",
+      "status": {
+        "planning": "Planificación",
+        "active": "En curso",
+        "on_hold": "En pausa",
+        "completed": "Terminado",
+        "cancelled": "Cancelado"
+      }
     }
   },
   "productsCatalog": {

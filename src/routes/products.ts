@@ -1,7 +1,7 @@
 import type express from 'express';
 import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
-import { canManageCompany, canManageCustomFields, canViewCompany } from '../modules/auth/permissionService.js';
+import { canManageCompany, canManageCustomFields, canViewCompany, canViewOpportunity } from '../modules/auth/permissionService.js';
 import { isClientsAllowed } from '../modules/tenant/planLimits.js';
 import {
   ProductError,
@@ -12,9 +12,10 @@ import {
   updateCompanyProduct,
   updateProduct,
 } from '../modules/crm/productService.js';
+import { getCompanyOnboarding, getCompanyTimeline } from '../modules/crm/company360Service.js';
 
-// Clientes C4: the product catalog (Settings, same permission as pipelines) and each company's
-// products (company permissions). Growth (clientsEnabled).
+// Clientes C4/C5: the product catalog (Settings, same permission as pipelines), each company's
+// products and its 360 view (company permissions). Growth (clientsEnabled).
 export const productsRouter = createAsyncRouter();
 
 type Need = 'catalog' | 'viewCompany' | 'manageCompany';
@@ -95,4 +96,21 @@ productsRouter.patch('/api/companies/:companyId/products/:lineId', async (req, r
   } catch (error) {
     return fail(res, error);
   }
+});
+
+// Clientes C5: the company 360 view — timeline and onboarding.
+productsRouter.get('/api/companies/:companyId/timeline', async (req, res) => {
+  const user = await guard(req, res, 'viewCompany');
+  if (!user) return;
+  const events = await getCompanyTimeline(user.tenantId!, req.params.companyId, { canViewOpportunities: canViewOpportunity(user.roleContext) });
+  if (!events) return res.status(404).json({ error: 'Company not found' });
+  return res.json(events);
+});
+
+productsRouter.get('/api/companies/:companyId/onboarding', async (req, res) => {
+  const user = await guard(req, res, 'viewCompany');
+  if (!user) return;
+  const projects = await getCompanyOnboarding(user.tenantId!, req.params.companyId);
+  if (!projects) return res.status(404).json({ error: 'Company not found' });
+  return res.json(projects);
 });

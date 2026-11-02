@@ -19,6 +19,8 @@ import TagInput from '../common/TagInput';
 import type { TagAssignmentLite } from '../../api';
 import { usePermissions } from '../../contexts/PermissionsContext';
 import CompanyProductsTab from './company360/CompanyProductsTab';
+import CompanyTimelineTab from './company360/CompanyTimelineTab';
+import CompanyOnboardingTab from './company360/CompanyOnboardingTab';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
 interface CompanyDetailModalProps {
@@ -616,7 +618,11 @@ export default function CompanyDetailModal({
   // The 360 view's extra tabs, in order. Each one only for whoever can see it.
   const extraTabs: { key: string; label: string; content: React.ReactNode }[] = [
     ...(permissions.features.clients
-      ? [{ key: 'products', label: t('company360.tabs.products'), content: <CompanyProductsTab token={token} companyId={company.id} canManage={permissions.has('manage_company')} /> }]
+      ? [
+          { key: 'timeline', label: t('company360.tabs.timeline'), content: <CompanyTimelineTab token={token} companyId={company.id} /> },
+          { key: 'products', label: t('company360.tabs.products'), content: <CompanyProductsTab token={token} companyId={company.id} canManage={permissions.has('manage_company')} /> },
+          { key: 'onboarding', label: t('company360.tabs.onboarding'), content: <CompanyOnboardingTab token={token} companyId={company.id} /> },
+        ]
       : []),
     ...(paymentsContent ? [{ key: 'payments', label: t('companyDetail.groups.payments'), content: paymentsContent }] : []),
   ];

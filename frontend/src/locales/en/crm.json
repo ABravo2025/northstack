@@ -722,7 +722,9 @@
     "loading": "Loading…",
     "cancel": "Cancel",
     "tabs": {
-      "products": "Products"
+      "products": "Products",
+      "timeline": "Timeline",
+      "onboarding": "Onboarding"
     },
     "billing": {
       "monthly": "Monthly",
@@ -747,6 +749,35 @@
       "price": "Unit price ({{currency}})",
       "renewal": "Renewal (optional)",
       "add": "Add"
+    },
+    "timeline": {
+      "empty": "Nothing has happened with this company yet.",
+      "kind": {
+        "opportunity_created": "New opportunity",
+        "stage_changed": "Stage changed",
+        "won": "Won",
+        "lost": "Lost",
+        "handoff": "Handed off",
+        "lead_converted": "Lead converted",
+        "product_added": "Product added",
+        "product_cancelled": "Product cancelled",
+        "note": "Note",
+        "task_done": "Task done",
+        "survey_answered": "Survey answered"
+      }
+    },
+    "onboarding": {
+      "empty": "No projects. The onboarding one is created when a won deal is handed off.",
+      "badge": "Onboarding",
+      "progress": "{{done}} of {{total}} tasks ({{pct}}%)",
+      "due": "due {{date}}",
+      "status": {
+        "planning": "Planning",
+        "active": "In progress",
+        "on_hold": "On hold",
+        "completed": "Completed",
+        "cancelled": "Cancelled"
+      }
     }
   },
   "productsCatalog": {

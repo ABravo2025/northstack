@@ -34,6 +34,37 @@ export interface CompanyProductsView {
   mrr: { currency: string; cents: number }[];
 }
 
+export interface CompanyTimelineEvent {
+  at: string;
+  kind:
+    | 'opportunity_created'
+    | 'stage_changed'
+    | 'won'
+    | 'lost'
+    | 'handoff'
+    | 'lead_converted'
+    | 'product_added'
+    | 'product_cancelled'
+    | 'note'
+    | 'task_done'
+    | 'survey_answered';
+  title: string;
+  detail?: string | null;
+  href?: string | null;
+}
+
+export interface CompanyOnboardingProject {
+  id: string;
+  name: string;
+  status: string;
+  startDate: string | null;
+  dueDate: string | null;
+  ownerEmployee: { firstName: string; lastName: string } | null;
+  isOnboarding: boolean;
+  tasks: number;
+  tasksDone: number;
+}
+
 export type ProductInput = Partial<Pick<Product, 'name' | 'sku' | 'description' | 'unitPriceCents' | 'currency' | 'billing' | 'isActive'>>;
 
 async function call<T>(token: string, path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
@@ -65,4 +96,7 @@ export const productsApi = {
     lineId: string,
     input: { quantity?: number; unitPriceCents?: number; renewalDate?: string | null; notes?: string | null; cancelled?: boolean },
   ) => call<CompanyProductLine>(token, `/api/companies/${companyId}/products/${lineId}`, { method: 'PATCH', body: input }),
+  // Clientes C5: the company 360 view.
+  getCompanyTimeline: (token: string, companyId: string) => call<CompanyTimelineEvent[]>(token, `/api/companies/${companyId}/timeline`),
+  getCompanyOnboarding: (token: string, companyId: string) => call<CompanyOnboardingProject[]>(token, `/api/companies/${companyId}/onboarding`),
 };

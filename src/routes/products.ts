@@ -16,6 +16,13 @@ import { getCompanyOnboarding, getCompanyTimeline } from '../modules/crm/company
 import { addCheckIn, getCompanyHealth } from '../modules/crm/healthService.js';
 import { SignalError, createSignalOpportunity, getSignals } from '../modules/crm/signalService.js';
 import { getClientsDashboard, getSalesExtras } from '../modules/crm/clientsDashboardService.js';
+import { getProfitability, type Money } from '../modules/crm/profitabilityService.js';
+import { canManageExpenses, canManagePayments, canManagePayroll } from '../modules/auth/permissionService.js';
+import { isExpensesAllowed, isPaymentsAllowed, isPayrollAllowed } from '../modules/tenant/planLimits.js';
+import { isExpenseEncryptionConfigured } from '../lib/expenseEncryption.js';
+import { getCompanyPaymentSummary } from '../modules/integrations/stripePaymentsService.js';
+import prisma from '../lib/prisma.js';
+import type { AuthenticatedUser } from '../modules/auth/authService.js';
 
 // Clientes C4/C5: the product catalog (Settings, same permission as pipelines), each company's
 // products and its 360 view (company permissions). Growth (clientsEnabled).
@@ -186,4 +193,67 @@ productsRouter.get('/api/dashboards/sales-extras', async (req, res) => {
   if (!user) return;
   if (!canViewOpportunity(user.roleContext)) return res.status(403).json({ error: 'Insufficient permissions' });
   return res.json(await getSalesExtras(user.tenantId!, dashboardFilter(req)));
+});
+
+// Cruces D1: profitability per client. Each part only for whoever may see it — labor needs payroll,
+// expenses need Gastos, Stripe revenue needs Payments (otherwise revenue is estimated from products).
+function profitabilityAccess(user: AuthenticatedUser) {
+  return {
+    canSeeLabor: canManagePayroll(user.roleContext) && isPayrollAllowed(user.tenant),
+    canSeeExpenses: canManageExpenses(user.roleContext) && isExpensesAllowed(user.tenant) && isExpenseEncryptionConfigured(),
+    canSeePayments: canManagePayments(user.roleContext) && isPaymentsAllowed(user.tenant),
+  };
+}
+
+function periodOf(req: express.Request) {
+  const f = dashboardFilter(req);
+  return { from: new Date(`${f.from}T00:00:00Z`), to: new Date(`${f.to}T23:59:59Z`), departmentId: f.departmentId };
+}
+
+productsRouter.get('/api/companies/:companyId/profitability', async (req, res) => {
+  const user = await guard(req, res, 'viewCompany');
+  if (!user) return;
+  const company = await prisma.company.findFirst({ where: { id: req.params.companyId, tenantId: user.tenantId! }, select: { id: true, stripeCustomerId: true } });
+  if (!company) return res.status(404).json({ error: 'Company not found' });
+  const access = profitabilityAccess(user);
+  const period = periodOf(req);
+  let stripeRevenue: Map<string, Money> | undefined;
+  if (access.canSeePayments && company.stripeCustomerId) {
+    try {
+      const summary = await getCompanyPaymentSummary(user.tenantId!, company, { since: period.from, until: period.to });
+      if (summary.currency && summary.paymentsAmountCents) {
+        stripeRevenue = new Map([[company.id, [{ currency: summary.currency.toUpperCase(), cents: summary.paymentsAmountCents - summary.refundsAmountCents }]]]);
+      }
+    } catch {
+      // No Stripe connection, or it failed: fall back to the products estimate.
+    }
+  }
+  const result = await getProfitability(user.tenantId!, [company.id], period, { ...access, stripeRevenue });
+  return res.json({ ...result.get(company.id), access });
+});
+
+// The Clients dashboard's table: every client, revenue estimated from products (no Stripe call per
+// company), by the account owner's department.
+productsRouter.get('/api/dashboards/profitability', async (req, res) => {
+  const user = await guard(req, res, 'viewCompany');
+  if (!user) return;
+  const access = profitabilityAccess(user);
+  const period = periodOf(req);
+  const [lines, won] = await Promise.all([
+    prisma.companyProduct.findMany({ where: { tenantId: user.tenantId!, cancelledAt: null }, select: { companyId: true } }),
+    prisma.opportunity.findMany({ where: { tenantId: user.tenantId!, isActive: true, stage: { outcome: 'won' } }, select: { companyId: true } }),
+  ]);
+  const ids = [...new Set([...lines.map((l) => l.companyId), ...won.map((w) => w.companyId)])];
+  const companies = await prisma.company.findMany({ where: { tenantId: user.tenantId!, id: { in: ids } }, select: { id: true, name: true, accountOwnerId: true } });
+  let scoped = companies;
+  if (period.departmentId) {
+    const employees = await prisma.employee.findMany({ where: { tenantId: user.tenantId!, userId: { not: null } }, select: { userId: true, departmentId: true } });
+    const deptOf = new Map(employees.map((e) => [e.userId!, e.departmentId]));
+    scoped = companies.filter((c) => (period.departmentId === 'none' ? !c.accountOwnerId || !deptOf.get(c.accountOwnerId) : c.accountOwnerId && deptOf.get(c.accountOwnerId) === period.departmentId));
+  }
+  const result = await getProfitability(user.tenantId!, scoped.map((c) => c.id), period, access);
+  return res.json({
+    access,
+    rows: scoped.map((c) => ({ companyId: c.id, companyName: c.name, ...result.get(c.id)! })),
+  });
 });

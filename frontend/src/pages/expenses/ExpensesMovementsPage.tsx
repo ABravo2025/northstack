@@ -41,6 +41,14 @@ function MovementsBody({ token, meta, reloadMeta }: { token: string; meta: Expen
   const [deleting, setDeleting] = useState<ExpenseMovement | null>(null);
 
   const accounts = useMemo(() => new Map(meta.accounts.map((a) => [a.id, a])), [meta.accounts]);
+  // Cruces D1: an expense can be assigned to a client, to count in that client's profitability.
+  const [companies, setCompanies] = useState<{ id: string; name: string }[]>([]);
+  useEffect(() => {
+    api
+      .listCompanies(token)
+      .then((cs) => setCompanies(cs.map((c) => ({ id: c.id, name: c.name })).sort((a, b) => a.name.localeCompare(b.name))))
+      .catch(() => setCompanies([]));
+  }, [token]);
   const activeCategories = meta.categories.filter((c) => c.isActive);
 
   const load = () =>
@@ -63,7 +71,7 @@ function MovementsBody({ token, meta, reloadMeta }: { token: string; meta: Expen
     .filter((m) => m.kind === 'expense')
     .reduce((sum, m) => sum + (m.direction === 'debit' ? m.amountCents : -m.amountCents), 0);
 
-  const patch = async (m: ExpenseMovement, input: { categoryId?: string | null; departmentId?: string | null }) => {
+  const patch = async (m: ExpenseMovement, input: { categoryId?: string | null; departmentId?: string | null; companyId?: string | null }) => {
     try {
       const { movement, appliedToOthers } = await api.updateExpenseMovement(token, m.id, input);
       setRows((prev) => prev?.map((r) => (r.id === movement.id ? movement : r)) ?? prev);
@@ -142,13 +150,14 @@ function MovementsBody({ token, meta, reloadMeta }: { token: string; meta: Expen
                 <th>{t('movements.columns.account')}</th>
                 <th>{t('movements.columns.category')}</th>
                 <th>{t('movements.columns.department')}</th>
+                {companies.length > 0 && <th>{t('movements.columns.client')}</th>}
                 <th>{t('movements.columns.type')}</th>
                 <th className="text-right">{t('movements.columns.amount')}</th>
                 <th aria-hidden="true" />
               </tr>
             </thead>
             <TableBody
-              colSpan={8}
+              colSpan={companies.length > 0 ? 9 : 8}
               isEmpty={visible.length === 0}
               empty={
                 filtered
@@ -209,6 +218,27 @@ function MovementsBody({ token, meta, reloadMeta }: { token: string; meta: Expen
                         ))}
                       </select>
                     </td>
+                    {companies.length > 0 && (
+                      <td>
+                        {m.kind === 'expense' ? (
+                          <select
+                            className="ex-inline-select"
+                            aria-label={t('movements.columns.client')}
+                            value={m.companyId ?? ''}
+                            onChange={(e) => patch(m, { companyId: e.target.value || null })}
+                          >
+                            <option value="">{t('movements.noClient')}</option>
+                            {companies.map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {c.name}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className="ex-muted">—</span>
+                        )}
+                      </td>
+                    )}
                     <td>
                       <span className={`to-chip ${isRefund ? 'to-chip-approved' : KIND_CHIP[m.kind]}`}>
                         {isRefund ? t('kind.refund') : t(`kind.${m.kind}`)}
@@ -237,7 +267,7 @@ function MovementsBody({ token, meta, reloadMeta }: { token: string; meta: Expen
             {visible.length > 0 && (
               <tfoot>
                 <tr className="font-semibold">
-                  <td colSpan={5}>{t('movements.count', { count: visible.length })}</td>
+                  <td colSpan={companies.length > 0 ? 6 : 5}>{t('movements.count', { count: visible.length })}</td>
                   <td colSpan={3} className="num text-right">
                     {t('movements.filteredTotal', { amount: money(filteredSpend) })}
                   </td>

@@ -8,6 +8,7 @@ import { pivotByCurrency, seriesColor } from '../../lib/metricsFormat';
 import { formatMoney } from '../../lib/currencies';
 import type { DashboardsOutletContext } from '../../layouts/DashboardsLayout';
 import { DepartmentFilter, dashboardDates } from './dashboardFilters';
+import ProfitabilityTable from './ProfitabilityTable';
 
 // Clientes C9 (spec-clientes-gastos-formularios.md): Dashboards → Clientes — how many clients, their
 // recurring revenue, health spread, support (tickets and SLA) and check-ins. Shared Dashboards period
@@ -62,6 +63,7 @@ export default function DashboardsClientsPage() {
           series={[{ key: 'count', label: t('clientsDash.opened'), color: seriesColor(2) }]}
         />
       </div>
+      <ProfitabilityTable token={token} from={from} to={to} departmentId={departmentId} />
     </div>
   );
 }

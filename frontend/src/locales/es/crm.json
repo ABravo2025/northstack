@@ -726,7 +726,8 @@
       "timeline": "Línea de tiempo",
       "onboarding": "Onboarding",
       "health": "Salud",
-      "tickets": "Tickets"
+      "tickets": "Tickets",
+      "profitability": "Rentabilidad"
     },
     "billing": {
       "monthly": "Mensual",
@@ -985,5 +986,31 @@
     "leadsBySource": "Leads por origen",
     "sourceForm": "Formulario",
     "sourceManual": "Cargado a mano"
+  },
+  "profit": {
+    "title": "Rentabilidad",
+    "period": {
+      "month": "Este mes",
+      "quarter": "Últimos 3 meses",
+      "year": "Este año",
+      "twelve": "Últimos 12 meses"
+    },
+    "revenue": "Ingresos",
+    "source": {
+      "stripe": "Cobros de Stripe del período",
+      "products": "Estimado con sus productos (ingreso recurrente del período)",
+      "none": "Sin ingresos registrados"
+    },
+    "labor": "Horas del equipo",
+    "hours": "{{hours}} h cargadas en la empresa y sus proyectos, al costo por hora de cada persona",
+    "needsPayroll": "El costo de las horas solo lo ve quien gestiona la nómina.",
+    "expenses": "Gastos asignados",
+    "expensesHint": "Gastos marcados con este cliente en Gastos → Movimientos",
+    "needsExpenses": "Los gastos solo los ve quien gestiona Gastos.",
+    "result": "Resultado",
+    "note": "Cada moneda se calcula por separado, sin conversión. Un sueldo fijo se pasa a costo por hora con 160 h por mes (80 h quincenal, 40 h semanal).",
+    "tableTitle": "Rentabilidad por cliente",
+    "tableHint": "Ingresos estimados con los productos de cada cliente; la ficha de cada uno usa los cobros de Stripe si está vinculado. Primero los menos rentables.",
+    "client": "Cliente"
   }
 }

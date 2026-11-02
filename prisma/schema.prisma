@@ -1011,9 +1011,10 @@ model Company {
   // from being linked to the *same* customer (see stripePaymentsService.ts's
   // linkCompanyToStripeCustomer, which already checks this at the application layer; this is the
   // DB-level backstop against a concurrent-request race).
-  products       CompanyProduct[]
-  CompanyCheckIn CompanyCheckIn[]
-  ClientTicket   ClientTicket[]
+  products         CompanyProduct[]
+  checkIns         CompanyCheckIn[]
+  clientTickets    ClientTicket[]
+  expenseMovements ExpenseMovement[] @relation("ExpenseMovementCompany")
 
   @@unique([tenantId, stripeCustomerId])
   @@index([tenantId])
@@ -3600,6 +3601,10 @@ model ExpenseMovement {
   category       ExpenseCategory?        @relation(fields: [categoryId], references: [id])
   departmentId   String?
   department     FieldCatalogDefinition? @relation("ExpenseMovementDepartment", fields: [departmentId], references: [id])
+  // Cruces D1: the client this expense is for, to count it in that client's profitability.
+  // In clear like the department: an id, not a spending detail.
+  companyId      String?
+  company        Company?                @relation("ExpenseMovementCompany", fields: [companyId], references: [id])
   source         ExpenseMovementSource   @default(manual)
   // A fixed expense's charge booked automatically on its day, until a CSV import confirms it with
   // the real amount and date (then false). Only fixed_auto movements are ever estimated.
@@ -3618,6 +3623,7 @@ model ExpenseMovement {
   @@unique([fixedExpenseId, fixedPeriod])
   @@index([tenantId, date])
   @@index([tenantId, accountId, amountHash])
+  @@index([tenantId, companyId])
 }
 
 model FixedExpense {

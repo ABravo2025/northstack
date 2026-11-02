@@ -102,6 +102,20 @@ export interface SalesExtras {
   leads: { total: number; worked: number; qualified: number; converted: number; disqualified: number; bySource: { source: string; total: number; converted: number }[] };
 }
 
+export type ProfitMoney = { currency: string; cents: number }[];
+
+export interface CompanyProfitability {
+  revenue: ProfitMoney;
+  revenueSource: 'stripe' | 'products' | 'none';
+  labor: ProfitMoney | null;
+  laborMinutes: number | null;
+  expenses: ProfitMoney | null;
+  profit: ProfitMoney;
+  access: { canSeeLabor: boolean; canSeeExpenses: boolean; canSeePayments: boolean };
+}
+
+export type ProfitabilityRow = Omit<CompanyProfitability, 'access'> & { companyId: string; companyName: string };
+
 export type ProductInput = Partial<Pick<Product, 'name' | 'sku' | 'description' | 'unitPriceCents' | 'currency' | 'billing' | 'isActive'>>;
 
 async function call<T>(token: string, path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
@@ -149,4 +163,12 @@ export const productsApi = {
     call<ClientsDashboard>(token, `/api/dashboards/clients?${new URLSearchParams({ from: f.from, to: f.to, ...(f.departmentId ? { departmentId: f.departmentId } : {}) })}`),
   getSalesExtras: (token: string, f: { from: string; to: string; departmentId?: string }) =>
     call<SalesExtras>(token, `/api/dashboards/sales-extras?${new URLSearchParams({ from: f.from, to: f.to, ...(f.departmentId ? { departmentId: f.departmentId } : {}) })}`),
+  // Cruces D1: profitability per client.
+  getCompanyProfitability: (token: string, companyId: string, f: { from: string; to: string }) =>
+    call<CompanyProfitability>(token, `/api/companies/${companyId}/profitability?${new URLSearchParams(f)}`),
+  getProfitabilityTable: (token: string, f: { from: string; to: string; departmentId?: string }) =>
+    call<{ access: { canSeeLabor: boolean; canSeeExpenses: boolean }; rows: ProfitabilityRow[] }>(
+      token,
+      `/api/dashboards/profitability?${new URLSearchParams({ from: f.from, to: f.to, ...(f.departmentId ? { departmentId: f.departmentId } : {}) })}`,
+    ),
 };

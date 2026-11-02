@@ -156,8 +156,18 @@ export async function listDepartments(tenantId: string) {
 }
 
 // Ids that come in from a request must belong to the tenant.
-async function assertRefs(tenantId: string, refs: { accountId?: string | null; categoryId?: string | null; departmentId?: string | null }) {
+async function assertRefs(
+  tenantId: string,
+  refs: { accountId?: string | null; categoryId?: string | null; departmentId?: string | null; companyId?: string | null },
+) {
   const checks: Promise<void>[] = [];
+  if (refs.companyId) {
+    checks.push(
+      prisma.company.findFirst({ where: { id: refs.companyId, tenantId }, select: { id: true } }).then((r) => {
+        if (!r) throw new ExpenseError('Company not found', 404);
+      }),
+    );
+  }
   if (refs.accountId) {
     checks.push(
       prisma.expenseAccount.findFirst({ where: { id: refs.accountId, tenantId }, select: { id: true } }).then((r) => {
@@ -196,6 +206,7 @@ const movementSelect = {
   kind: true,
   categoryId: true,
   departmentId: true,
+  companyId: true,
   source: true,
   isEstimated: true,
   fixedExpenseId: true,
@@ -217,6 +228,7 @@ function presentMovement(m: MovementRow) {
     kind: m.kind,
     categoryId: m.categoryId,
     departmentId: m.departmentId,
+    companyId: m.companyId,
     source: m.source,
     isEstimated: m.isEstimated,
     fixedExpenseId: m.fixedExpenseId,
@@ -259,6 +271,7 @@ export async function createManualMovement(
     direction: ExpenseDirection;
     categoryId?: string | null;
     departmentId?: string | null;
+    companyId?: string | null;
     note?: string | null;
   },
 ) {
@@ -275,6 +288,7 @@ export async function createManualMovement(
       kind: input.direction === 'debit' ? 'expense' : 'credit',
       categoryId: input.direction === 'debit' ? (input.categoryId ?? null) : null,
       departmentId: input.departmentId ?? null,
+      companyId: input.companyId ?? null,
       source: 'manual',
       noteEnc: input.note ? encryptExpenseData(input.note) : null,
       createdById: userId,
@@ -290,17 +304,18 @@ export async function updateMovement(
   tenantId: string,
   userId: string,
   id: string,
-  input: { categoryId?: string | null; departmentId?: string | null; kind?: ExpenseKind; note?: string | null; learnRule?: boolean },
+  input: { categoryId?: string | null; departmentId?: string | null; companyId?: string | null; kind?: ExpenseKind; note?: string | null; learnRule?: boolean },
 ) {
   const existing = await prisma.expenseMovement.findFirst({ where: { id, tenantId }, select: movementSelect });
   if (!existing) throw new ExpenseError('Movement not found', 404);
-  await assertRefs(tenantId, { categoryId: input.categoryId, departmentId: input.departmentId });
+  await assertRefs(tenantId, { categoryId: input.categoryId, departmentId: input.departmentId, companyId: input.companyId });
 
   const row = await prisma.expenseMovement.update({
     where: { id },
     data: {
       ...(input.categoryId !== undefined ? { categoryId: input.categoryId } : {}),
       ...(input.departmentId !== undefined ? { departmentId: input.departmentId } : {}),
+      ...(input.companyId !== undefined ? { companyId: input.companyId } : {}),
       ...(input.kind !== undefined ? { kind: input.kind } : {}),
       ...(input.note !== undefined ? { noteEnc: input.note ? encryptExpenseData(input.note) : null } : {}),
     },

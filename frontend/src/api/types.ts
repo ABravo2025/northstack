@@ -2071,6 +2071,8 @@ export interface ExpenseMovement {
   kind: ExpenseKind;
   categoryId: string | null;
   departmentId: string | null;
+  // Cruces D1: the client this expense is for (counts in its profitability).
+  companyId?: string | null;
   source: ExpenseSource;
   isEstimated: boolean;
   fixedExpenseId: string | null;

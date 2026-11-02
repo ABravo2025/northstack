@@ -726,7 +726,8 @@
       "timeline": "Timeline",
       "onboarding": "Onboarding",
       "health": "Health",
-      "tickets": "Tickets"
+      "tickets": "Tickets",
+      "profitability": "Profitability"
     },
     "billing": {
       "monthly": "Monthly",
@@ -985,5 +986,31 @@
     "leadsBySource": "Leads by source",
     "sourceForm": "Form",
     "sourceManual": "Entered by hand"
+  },
+  "profit": {
+    "title": "Profitability",
+    "period": {
+      "month": "This month",
+      "quarter": "Last 3 months",
+      "year": "This year",
+      "twelve": "Last 12 months"
+    },
+    "revenue": "Revenue",
+    "source": {
+      "stripe": "Stripe payments in the period",
+      "products": "Estimated from their products (recurring revenue in the period)",
+      "none": "No revenue recorded"
+    },
+    "labor": "Team hours",
+    "hours": "{{hours}} h logged on the company and its projects, at each person's hourly cost",
+    "needsPayroll": "The cost of hours is only visible to payroll managers.",
+    "expenses": "Assigned expenses",
+    "expensesHint": "Expenses tagged with this client in Expenses → Movements",
+    "needsExpenses": "Expenses are only visible to Expenses managers.",
+    "result": "Result",
+    "note": "Each currency is computed on its own, with no conversion. A fixed salary becomes an hourly cost at 160 h a month (80 h semimonthly, 40 h weekly).",
+    "tableTitle": "Profitability per client",
+    "tableHint": "Revenue estimated from each client's products; each client's own view uses Stripe payments when linked. Least profitable first.",
+    "client": "Client"
   }
 }

@@ -81,6 +81,7 @@ export const expensesApi = {
       direction: ExpenseDirection;
       categoryId: string | null;
       departmentId: string | null;
+      companyId?: string | null;
       note?: string;
     },
   ) => call<ExpenseMovement>(token, '/api/expenses/movements', { method: 'POST', body: input }),
@@ -88,7 +89,7 @@ export const expensesApi = {
   updateExpenseMovement: (
     token: string,
     id: string,
-    input: { categoryId?: string | null; departmentId?: string | null; kind?: ExpenseKind; note?: string | null; learnRule?: boolean },
+    input: { categoryId?: string | null; departmentId?: string | null; companyId?: string | null; kind?: ExpenseKind; note?: string | null; learnRule?: boolean },
   ) => call<{ movement: ExpenseMovement; appliedToOthers: number }>(token, `/api/expenses/movements/${id}`, { method: 'PATCH', body: input }),
 
   deleteExpenseMovement: (token: string, id: string) => call<void>(token, `/api/expenses/movements/${id}`, { method: 'DELETE' }),

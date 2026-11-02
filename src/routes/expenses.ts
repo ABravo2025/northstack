@@ -170,6 +170,7 @@ expensesRouter.post('/api/expenses/movements', async (req, res) => {
       direction,
       categoryId: optionalId(req.body.categoryId),
       departmentId: optionalId(req.body.departmentId),
+      companyId: optionalId(req.body.companyId),
       note: text(req.body.note, 500) || null,
     });
     return res.status(201).json(movement);
@@ -184,6 +185,7 @@ expensesRouter.patch('/api/expenses/movements/:id', async (req, res) => {
   const input: Parameters<typeof updateMovement>[3] = {};
   if (req.body.categoryId !== undefined) input.categoryId = optionalId(req.body.categoryId);
   if (req.body.departmentId !== undefined) input.departmentId = optionalId(req.body.departmentId);
+  if (req.body.companyId !== undefined) input.companyId = optionalId(req.body.companyId);
   if (req.body.kind !== undefined) {
     if (!KINDS.includes(req.body.kind)) return res.status(400).json({ error: 'Invalid type' });
     input.kind = req.body.kind;

@@ -79,6 +79,7 @@ import FormsListPage from './pages/forms/FormsListPage';
 import FormEditorPage from './pages/forms/FormEditorPage';
 import FormResponsesPage from './pages/forms/FormResponsesPage';
 import LeadsPage from './pages/leads/LeadsPage';
+import ProductsSettingsPage from './pages/ProductsSettingsPage';
 import PayrollPage from './pages/PayrollPage';
 import PayrollRunDetailPage from './pages/PayrollRunDetailPage';
 import AppLayout from './layouts/AppLayout';
@@ -507,6 +508,7 @@ export default function App() {
           {/* The old public-forms page lives on as Formularios y encuestas (/forms). */}
           <Route path="public-forms" element={<Navigate to="/forms" replace />} />
           <Route path="pipelines" element={<PipelinesSettingsPage token={token ?? ''} />} />
+          <Route path="products" element={featureOnly('clients', <ProductsSettingsPage token={token ?? ''} />, '/settings')} />
           <Route path="activity" element={<ActivityLogSettingsPage token={token ?? ''} />} />
           <Route path="roles" element={<RolesPermissionsPage token={token ?? ''} />} />
           <Route path="billing" element={<BillingPage token={token ?? ''} tenant={tenant} onTenantUpdated={setTenant} />} />

@@ -30,6 +30,8 @@ export interface SettingsSectionGroup {
 export interface SettingsSectionsPermissions {
   isOwner: boolean;
   has: (permission: string) => boolean;
+  // Plan modules that some sections also need (Clientes: the product catalog).
+  features?: { clients?: boolean };
 }
 
 // Single source of truth for what's in Settings, consumed by both the tile
@@ -71,6 +73,10 @@ export function getSettingsSections(permissions: SettingsSectionsPermissions): S
   }
   if (permissions.has('manage_custom_fields')) {
     companyItems.push({ to: 'pipelines', label: t('settings.pipelines.label'), desc: t('settings.pipelines.desc'), icon: <TrendingIcon /> });
+    // Clientes C4: the product catalog (Growth).
+    if (permissions.features?.clients) {
+      companyItems.push({ to: 'products', label: t('settings.products.label'), desc: t('settings.products.desc'), icon: <GridIcon /> });
+    }
   }
   if (permissions.has('view_activity_log')) {
     companyItems.push({ to: 'activity', label: t('settings.activityLog.label'), desc: t('settings.activityLog.desc'), icon: <ClockIcon /> });

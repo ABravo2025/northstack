@@ -248,6 +248,7 @@
       "label": "Usuarios",
       "desc": "Invitá personas y gestioná roles."
     },
+    "products": {"label": "Productos", "desc": "El catálogo de lo que vendés: precios y forma de cobro."},
     "pipelines": {
       "label": "Pipelines",
       "desc": "Etapas de venta y sus resultados."

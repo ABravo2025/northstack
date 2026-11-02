@@ -248,6 +248,7 @@
       "label": "Users",
       "desc": "Invite people and manage roles."
     },
+    "products": {"label": "Products", "desc": "The catalog of what you sell: prices and how they're charged."},
     "pipelines": {
       "label": "Pipelines",
       "desc": "Sales stages and their outcomes."

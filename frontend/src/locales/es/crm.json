@@ -717,5 +717,58 @@
     "done": "Traspaso hecho",
     "doneTitle": "Traspaso hecho",
     "doneBody": "El {{date}} se pasó al responsable de cuenta."
+  },
+  "company360": {
+    "loading": "Cargando…",
+    "cancel": "Cancelar",
+    "tabs": {
+      "products": "Productos"
+    },
+    "billing": {
+      "monthly": "Mensual",
+      "yearly": "Anual",
+      "one_time": "Pago único"
+    },
+    "products": {
+      "title": "Lo que tiene",
+      "mrr": "Ingreso mensual recurrente: {{amount}}",
+      "noMrr": "Sin ingreso recurrente todavía.",
+      "none": "No tiene productos cargados.",
+      "since": "desde {{date}}",
+      "renews": "renueva {{date}}",
+      "cancelled": "dado de baja",
+      "cancel": "Dar de baja",
+      "reactivate": "Reactivar",
+      "whiteSpace": "Lo que todavía no tiene",
+      "whiteSpaceHint": "Productos del catálogo que esta empresa no tiene: posibles ventas adicionales.",
+      "allOwned": "Ya tiene todo el catálogo.",
+      "addTitle": "Agregar {{name}}",
+      "quantity": "Cantidad",
+      "price": "Precio unitario ({{currency}})",
+      "renewal": "Renovación (opcional)",
+      "add": "Agregar"
+    }
+  },
+  "productsCatalog": {
+    "title": "Productos",
+    "subtitle": "El catálogo de lo que vendés. En la ficha de cada cliente se ve qué tiene y qué todavía no.",
+    "columns": {
+      "name": "Nombre",
+      "billing": "Cobro",
+      "price": "Precio",
+      "clients": "Clientes",
+      "status": "Estado"
+    },
+    "empty": "Todavía no cargaste productos.",
+    "add": "Nuevo producto",
+    "active": "Activo",
+    "archived": "Archivado",
+    "currency": "Moneda",
+    "sku": "Código (opcional)",
+    "description": "Descripción",
+    "activeHint": "Activo (se puede agregar a clientes)",
+    "save": "Guardar",
+    "saved": "Producto guardado",
+    "invalidPrice": "Ingresá un precio válido."
   }
 }

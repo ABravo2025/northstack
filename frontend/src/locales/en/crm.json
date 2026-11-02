@@ -717,5 +717,58 @@
     "done": "Hand-off done",
     "doneTitle": "Handed off",
     "doneBody": "Handed off to the account owner on {{date}}."
+  },
+  "company360": {
+    "loading": "Loading…",
+    "cancel": "Cancel",
+    "tabs": {
+      "products": "Products"
+    },
+    "billing": {
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "one_time": "One-time"
+    },
+    "products": {
+      "title": "What they have",
+      "mrr": "Monthly recurring revenue: {{amount}}",
+      "noMrr": "No recurring revenue yet.",
+      "none": "No products yet.",
+      "since": "since {{date}}",
+      "renews": "renews {{date}}",
+      "cancelled": "cancelled",
+      "cancel": "Cancel",
+      "reactivate": "Reactivate",
+      "whiteSpace": "What they don't have yet",
+      "whiteSpaceHint": "Catalog products this company doesn't have: possible upsells.",
+      "allOwned": "They already have the whole catalog.",
+      "addTitle": "Add {{name}}",
+      "quantity": "Quantity",
+      "price": "Unit price ({{currency}})",
+      "renewal": "Renewal (optional)",
+      "add": "Add"
+    }
+  },
+  "productsCatalog": {
+    "title": "Products",
+    "subtitle": "The catalog of what you sell. Each client's view shows what they have and what they don't yet.",
+    "columns": {
+      "name": "Name",
+      "billing": "Billing",
+      "price": "Price",
+      "clients": "Clients",
+      "status": "Status"
+    },
+    "empty": "No products yet.",
+    "add": "New product",
+    "active": "Active",
+    "archived": "Archived",
+    "currency": "Currency",
+    "sku": "SKU (optional)",
+    "description": "Description",
+    "activeHint": "Active (can be added to clients)",
+    "save": "Save",
+    "saved": "Product saved",
+    "invalidPrice": "Enter a valid price."
   }
 }

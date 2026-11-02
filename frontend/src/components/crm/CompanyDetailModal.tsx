@@ -17,6 +17,8 @@ import { PlusIcon, TrashIcon, XIcon } from '../common/Icons';
 import { formatMoney } from '../../lib/currencies';
 import TagInput from '../common/TagInput';
 import type { TagAssignmentLite } from '../../api';
+import { usePermissions } from '../../contexts/PermissionsContext';
+import CompanyProductsTab from './company360/CompanyProductsTab';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
 interface CompanyDetailModalProps {
@@ -69,6 +71,7 @@ export default function CompanyDetailModal({
   onNavigate,
 }: CompanyDetailModalProps) {
   const { t } = useTranslation('crm');
+  const permissions = usePermissions();
   const toast = useToast();
   const [addingContact, setAddingContact] = useState(false);
   const [linkContactId, setLinkContactId] = useState('');
@@ -83,8 +86,9 @@ export default function CompanyDetailModal({
   // unifies DetailSidebar's Notes/Tasks/Activity with "Overview" into one tab strip on mobile.
   // 2026-10 (Alejandro): Payments moved out of Overview into its own tab, the way Employee's
   // Payment History is — Stripe connection, summary and the full history all live there.
-  const [mobileSection, setMobileSection] = useState<'overview' | 'payments' | 'notes' | 'tasks' | 'activity'>('overview');
-  const [activeTab, setActiveTab] = useState<'overview' | 'payments'>('overview');
+  const [mobileSection, setMobileSection] = useState<string>('overview');
+  // Overview + the 360 tabs (Clientes C4/C5); payments only for who can see them.
+  const [activeTab, setActiveTab] = useState<string>('overview');
   const [sidebarCounts, setSidebarCounts] = useState({ notes: 0, tasks: 0, activity: 0 });
   const isMobile = useIsMobile();
 
@@ -609,6 +613,16 @@ export default function CompanyDetailModal({
     </div>
   ) : null;
 
+  // The 360 view's extra tabs, in order. Each one only for whoever can see it.
+  const extraTabs: { key: string; label: string; content: React.ReactNode }[] = [
+    ...(permissions.features.clients
+      ? [{ key: 'products', label: t('company360.tabs.products'), content: <CompanyProductsTab token={token} companyId={company.id} canManage={permissions.has('manage_company')} /> }]
+      : []),
+    ...(paymentsContent ? [{ key: 'payments', label: t('companyDetail.groups.payments'), content: paymentsContent }] : []),
+  ];
+  const activeExtra = extraTabs.find((tab) => tab.key === activeTab);
+  const mobileExtra = extraTabs.find((tab) => tab.key === mobileSection);
+
   return (
     <div className="detail-modal-overlay" onClick={onClose}>
       <div
@@ -637,8 +651,8 @@ export default function CompanyDetailModal({
           </div>
         </div>
 
-        {!isMobile && paymentsContent && (
-          <div className="mini-toggle-row mx-4 mt-3">
+        {!isMobile && extraTabs.length > 0 && (
+          <div className="mini-toggle-row mx-4 mt-3 flex-wrap">
             <button
               type="button"
               className={`mini-toggle-opt ${activeTab === 'overview' ? 'active' : ''}`}
@@ -646,13 +660,11 @@ export default function CompanyDetailModal({
             >
               {t('detail.mobileTabs.overview')}
             </button>
-            <button
-              type="button"
-              className={`mini-toggle-opt ${activeTab === 'payments' ? 'active' : ''}`}
-              onClick={() => setActiveTab('payments')}
-            >
-              {t('companyDetail.groups.payments')}
-            </button>
+            {extraTabs.map((tab) => (
+              <button key={tab.key} type="button" className={`mini-toggle-opt ${activeTab === tab.key ? 'active' : ''}`} onClick={() => setActiveTab(tab.key)}>
+                {tab.label}
+              </button>
+            ))}
           </div>
         )}
 
@@ -666,15 +678,11 @@ export default function CompanyDetailModal({
               >
                 {t('detail.mobileTabs.overview')}
               </button>
-              {paymentsContent && (
-                <button
-                  type="button"
-                  className={mobileSection === 'payments' ? 'active' : ''}
-                  onClick={() => setMobileSection('payments')}
-                >
-                  {t('companyDetail.groups.payments')}
+              {extraTabs.map((tab) => (
+                <button key={tab.key} type="button" className={mobileSection === tab.key ? 'active' : ''} onClick={() => setMobileSection(tab.key)}>
+                  {tab.label}
                 </button>
-              )}
+              ))}
               <button
                 type="button"
                 className={mobileSection === 'notes' ? 'active' : ''}
@@ -704,7 +712,7 @@ export default function CompanyDetailModal({
               </button>
             </div>
             <div style={{ display: mobileSection === 'overview' ? 'contents' : 'none' }}>{overviewContent}</div>
-            {mobileSection === 'payments' && paymentsContent}
+            {mobileExtra?.content}
             <DetailSidebar
               token={token}
               entityType="company"
@@ -712,12 +720,12 @@ export default function CompanyDetailModal({
               tenantUsers={tenantUsers}
               currentUserId={currentUserId}
               onCountsChange={setSidebarCounts}
-              mobileActiveSection={mobileSection === 'overview' || mobileSection === 'payments' ? null : mobileSection}
+              mobileActiveSection={mobileSection === 'notes' || mobileSection === 'tasks' || mobileSection === 'activity' ? mobileSection : null}
             />
           </div>
         ) : (
           <div className="overview-panel-main">
-            {activeTab === 'payments' && paymentsContent ? paymentsContent : overviewContent}
+            {activeExtra ? activeExtra.content : overviewContent}
             <DetailSidebar
               token={token}
               entityType="company"

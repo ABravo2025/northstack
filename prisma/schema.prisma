@@ -309,6 +309,13 @@ enum LeadInboxStatus {
   disqualified
 }
 
+// Clientes C4: how a catalog product is charged — drives the account's MRR.
+enum ProductBilling {
+  one_time
+  monthly
+  yearly
+}
+
 enum PipelinePurpose {
   new_business
   expansion
@@ -454,6 +461,8 @@ model Tenant {
   forms                     Form[]
   formResponses             FormResponse[]
   leads                     Lead[]
+  products                  Product[]
+  companyProducts           CompanyProduct[]
   leadTouches               LeadTouch[]
   formInvites               FormInvite[]
   expenseAccounts           ExpenseAccount[]
@@ -976,6 +985,8 @@ model Company {
   // from being linked to the *same* customer (see stripePaymentsService.ts's
   // linkCompanyToStripeCustomer, which already checks this at the application layer; this is the
   // DB-level backstop against a concurrent-request race).
+  products CompanyProduct[]
+
   @@unique([tenantId, stripeCustomerId])
   @@index([tenantId])
 }
@@ -3679,4 +3690,45 @@ model LeadTouch {
   at       DateTime @default(now())
 
   @@index([tenantId, leadId])
+}
+
+// Clientes C4 (spec-clientes-gastos-formularios.md): the company's product catalog — what it sells.
+model Product {
+  id             String           @id @default(uuid())
+  tenantId       String
+  tenant         Tenant           @relation(fields: [tenantId], references: [id])
+  name           String
+  sku            String?
+  description    String?
+  unitPriceCents Int
+  currency       String
+  billing        ProductBilling   @default(monthly)
+  isActive       Boolean          @default(true)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @default(now()) @updatedAt
+  accounts       CompanyProduct[]
+
+  @@index([tenantId])
+}
+
+// Clientes C4: a product a client company has (or had). The price can differ from the catalog's.
+// A product the company doesn't have yet is "white space" — an upsell to look at (C5/C8).
+model CompanyProduct {
+  id             String    @id @default(uuid())
+  tenantId       String
+  tenant         Tenant    @relation(fields: [tenantId], references: [id])
+  companyId      String
+  company        Company   @relation(fields: [companyId], references: [id])
+  productId      String
+  product        Product   @relation(fields: [productId], references: [id])
+  quantity       Int       @default(1)
+  unitPriceCents Int
+  startDate      DateTime  @db.Date
+  renewalDate    DateTime? @db.Date
+  cancelledAt    DateTime?
+  notes          String?
+  createdAt      DateTime  @default(now())
+
+  @@index([tenantId, companyId])
+  @@index([tenantId, productId])
 }

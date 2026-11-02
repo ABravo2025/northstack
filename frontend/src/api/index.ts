@@ -37,11 +37,13 @@ import { projectsApi } from './projects.js';
 import { expensesApi } from './expenses.js';
 import { formsApi } from './forms.js';
 import { leadsApi } from './leads.js';
+import { productsApi } from './products.js';
 
 export { ApiError, API_BASE_URL } from './http.js';
 export * from './types.js';
 export type * from './forms.js';
 export type * from './leads.js';
+export type * from './products.js';
 
 export const api = {
   ...authApi,
@@ -82,5 +84,6 @@ export const api = {
   ...expensesApi,
   ...formsApi,
   ...leadsApi,
+  ...productsApi,
   ...projectsApi,
 };

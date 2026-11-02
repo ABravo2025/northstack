@@ -6,6 +6,7 @@ import { GENERIC_EMAIL_DOMAINS } from '../tenant/tenantService.js';
 import { getEmailDomain } from '../../lib/email.js';
 import { isClientsAllowed } from '../tenant/planLimits.js';
 import { createLead as createInboxLead } from '../crm/leadService.js';
+import { createTicket as createClientTicket } from '../crm/ticketService.js';
 import { createContact } from '../crm/contactService.js';
 import { addOpportunityContact, createOpportunity } from '../crm/opportunityService.js';
 import { getDefaultStatusId } from '../hr/statusService.js';
@@ -261,6 +262,21 @@ async function createTaskFromAnswers(form: Form, values: Values): Promise<Linked
   return { type: 'task', id: task.id };
 }
 
+// Clientes C7: a support form opens a customer ticket (normal priority), on the requester's company
+// when their email is a known contact. Needs the Clients module (Growth).
+async function createTicketFromAnswers(form: Form, values: Values): Promise<Linked> {
+  const tenant = await prisma.tenant.findUnique({ where: { id: form.tenantId } });
+  if (!tenant || !isClientsAllowed(tenant)) throw new FormError('Support tickets need the Clients module', 409, 'tickets_not_available');
+  const ticket = await createClientTicket(form.tenantId, null, {
+    subject: str(values.get('ticket.subject')),
+    description: str(values.get('ticket.description')) || null,
+    requesterEmail: str(values.get('ticket.email')) || null,
+    requesterName: str(values.get('ticket.name')) || null,
+    source: 'form',
+  });
+  return { type: 'ticket', id: ticket.id };
+}
+
 async function runAction(form: Form, action: FormAction, values: Values, ctx: SubmitContext): Promise<Linked> {
   switch (action) {
     case 'create_lead':
@@ -274,8 +290,7 @@ async function runAction(form: Form, action: FormAction, values: Values, ctx: Su
     case 'create_task':
       return createTaskFromAnswers(form, values);
     case 'create_ticket':
-      // Customer tickets are their own model, built with the Clientes phase (C7).
-      throw new FormError('Support tickets arrive with the Clients module', 409, 'tickets_not_available');
+      return createTicketFromAnswers(form, values);
     case 'save_to_file':
     case 'save_only':
       return ctx.respondent ? { type: ctx.respondent.type, id: ctx.respondent.id } : null;
@@ -334,16 +349,18 @@ export async function submitResponse(form: Form, rawAnswers: Record<string, unkn
 
 async function linkedLabels(tenantId: string, rows: { linkedEntityType: string | null; linkedEntityId: string | null }[]) {
   const ids = (type: string) => [...new Set(rows.filter((r) => r.linkedEntityType === type && r.linkedEntityId).map((r) => r.linkedEntityId!))];
-  const [contacts, employees, tasks, leads] = await Promise.all([
+  const [contacts, employees, tasks, leads, tickets] = await Promise.all([
     prisma.contact.findMany({ where: { tenantId, id: { in: ids('contact') } }, select: { id: true, firstName: true, lastName: true, email: true } }),
     prisma.employee.findMany({ where: { tenantId, id: { in: ids('employee') } }, select: { id: true, firstName: true, lastName: true } }),
     prisma.task.findMany({ where: { tenantId, id: { in: ids('task') } }, select: { id: true, title: true, entityId: true } }),
     prisma.lead.findMany({ where: { tenantId, id: { in: ids('lead') } }, select: { id: true, firstName: true, lastName: true, email: true } }),
+    prisma.clientTicket.findMany({ where: { tenantId, id: { in: ids('ticket') } }, select: { id: true, number: true, subject: true } }),
   ]);
   const labels = new Map<string, { label: string; href: string }>();
   for (const c of contacts) labels.set(`contact:${c.id}`, { label: `${c.firstName} ${c.lastName}`.trim() || c.email, href: `/contacts?open=${c.id}` });
   for (const e of employees) labels.set(`employee:${e.id}`, { label: `${e.firstName} ${e.lastName}`.trim(), href: '/hr/people' });
   for (const t of tasks) labels.set(`task:${t.id}`, { label: t.title, href: `/projects/${t.entityId}` });
+  for (const tk of tickets) labels.set(`ticket:${tk.id}`, { label: `#${tk.number} ${tk.subject}`, href: `/tickets?open=${tk.id}` });
   for (const l of leads) labels.set(`lead:${l.id}`, { label: `${l.firstName} ${l.lastName}`.trim() || l.email, href: `/leads?open=${l.id}` });
   return labels;
 }

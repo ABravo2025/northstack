@@ -323,6 +323,22 @@ enum CheckInSentiment {
   bad
 }
 
+// Clientes C7: customer tickets (not the Ticket model, which is Northstack's own support).
+enum ClientTicketPriority {
+  low
+  normal
+  high
+  urgent
+}
+
+enum ClientTicketStatus {
+  open
+  in_progress
+  waiting // on the client
+  resolved
+  closed
+}
+
 enum PipelinePurpose {
   new_business
   expansion
@@ -471,6 +487,8 @@ model Tenant {
   products                  Product[]
   companyProducts           CompanyProduct[]
   companyCheckIns           CompanyCheckIn[]
+  clientTickets             ClientTicket[]
+  clientTicketComments      ClientTicketComment[]
   leadTouches               LeadTouch[]
   formInvites               FormInvite[]
   expenseAccounts           ExpenseAccount[]
@@ -995,6 +1013,7 @@ model Company {
   // DB-level backstop against a concurrent-request race).
   products       CompanyProduct[]
   CompanyCheckIn CompanyCheckIn[]
+  ClientTicket   ClientTicket[]
 
   @@unique([tenantId, stripeCustomerId])
   @@index([tenantId])
@@ -3757,4 +3776,53 @@ model CompanyCheckIn {
   nextCheckInAt DateTime?        @db.Date
 
   @@index([tenantId, companyId, at])
+}
+
+// Clientes C7 (spec-clientes-gastos-formularios.md): a client's support ticket with an SLA — a first
+// response and a resolution due by its priority. Numbered per company (tenant): #1, #2…
+model ClientTicket {
+  id                 String                @id @default(uuid())
+  tenantId           String
+  tenant             Tenant                @relation(fields: [tenantId], references: [id])
+  number             Int
+  companyId          String?
+  company            Company?              @relation(fields: [companyId], references: [id])
+  contactId          String?
+  requesterName      String?
+  requesterEmail     String?
+  subject            String
+  description        String?
+  priority           ClientTicketPriority  @default(normal)
+  status             ClientTicketStatus    @default(open)
+  assigneeId         String?
+  source             String                @default("manual") // manual | form
+  formResponseId     String?
+  firstResponseDueAt DateTime
+  resolutionDueAt    DateTime
+  firstRespondedAt   DateTime?
+  resolvedAt         DateTime?
+  closedAt           DateTime?
+  createdById        String?
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @default(now()) @updatedAt
+  comments           ClientTicketComment[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId, status])
+  @@index([tenantId, companyId])
+}
+
+model ClientTicketComment {
+  id        String       @id @default(uuid())
+  tenantId  String
+  tenant    Tenant       @relation(fields: [tenantId], references: [id])
+  ticketId  String
+  ticket    ClientTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId  String?
+  body      String
+  // An internal note never counts as the first response to the client.
+  internal  Boolean      @default(false)
+  createdAt DateTime     @default(now())
+
+  @@index([tenantId, ticketId])
 }

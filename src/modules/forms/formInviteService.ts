@@ -227,8 +227,7 @@ const dateOnly = (d: Date) => d.toISOString().slice(0, 10);
 const startOf = (iso: string) => new Date(`${iso}T00:00:00Z`);
 
 // Runs every published survey that has an automatic trigger. Each trigger looks at a window that
-// ends today, and the 60-day rule makes a second run the same day send nothing new. "When a ticket
-// is closed" arrives with customer tickets (C7).
+// ends today, and the 60-day rule makes a second run the same day send nothing new.
 export async function runSurveyTriggers(today = dateOnly(new Date())) {
   if (!isFormsEncryptionConfigured()) return { forms: 0, sent: 0, skipped: true };
   const surveys = await prisma.form.findMany({
@@ -274,6 +273,14 @@ export async function runSurveyTriggers(today = dateOnly(new Date())) {
         });
         ids = deals.flatMap((d) => d.contactLinks.map((c) => c.contactId));
       }
+    } else if (trigger === 'ticket_closed') {
+      // Clientes C7: the requester of a ticket resolved or closed in the last day.
+      ids = (
+        await prisma.clientTicket.findMany({
+          where: { tenantId, contactId: { not: null }, resolvedAt: { gte: yesterday } },
+          select: { contactId: true },
+        })
+      ).map((t) => t.contactId!);
     } else if (trigger === 'opportunity_lost') {
       const lost = await prisma.opportunityStageHistory.findMany({
         where: { tenantId, enteredAt: { gte: yesterday }, stage: { outcome: 'lost' } },

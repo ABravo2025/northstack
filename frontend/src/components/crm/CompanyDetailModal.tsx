@@ -22,6 +22,7 @@ import CompanyProductsTab from './company360/CompanyProductsTab';
 import CompanyTimelineTab from './company360/CompanyTimelineTab';
 import CompanyOnboardingTab from './company360/CompanyOnboardingTab';
 import CompanyHealthTab from './company360/CompanyHealthTab';
+import CompanyTicketsTab from './company360/CompanyTicketsTab';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
 interface CompanyDetailModalProps {
@@ -624,6 +625,7 @@ export default function CompanyDetailModal({
           { key: 'products', label: t('company360.tabs.products'), content: <CompanyProductsTab token={token} companyId={company.id} canManage={permissions.has('manage_company')} /> },
           { key: 'onboarding', label: t('company360.tabs.onboarding'), content: <CompanyOnboardingTab token={token} companyId={company.id} /> },
           { key: 'health', label: t('company360.tabs.health'), content: <CompanyHealthTab token={token} companyId={company.id} canManage={permissions.has('manage_company')} /> },
+          { key: 'tickets', label: t('company360.tabs.tickets'), content: <CompanyTicketsTab token={token} companyId={company.id} canManage={permissions.has('manage_company')} /> },
         ]
       : []),
     ...(paymentsContent ? [{ key: 'payments', label: t('companyDetail.groups.payments'), content: paymentsContent }] : []),

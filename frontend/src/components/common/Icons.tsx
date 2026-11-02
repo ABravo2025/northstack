@@ -548,3 +548,14 @@ export function InboxIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+// Clientes C7: customer tickets.
+export function LifebuoyIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="4" />
+      <path d="m5.6 5.6 3.6 3.6M14.8 14.8l3.6 3.6M18.4 5.6l-3.6 3.6M9.2 14.8l-3.6 3.6" />
+    </svg>
+  );
+}

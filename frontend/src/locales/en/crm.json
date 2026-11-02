@@ -725,7 +725,8 @@
       "products": "Products",
       "timeline": "Timeline",
       "onboarding": "Onboarding",
-      "health": "Health"
+      "health": "Health",
+      "tickets": "Tickets"
     },
     "billing": {
       "monthly": "Monthly",
@@ -837,5 +838,66 @@
     "save": "Save",
     "saved": "Product saved",
     "invalidPrice": "Enter a valid price."
+  },
+  "tickets": {
+    "title": "Tickets",
+    "subtitle": "Your clients' support requests, with first-response and resolution times by priority.",
+    "new": "New ticket",
+    "create": "Create ticket",
+    "created": "Ticket #{{number}} created",
+    "cancel": "Cancel",
+    "search": "Search by subject, email or number",
+    "mine": "Assigned to me",
+    "views": {
+      "open": "Open",
+      "closed": "Resolved",
+      "all": "All"
+    },
+    "empty": "No tickets.",
+    "columns": {
+      "subject": "Subject",
+      "company": "Company",
+      "priority": "Priority",
+      "status": "Status",
+      "sla": "SLA",
+      "assignee": "Assignee"
+    },
+    "priority": {
+      "urgent": "Urgent",
+      "high": "High",
+      "normal": "Normal",
+      "low": "Low"
+    },
+    "status": {
+      "open": "Open",
+      "in_progress": "In progress",
+      "waiting": "Waiting on client",
+      "resolved": "Resolved",
+      "closed": "Closed"
+    },
+    "source": {
+      "manual": "Entered by hand",
+      "form": "Form"
+    },
+    "unassigned": "Unassigned",
+    "description": "Details",
+    "requesterEmail": "Requester email",
+    "sla": {
+      "overdue": "Overdue",
+      "respondBy": "Respond by {{date}}",
+      "resolveBy": "Resolve by {{date}}",
+      "resolvedOnTime": "Resolved on time",
+      "resolvedLate": "Resolved late",
+      "detail": "First response by {{response}} · resolution by {{resolution}}",
+      "respondedAt": "responded on {{date}}"
+    },
+    "slaNote": "SLA by priority (calendar hours): urgent 1 h / 8 h, high 4 h / 24 h, normal 8 h / 72 h, low 24 h / 5 days.",
+    "internal": "internal note",
+    "internalToggle": "Internal note (doesn't count as a reply to the client)",
+    "replyPlaceholder": "Reply to the client",
+    "notePlaceholder": "Note for the team",
+    "addReply": "Log reply",
+    "addNote": "Add note",
+    "replyHint": "It's logged here; emailing the client from the ticket isn't built yet."
   }
 }

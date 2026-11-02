@@ -80,6 +80,7 @@ import FormEditorPage from './pages/forms/FormEditorPage';
 import FormResponsesPage from './pages/forms/FormResponsesPage';
 import LeadsPage from './pages/leads/LeadsPage';
 import ProductsSettingsPage from './pages/ProductsSettingsPage';
+import TicketsPage from './pages/tickets/TicketsPage';
 import PayrollPage from './pages/PayrollPage';
 import PayrollRunDetailPage from './pages/PayrollRunDetailPage';
 import AppLayout from './layouts/AppLayout';
@@ -467,6 +468,8 @@ export default function App() {
         <Route path="/hr/payroll/runs/:runId" element={<LegacyRunRedirect />} />
         {/* Clientes C2: the Leads inbox, separate from the pipelines. */}
         <Route path="/leads" element={featureOnly('clients', <LeadsPage token={token ?? ''} userId={user?.id ?? ''} />, '/')} />
+        {/* Clientes C7: customer tickets with SLA. */}
+        <Route path="/tickets" element={featureOnly('clients', <TicketsPage token={token ?? ''} userId={user?.id ?? ''} />, '/')} />
         <Route path="/companies" element={<CompaniesPage user={user} token={token ?? ''} />} />
         <Route path="/contacts" element={<ContactsPage user={user} token={token ?? ''} />} />
         <Route path="/opportunities" element={<OpportunitiesPage user={user} token={token ?? ''} />} />

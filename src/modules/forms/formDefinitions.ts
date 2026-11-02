@@ -75,7 +75,7 @@ export const ACTION_TARGETS: Record<FormAction, string[]> = {
   add_contact: ['contact.firstName', 'contact.lastName', 'contact.email', 'contact.phone', 'contact.title'],
   update_employee: ['employee.personalEmail', 'employee.nationality', 'employee.birthdate'],
   save_to_file: [],
-  create_ticket: ['ticket.subject', 'ticket.description'],
+  create_ticket: ['ticket.subject', 'ticket.description', 'ticket.email', 'ticket.name'],
   create_task: ['task.title', 'task.description', 'task.dueDate'],
   save_only: [],
 };
@@ -91,6 +91,7 @@ export const REQUIRED_TARGETS: Partial<Record<FormAction, string[]>> = {
 // Question types that can feed each kind of target (a date target needs a date question, etc.).
 const TARGET_TYPES: Record<string, QuestionType[]> = {
   'contact.email': ['email'],
+  'ticket.email': ['email'],
   'employee.personalEmail': ['email'],
   'contact.phone': ['phone', 'short_text'],
   'opportunity.amount': ['number'],

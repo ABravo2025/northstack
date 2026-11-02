@@ -725,7 +725,8 @@
       "products": "Productos",
       "timeline": "Línea de tiempo",
       "onboarding": "Onboarding",
-      "health": "Salud"
+      "health": "Salud",
+      "tickets": "Tickets"
     },
     "billing": {
       "monthly": "Mensual",
@@ -837,5 +838,66 @@
     "save": "Guardar",
     "saved": "Producto guardado",
     "invalidPrice": "Ingresá un precio válido."
+  },
+  "tickets": {
+    "title": "Tickets",
+    "subtitle": "Los pedidos de soporte de tus clientes, con tiempo de primera respuesta y de resolución según la prioridad.",
+    "new": "Nuevo ticket",
+    "create": "Crear ticket",
+    "created": "Ticket #{{number}} creado",
+    "cancel": "Cancelar",
+    "search": "Buscar por asunto, email o número",
+    "mine": "Asignados a mí",
+    "views": {
+      "open": "Abiertos",
+      "closed": "Resueltos",
+      "all": "Todos"
+    },
+    "empty": "No hay tickets.",
+    "columns": {
+      "subject": "Asunto",
+      "company": "Empresa",
+      "priority": "Prioridad",
+      "status": "Estado",
+      "sla": "SLA",
+      "assignee": "Responsable"
+    },
+    "priority": {
+      "urgent": "Urgente",
+      "high": "Alta",
+      "normal": "Normal",
+      "low": "Baja"
+    },
+    "status": {
+      "open": "Abierto",
+      "in_progress": "En curso",
+      "waiting": "Esperando al cliente",
+      "resolved": "Resuelto",
+      "closed": "Cerrado"
+    },
+    "source": {
+      "manual": "Cargado a mano",
+      "form": "Formulario"
+    },
+    "unassigned": "Sin asignar",
+    "description": "Detalle",
+    "requesterEmail": "Email de quien lo pide",
+    "sla": {
+      "overdue": "Vencido",
+      "respondBy": "Responder antes del {{date}}",
+      "resolveBy": "Resolver antes del {{date}}",
+      "resolvedOnTime": "Resuelto a tiempo",
+      "resolvedLate": "Resuelto fuera de término",
+      "detail": "Primera respuesta antes del {{response}} · resolución antes del {{resolution}}",
+      "respondedAt": "respondido el {{date}}"
+    },
+    "slaNote": "SLA por prioridad (horas corridas): urgente 1 h / 8 h, alta 4 h / 24 h, normal 8 h / 72 h, baja 24 h / 5 días.",
+    "internal": "nota interna",
+    "internalToggle": "Nota interna (no cuenta como respuesta al cliente)",
+    "replyPlaceholder": "Respuesta al cliente",
+    "notePlaceholder": "Nota para el equipo",
+    "addReply": "Registrar respuesta",
+    "addNote": "Agregar nota",
+    "replyHint": "Queda registrada acá; el envío por mail al cliente desde el ticket todavía no está."
   }
 }

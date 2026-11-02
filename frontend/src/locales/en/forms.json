@@ -43,7 +43,7 @@
     "leads": "Public link for your website: each response creates a lead.",
     "clients": "Personal link by email: Northstack already knows which contact is answering.",
     "employees": "Personal link by email: the response goes to the employee file.",
-    "support": "Public link: each response creates a ticket. Enabled with the Clients module.",
+    "support": "Public link: each response opens a support ticket, on the requester's company when their email is already a contact.",
     "projects": "Each response creates a task in the project you choose.",
     "none": "Only stores the response."
   },
@@ -66,7 +66,7 @@
     "add_contact": "As a new contact in the responder's company.",
     "update_employee": "In the responder's employee file: only the fields you chose below.",
     "save_to_file": "In the responder's employee file, as a saved response.",
-    "create_ticket": "As a support ticket (enabled with the Clients module).",
+    "create_ticket": "As a ticket in Tickets, normal priority with its SLA. If the email belongs to a contact, it lands on their company.",
     "create_task": "As a task in the chosen project, assigned to whoever you pick.",
     "save_only": "Only in Responses.",
     "survey": "In Responses and on the responder's record. The score feeds the surveys dashboard.",
@@ -210,7 +210,9 @@
     "task.title": "Task · Title",
     "task.description": "Task · Description",
     "task.dueDate": "Task · Due date",
-    "customField": "Custom field · {{name}}"
+    "customField": "Custom field · {{name}}",
+    "ticket.email": "Ticket · Requester email",
+    "ticket.name": "Ticket · Requester name"
   },
   "metric": {
     "nps": "NPS (0-10)",
@@ -329,7 +331,7 @@
     "history": "Sending history",
     "autoTitle": "Automatic sending: {{trigger}}",
     "autoBody": "Northstack sends it every day to whoever it applies to. You can also send it by hand.",
-    "autoLater": "This trigger turns on with the Clients module. Meanwhile, send it by hand.",
+    "autoLater": "This trigger needs the Clients module's tickets.",
     "status": {
       "pending": "not answered",
       "responded": "answered",

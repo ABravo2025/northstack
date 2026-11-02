@@ -1039,7 +1039,7 @@
         "title": "Configuration",
         "manage_custom_fields": {
           "label": "Manage custom fields & catalogs",
-          "description": "Custom fields, statuses, pipelines, and shared catalogs."
+          "description": "Custom fields, statuses, pipelines, shared catalogs, and forms & surveys."
         }
       },
       "team": {

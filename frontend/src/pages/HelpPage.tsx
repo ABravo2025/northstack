@@ -14,6 +14,7 @@ import {
   LockIcon,
   MailIcon,
   PlugIcon,
+  ReceiptIcon,
   SearchIcon,
   TargetIcon,
   TeamIcon,
@@ -153,6 +154,22 @@ const FAQ_CATEGORIES: FaqCategory[] = [
       {
         q: 'Can I use Saved Views on Opportunities?',
         a: 'No — Opportunities are always browsed through pipeline tabs and the Kanban board. Saved Views (Grid/List/Kanban) are a Companies and Contacts feature.',
+      },
+      {
+        q: "What's the difference between a Lead and a Contact?",
+        a: "A Lead is someone new you're still working (Sales → Leads): you log contact attempts and qualify them. When you Convert a lead, Northstack creates the Company, the Contact, and the Opportunity for you. Leads need the Growth plan.",
+      },
+      {
+        q: "Why can't I move a deal to the next stage?",
+        a: "That stage has a checklist (Settings → Pipelines → Rules) with required items still pending. The card shows what's missing. Moving back, or marking the deal Lost, is never blocked.",
+      },
+      {
+        q: "What happens when my client accepts a quote?",
+        a: "The opportunity moves to the first Won stage of its pipeline, we notify the owner, and the Handoff panel appears on it. The quote records the name the client typed and the date.",
+      },
+      {
+        q: "How is a client's health score calculated?",
+        a: "From 0 to 100, from five parts: satisfaction (survey scores), contact (check-ins, notes, meetings), onboarding, products, and support tickets. The Health tab on the company shows each part. A new client with no data starts at 70.",
       },
     ],
   },
@@ -314,6 +331,52 @@ const FAQ_CATEGORIES: FaqCategory[] = [
     ],
   },
   {
+    id: 'f-expenses',
+    label: "Expenses",
+    icon: <ReceiptIcon />,
+    items: [
+      {
+        q: "Is my bank statement uploaded to Northstack?",
+        a: "No. The CSV file is read in your browser; only the rows you confirm in the review are saved, and their amounts and descriptions are stored encrypted.",
+      },
+      {
+        q: "Why does a fixed expense show as \"estimated\"?",
+        a: "Fixed expenses paid by automatic debit or card book themselves on their charge day as an estimate. When you import the statement, the real charge confirms it (or corrects the amount).",
+      },
+      {
+        q: "My card statement has a dollar column. What do I do?",
+        a: "In the import, map the dollar column and enter the statement's exchange rate. Dollar-only lines are converted to your currency, and the original amount and rate are kept.",
+      },
+      {
+        q: "Who can see Expenses?",
+        a: "The owner and roles with the Manage expenses permission. Expenses needs the Growth plan.",
+      },
+    ],
+  },
+  {
+    id: 'f-forms',
+    label: "Forms & surveys",
+    icon: <FormIcon />,
+    items: [
+      {
+        q: "How do I put a form on my website?",
+        a: "Open the form, publish it, and in the Link & code card copy the code for the style you want (inline, floating button, or popup). Add your website's domain to the allowed domains.",
+      },
+      {
+        q: "Are employee surveys really anonymous?",
+        a: "Yes, by default. Who answered isn't stored with the answer, and results and individual answers only show once there are at least 3 (or the minimum you set). Avoid open questions that could identify someone.",
+      },
+      {
+        q: "Why didn't someone get my survey?",
+        a: "The same person isn't sent the same survey twice within 60 days, and personal links expire after 30 days. The send history on the form shows what was sent and when.",
+      },
+      {
+        q: "Do form submissions need approval before they show up?",
+        a: "Leads forms land in Sales → Leads, where you work and qualify them before converting. Other actions (update a contact, create a ticket or a task, save to an employee file) apply right away, and every answer stays in Responses.",
+      },
+    ],
+  },
+  {
     id: 'f-data',
     label: 'Data & security',
     icon: <LockIcon />,
@@ -321,10 +384,6 @@ const FAQ_CATEGORIES: FaqCategory[] = [
       {
         q: 'Is my data visible to other companies using Northstack?',
         a: 'No. Every workspace\'s data — records, custom fields, settings — is fully isolated and never shared across workspaces.',
-      },
-      {
-        q: 'Do Public Form submissions need approval before they show up?',
-        a: 'No — a submission creates a real record immediately, with no review queue in between. If you want to vet people before treating them as active, use a status field as your own "under review" step.',
       },
       {
         q: 'Which modules support CSV import and export?',
@@ -516,6 +575,22 @@ const FAQ_CATEGORIES_ES: FaqCategory[] = [
         q: '¿Puedo usar Vistas guardadas en Oportunidades?',
         a: 'No — las Oportunidades siempre se recorren a través de las pestañas de pipeline y el tablero Kanban. Las Vistas guardadas (Cuadrícula/Lista/Kanban) son una función de Empresas y Contactos.',
       },
+      {
+        q: "¿Qué diferencia hay entre un Lead y un Contacto?",
+        a: "Un Lead es alguien nuevo que todavía estás trabajando (Ventas → Leads): registrás los intentos de contacto y lo calificás. Cuando lo convertís, Northstack crea la Empresa, el Contacto y la Oportunidad. Los Leads requieren el plan Growth.",
+      },
+      {
+        q: "¿Por qué no puedo pasar un negocio a la etapa siguiente?",
+        a: "Esa etapa tiene un checklist (Configuración → Pipelines → Reglas) con ítems obligatorios pendientes. La tarjeta te muestra qué falta. Volver atrás o marcarlo como perdido nunca se bloquea.",
+      },
+      {
+        q: "¿Qué pasa cuando mi cliente acepta un presupuesto?",
+        a: "La oportunidad pasa a la primera etapa Ganada de su pipeline, avisamos al responsable y aparece el panel de Traspaso. El presupuesto guarda el nombre que escribió el cliente y la fecha.",
+      },
+      {
+        q: "¿Cómo se calcula la salud de un cliente?",
+        a: "De 0 a 100, con cinco partes: satisfacción (puntajes de encuestas), contacto (check-ins, notas, reuniones), onboarding, productos y tickets de soporte. La pestaña Salud de la empresa muestra cada parte. Un cliente nuevo sin datos arranca en 70.",
+      },
     ],
   },
   {
@@ -676,6 +751,52 @@ const FAQ_CATEGORIES_ES: FaqCategory[] = [
     ],
   },
   {
+    id: 'f-expenses',
+    label: "Gastos",
+    icon: <ReceiptIcon />,
+    items: [
+      {
+        q: "¿Mi resumen bancario se sube a Northstack?",
+        a: "No. El archivo CSV se lee en tu navegador; solo se guardan las filas que confirmás en la revisión, y sus montos y descripciones se guardan cifrados.",
+      },
+      {
+        q: "¿Por qué un gasto fijo aparece como \"estimado\"?",
+        a: "Los gastos fijos que se pagan por débito automático o tarjeta se registran solos el día del cobro como estimados. Cuando importás el resumen, el cobro real lo confirma (o corrige el monto).",
+      },
+      {
+        q: "Mi resumen de tarjeta tiene una columna en dólares. ¿Qué hago?",
+        a: "En la importación, elegí la columna de dólares e ingresá el tipo de cambio del resumen. Las líneas que solo vienen en dólares se pasan a tu moneda, y se guardan el monto original y el tipo de cambio.",
+      },
+      {
+        q: "¿Quién puede ver Gastos?",
+        a: "El owner y los roles con el permiso Gestionar gastos. Gastos requiere el plan Growth.",
+      },
+    ],
+  },
+  {
+    id: 'f-forms',
+    label: "Formularios y encuestas",
+    icon: <FormIcon />,
+    items: [
+      {
+        q: "¿Cómo pongo un formulario en mi sitio web?",
+        a: "Abrí el formulario, publicalo, y en la tarjeta Link y código copiá el código del estilo que quieras (en la página, botón flotante o ventana). Agregá el dominio de tu web a los dominios permitidos.",
+      },
+      {
+        q: "¿Las encuestas a empleados son anónimas de verdad?",
+        a: "Sí, por defecto. No se guarda quién respondió junto con la respuesta, y los resultados y las respuestas individuales se muestran recién cuando hay al menos 3 (o el mínimo que fijes). Evitá preguntas abiertas que puedan identificar a alguien.",
+      },
+      {
+        q: "¿Por qué alguien no recibió mi encuesta?",
+        a: "A la misma persona no se le envía la misma encuesta dos veces en 60 días, y los links personales vencen a los 30 días. El historial de envíos del formulario muestra qué se mandó y cuándo.",
+      },
+      {
+        q: "¿Los envíos de un formulario necesitan aprobación antes de aparecer?",
+        a: "Los formularios de Leads caen en Ventas → Leads, donde los trabajás y calificás antes de convertirlos. Las demás acciones (actualizar un contacto, crear un ticket o una tarea, guardar en el legajo) se aplican en el momento, y cada respuesta queda en Respuestas.",
+      },
+    ],
+  },
+  {
     id: 'f-data',
     label: 'Datos y seguridad',
     icon: <LockIcon />,
@@ -683,10 +804,6 @@ const FAQ_CATEGORIES_ES: FaqCategory[] = [
       {
         q: '¿Mis datos son visibles para otras empresas que usan Northstack?',
         a: 'No. Los datos de cada espacio de trabajo — registros, campos personalizados, configuración — están totalmente aislados y nunca se comparten entre espacios de trabajo.',
-      },
-      {
-        q: '¿Los envíos de un formulario público necesitan aprobación antes de aparecer?',
-        a: 'No — un envío crea un registro real de inmediato, sin ninguna cola de revisión en el medio. Si querés evaluar a las personas antes de tratarlas como activas, usá un campo de estado como tu propio paso de "en revisión".',
       },
       {
         q: '¿Qué módulos permiten importar y exportar CSV?',

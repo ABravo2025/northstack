@@ -1044,7 +1044,7 @@
         "title": "Configuración",
         "manage_custom_fields": {
           "label": "Gestionar campos personalizados y catálogos",
-          "description": "Campos personalizados, estados, pipelines, y catálogos compartidos."
+          "description": "Campos personalizados, estados, pipelines, catálogos compartidos, y formularios y encuestas."
         }
       },
       "team": {

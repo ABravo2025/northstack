@@ -22,8 +22,10 @@ import {
   ListIcon,
   PeopleIcon,
   PlugIcon,
+  ReceiptIcon,
   RocketIcon,
   SparklesIcon,
+  TargetIcon,
   TeamIcon,
 } from '../components/common/Icons';
 
@@ -32,9 +34,11 @@ const SECTION_IDS = [
   'g-roles',
   'g-crm',
   'g-pipeline',
+  'g-clients',
   'g-organize',
   'g-hr',
   'g-payroll',
+  'g-expenses',
   'g-tasks',
   'g-projects',
   'g-shifts',
@@ -60,6 +64,7 @@ const NAV_GROUPS: { label: string; items: { id: string; label: string; icon: JSX
     items: [
       { id: 'g-crm', label: 'Companies & contacts', icon: <BuildingIcon /> },
       { id: 'g-pipeline', label: 'Pipelines & deals', icon: <KanbanIcon /> },
+      { id: 'g-clients', label: 'Clients', icon: <TargetIcon /> },
       { id: 'g-organize', label: 'Views, tags & fields', icon: <GridIcon /> },
     ],
   },
@@ -68,6 +73,7 @@ const NAV_GROUPS: { label: string; items: { id: string; label: string; icon: JSX
     items: [
       { id: 'g-hr', label: 'Employees & time off', icon: <PeopleIcon /> },
       { id: 'g-payroll', label: 'Payroll', icon: <BriefcaseIcon /> },
+      { id: 'g-expenses', label: 'Expenses', icon: <ReceiptIcon /> },
       { id: 'g-tasks', label: 'Tasks & notes', icon: <ListIcon /> },
       { id: 'g-projects', label: 'Projects', icon: <FolderIcon /> },
       { id: 'g-shifts', label: 'Shifts', icon: <ClockIcon /> },
@@ -76,7 +82,7 @@ const NAV_GROUPS: { label: string; items: { id: string; label: string; icon: JSX
   {
     label: 'Connect',
     items: [
-      { id: 'g-forms', label: 'Public forms', icon: <FormIcon /> },
+      { id: 'g-forms', label: 'Forms & surveys', icon: <FormIcon /> },
       { id: 'g-integrations', label: 'Integrations & API', icon: <PlugIcon /> },
     ],
   },
@@ -97,12 +103,14 @@ const MODULE_MAP: { id: string; label: string; blurb: string; icon: JSX.Element 
   { id: 'g-roles', label: 'Roles & team', blurb: 'Invite people and build custom roles.', icon: <TeamIcon /> },
   { id: 'g-crm', label: 'Companies & contacts', blurb: 'Your CRM records and how they relate.', icon: <BuildingIcon /> },
   { id: 'g-pipeline', label: 'Pipelines & deals', blurb: 'Stages, forecasting, and auto-assignment.', icon: <KanbanIcon /> },
+  { id: 'g-clients', label: 'Clients', blurb: 'Leads, quotes, handoff, health, tickets, and upsell.', icon: <TargetIcon /> },
   { id: 'g-hr', label: 'Employees & time off', blurb: 'Directory, reporting lines, PTO policies.', icon: <PeopleIcon /> },
   { id: 'g-payroll', label: 'Payroll', blurb: 'Compensation, pay runs, numbered payslips.', icon: <BriefcaseIcon /> },
+  { id: 'g-expenses', label: 'Expenses', blurb: 'Accounts, fixed expenses, statement imports, budgets, cash projection.', icon: <ReceiptIcon /> },
   { id: 'g-tasks', label: 'Tasks & notes', blurb: 'Follow-ups on any record.', icon: <ListIcon /> },
   { id: 'g-projects', label: 'Projects', blurb: 'Phases, tasks and teams, blank or from a template.', icon: <FolderIcon /> },
   { id: 'g-shifts', label: 'Shifts', blurb: 'Shifts by location, swaps, clock-in, timesheets, approvals and hours reports.', icon: <ClockIcon /> },
-  { id: 'g-forms', label: 'Public forms', blurb: 'No-login intake for hiring and leads.', icon: <FormIcon /> },
+  { id: 'g-forms', label: 'Forms & surveys', blurb: 'Website forms, client and employee surveys, NPS and eNPS.', icon: <FormIcon /> },
   { id: 'g-integrations', label: 'Integrations & API', blurb: 'Google Calendar, Stripe, API keys.', icon: <PlugIcon /> },
   { id: 'g-settings', label: 'Settings', blurb: 'Company profile, logo, currency, theme, two-step verification.', icon: <GearIcon /> },
   { id: 'g-billing', label: 'Billing & plans', blurb: 'Starter vs. Growth, checkout, failures.', icon: <CreditCardIcon /> },
@@ -125,6 +133,7 @@ const NAV_GROUPS_ES: { label: string; items: { id: string; label: string; icon: 
     items: [
       { id: 'g-crm', label: 'Empresas y contactos', icon: <BuildingIcon /> },
       { id: 'g-pipeline', label: 'Pipelines y negocios', icon: <KanbanIcon /> },
+      { id: 'g-clients', label: 'Clientes', icon: <TargetIcon /> },
       { id: 'g-organize', label: 'Vistas, tags y campos', icon: <GridIcon /> },
     ],
   },
@@ -133,6 +142,7 @@ const NAV_GROUPS_ES: { label: string; items: { id: string; label: string; icon: 
     items: [
       { id: 'g-hr', label: 'Empleados y ausencias', icon: <PeopleIcon /> },
       { id: 'g-payroll', label: 'Nómina', icon: <BriefcaseIcon /> },
+      { id: 'g-expenses', label: 'Gastos', icon: <ReceiptIcon /> },
       { id: 'g-tasks', label: 'Tareas y notas', icon: <ListIcon /> },
       { id: 'g-projects', label: 'Proyectos', icon: <FolderIcon /> },
       { id: 'g-shifts', label: 'Turnos', icon: <ClockIcon /> },
@@ -141,7 +151,7 @@ const NAV_GROUPS_ES: { label: string; items: { id: string; label: string; icon: 
   {
     label: 'Conectar',
     items: [
-      { id: 'g-forms', label: 'Formularios públicos', icon: <FormIcon /> },
+      { id: 'g-forms', label: 'Formularios y encuestas', icon: <FormIcon /> },
       { id: 'g-integrations', label: 'Integraciones y API', icon: <PlugIcon /> },
     ],
   },
@@ -162,12 +172,14 @@ const MODULE_MAP_ES: { id: string; label: string; blurb: string; icon: JSX.Eleme
   { id: 'g-roles', label: 'Roles y equipo', blurb: 'Invitá personas y armá roles personalizados.', icon: <TeamIcon /> },
   { id: 'g-crm', label: 'Empresas y contactos', blurb: 'Los registros de tu CRM y cómo se relacionan.', icon: <BuildingIcon /> },
   { id: 'g-pipeline', label: 'Pipelines y negocios', blurb: 'Etapas, pronóstico, y asignación automática.', icon: <KanbanIcon /> },
+  { id: 'g-clients', label: 'Clientes', blurb: 'Leads, presupuestos, traspaso, salud, tickets y upsell.', icon: <TargetIcon /> },
   { id: 'g-hr', label: 'Empleados y ausencias', blurb: 'Directorio, líneas de reporte, políticas de ausencias.', icon: <PeopleIcon /> },
   { id: 'g-payroll', label: 'Nómina', blurb: 'Compensación, liquidaciones, recibos de pago.', icon: <BriefcaseIcon /> },
+  { id: 'g-expenses', label: 'Gastos', blurb: 'Cuentas, gastos fijos, importación de resúmenes, presupuestos, proyección de caja.', icon: <ReceiptIcon /> },
   { id: 'g-tasks', label: 'Tareas y notas', blurb: 'Seguimientos sobre cualquier registro.', icon: <ListIcon /> },
   { id: 'g-projects', label: 'Proyectos', blurb: 'Fases, tareas y equipos, en blanco o desde un template.', icon: <FolderIcon /> },
   { id: 'g-shifts', label: 'Turnos', blurb: 'Turnos por locación, cambios, fichaje, timesheet, aprobaciones y reportes de horas.', icon: <ClockIcon /> },
-  { id: 'g-forms', label: 'Formularios públicos', blurb: 'Carga sin login para reclutamiento y leads.', icon: <FormIcon /> },
+  { id: 'g-forms', label: 'Formularios y encuestas', blurb: 'Formularios para tu web, encuestas a clientes y empleados, NPS y eNPS.', icon: <FormIcon /> },
   { id: 'g-integrations', label: 'Integraciones y API', blurb: 'Google Calendar, Stripe, claves de API.', icon: <PlugIcon /> },
   { id: 'g-settings', label: 'Configuración', blurb: 'Datos de la empresa, logo, moneda, tema, verificación en dos pasos.', icon: <GearIcon /> },
   { id: 'g-billing', label: 'Facturación y planes', blurb: 'Starter vs. Growth, checkout, fallas de pago.', icon: <CreditCardIcon /> },
@@ -974,6 +986,222 @@ export default function GuidePage() {
           </section>
           )}
 
+
+          {/* ===== Clients ===== */}
+          {isSpanish ? (
+          <section className="help-section" id="g-clients">
+            <div className="help-eyebrow">
+              <TargetIcon />
+              Ventas
+            </div>
+            <h2>Clientes: de lead a cliente activo</h2>
+            <div className="help-tagrow">
+              <span className="help-pill help-pill-plan">Plan Growth</span>
+            </div>
+            <p className="help-intro">
+              Todo el recorrido de un cliente en un solo lugar: los leads nuevos, la venta, el traspaso al responsable de
+              la cuenta, la postventa (salud, tickets) y las oportunidades de expansión y renovación.
+            </p>
+
+            <div className="help-sub">
+              <h3>Leads</h3>
+              <p>
+                <strong>Ventas → Leads</strong> es la bandeja de los contactos nuevos que todavía no son clientes. Llegan
+                cargados a mano o desde un formulario de Leads (ver <strong>Formularios y encuestas</strong>), con su origen
+                y los parámetros de campaña del link.
+              </p>
+              <ul>
+                <li><strong>Cadencia de 5 toques</strong> (días 0, 2, 5, 9 y 14): registrá cada intento y la bandeja te ordena por el próximo.</li>
+                <li><strong>Calificación de 4 preguntas</strong> y un puntaje de 0 a 100 para saber en cuáles enfocarte.</li>
+                <li><strong>Convertir</strong> (con 3 de 4 respuestas en sí) crea la empresa, el contacto (reusa el que tenga el mismo mail) y la oportunidad en un paso.</li>
+                <li>Descalificá con un motivo; podés reabrirlo más adelante.</li>
+              </ul>
+            </div>
+
+            <div className="help-sub">
+              <h3>Pipelines con propósito, checklist y automatizaciones</h3>
+              <p>
+                Tus pipelines siguen siendo 100% configurables. Ahora cada una tiene un <strong>propósito</strong> (Nuevo
+                negocio, Expansión, Renovaciones u otro) y podés crearlas desde una plantilla. En{' '}
+                <strong>Configuración → Pipelines</strong>, el botón <strong>Reglas</strong> de cada etapa define:
+              </p>
+              <ul>
+                <li><strong>Checklist para avanzar:</strong> lo que hay que completar antes de pasar a una etapa siguiente o a Ganada. Volver atrás o marcarla como perdida nunca se bloquea.</li>
+                <li><strong>Automatizaciones al entrar:</strong> crear una tarea para el responsable o enviar una encuesta a los contactos del negocio.</li>
+              </ul>
+            </div>
+
+            <div className="help-sub">
+              <h3>Presupuestos y traspaso</h3>
+              <p>
+                En la oportunidad, <strong>Presupuestos</strong> arma una cotización con productos del catálogo o líneas
+                libres, descuento y validez. Al enviarlo te da un link privado (copialo y mandáselo a tu cliente): ahí lo ve,
+                baja el PDF y lo acepta con su nombre o lo rechaza. Si lo acepta, la oportunidad pasa a Ganada y te
+                avisamos.
+              </p>
+              <p>
+                En una oportunidad ganada aparece el <strong>Traspaso al responsable de cuenta</strong>: elegís quién se
+                ocupa del cliente, un proyecto de onboarding desde plantilla, una reunión de inicio y un mail de bienvenida.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>La ficha 360 del cliente</h3>
+              <p>Al abrir una empresa vas a ver pestañas nuevas:</p>
+              <dl className="help-fieldgrid">
+                <div className="help-fielddef">
+                  <dt>Productos</dt>
+                  <dd>Lo que tiene contratado (del catálogo de <strong>Configuración → Productos</strong>), su ingreso mensual recurrente y lo que todavía no tiene.</dd>
+                </div>
+                <div className="help-fielddef">
+                  <dt>Línea de tiempo</dt>
+                  <dd>Negocios, traspaso, notas, tareas terminadas y encuestas respondidas, en orden.</dd>
+                </div>
+                <div className="help-fielddef">
+                  <dt>Onboarding</dt>
+                  <dd>Los proyectos de la empresa con su avance.</dd>
+                </div>
+                <div className="help-fielddef">
+                  <dt>Salud</dt>
+                  <dd>Un puntaje de 0 a 100 (Saludable, En riesgo, Crítico) explicado en 5 partes: satisfacción, contacto, onboarding, productos y soporte. Registrá check-ins (bien, regular, mal) y te sugerimos el próximo.</dd>
+                </div>
+                <div className="help-fielddef">
+                  <dt>Tickets</dt>
+                  <dd>Los pedidos de soporte de ese cliente.</dd>
+                </div>
+                <div className="help-fielddef">
+                  <dt>Rentabilidad</dt>
+                  <dd>Lo que factura menos el costo de las horas trabajadas para él y los gastos asignados. Cada parte la ve solo quien tiene permiso (nómina o gastos).</dd>
+                </div>
+              </dl>
+            </div>
+
+            <div className="help-sub">
+              <h3>Tickets y expansión</h3>
+              <p>
+                <strong>Ventas → Tickets</strong> reúne los pedidos de soporte de tus clientes, numerados por empresa, con
+                prioridad y SLA (primera respuesta y resolución). Pueden llegar desde un formulario de Soporte.{' '}
+                <strong>Ventas → Expansión y renovaciones</strong> te muestra clientes sanos con productos que no tienen,
+                productos que renuevan en los próximos 90 días y clientes en riesgo; con un clic creás la oportunidad.
+              </p>
+            </div>
+
+            <div className="help-callout help-callout-note">
+              <InfoIcon />
+              <p>
+                Las métricas de todo esto están en <strong>Dashboards → Clientes</strong> y en una sección nueva de{' '}
+                <strong>Dashboards → Ventas</strong>, con el selector de período y el filtro de departamento.
+              </p>
+            </div>
+          </section>
+          ) : (
+          <section className="help-section" id="g-clients">
+            <div className="help-eyebrow">
+              <TargetIcon />
+              Sales
+            </div>
+            <h2>Clients: from lead to active customer</h2>
+            <div className="help-tagrow">
+              <span className="help-pill help-pill-plan">Growth plan</span>
+            </div>
+            <p className="help-intro">
+              The whole customer journey in one place: new leads, the sale, the handoff to the account owner, post-sale
+              (health, tickets), and expansion and renewal opportunities.
+            </p>
+
+            <div className="help-sub">
+              <h3>Leads</h3>
+              <p>
+                <strong>Sales → Leads</strong> is the inbox for new contacts who aren't customers yet. They're added by hand
+                or come in from a Leads form (see <strong>Forms &amp; surveys</strong>), with their source and the link's
+                campaign parameters.
+              </p>
+              <ul>
+                <li><strong>5-touch cadence</strong> (days 0, 2, 5, 9, and 14): log each attempt and the inbox sorts by the next one.</li>
+                <li><strong>4-question qualification</strong> and a 0-100 score, so you know where to focus.</li>
+                <li><strong>Convert</strong> (with 3 of 4 answered yes) creates the company, the contact (reusing one with the same email), and the opportunity in one step.</li>
+                <li>Disqualify with a reason; you can reopen it later.</li>
+              </ul>
+            </div>
+
+            <div className="help-sub">
+              <h3>Pipelines with a purpose, checklists, and automations</h3>
+              <p>
+                Your pipelines stay fully customizable. Each one now has a <strong>purpose</strong> (New business,
+                Expansion, Renewals, or other) and you can create them from a template. In{' '}
+                <strong>Settings → Pipelines</strong>, each stage's <strong>Rules</strong> button sets:
+              </p>
+              <ul>
+                <li><strong>Checklist to move forward:</strong> what must be done before moving to a later stage or to Won. Moving back or marking it lost is never blocked.</li>
+                <li><strong>Automations on entering:</strong> create a task for the owner, or send a survey to the deal's contacts.</li>
+              </ul>
+            </div>
+
+            <div className="help-sub">
+              <h3>Quotes and handoff</h3>
+              <p>
+                On an opportunity, <strong>Quotes</strong> builds a quote from catalog products or free lines, with a
+                discount and an expiry. Sending it gives you a private link (copy it and send it to your client): they see
+                it, download the PDF, and accept it with their name or decline it. If they accept, the opportunity moves to
+                Won and we let you know.
+              </p>
+              <p>
+                A won opportunity shows the <strong>Handoff to the account owner</strong>: choose who looks after the
+                client, an onboarding project from a template, a kickoff meeting, and a welcome email.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>The client's 360 view</h3>
+              <p>When you open a company you'll see new tabs:</p>
+              <dl className="help-fieldgrid">
+                <div className="help-fielddef">
+                  <dt>Products</dt>
+                  <dd>What they've contracted (from the catalog in <strong>Settings → Products</strong>), their monthly recurring revenue, and what they don't have yet.</dd>
+                </div>
+                <div className="help-fielddef">
+                  <dt>Timeline</dt>
+                  <dd>Deals, handoff, notes, completed tasks, and answered surveys, in order.</dd>
+                </div>
+                <div className="help-fielddef">
+                  <dt>Onboarding</dt>
+                  <dd>The company's projects and their progress.</dd>
+                </div>
+                <div className="help-fielddef">
+                  <dt>Health</dt>
+                  <dd>A 0-100 score (Healthy, At risk, Critical) explained in 5 parts: satisfaction, contact, onboarding, products, and support. Log check-ins (good, okay, bad) and we suggest the next one.</dd>
+                </div>
+                <div className="help-fielddef">
+                  <dt>Tickets</dt>
+                  <dd>That client's support requests.</dd>
+                </div>
+                <div className="help-fielddef">
+                  <dt>Profitability</dt>
+                  <dd>What they bring in, minus the cost of the hours worked for them and the expenses assigned to them. Each part is shown only to people with permission (payroll or expenses).</dd>
+                </div>
+              </dl>
+            </div>
+
+            <div className="help-sub">
+              <h3>Tickets and expansion</h3>
+              <p>
+                <strong>Sales → Tickets</strong> collects your clients' support requests, numbered per company, with a
+                priority and SLA (first response and resolution). They can come in from a Support form.{' '}
+                <strong>Sales → Expansion &amp; renewals</strong> shows healthy clients with products they don't have,
+                products renewing in the next 90 days, and clients at risk; one click creates the opportunity.
+              </p>
+            </div>
+
+            <div className="help-callout help-callout-note">
+              <InfoIcon />
+              <p>
+                The metrics for all of this live in <strong>Dashboards → Clients</strong> and in a new section of{' '}
+                <strong>Dashboards → Sales</strong>, with the period selector and the department filter.
+              </p>
+            </div>
+          </section>
+          )}
+
           {/* ===== Organize ===== */}
           {isSpanish ? (
           <section className="help-section" id="g-organize">
@@ -1676,6 +1904,138 @@ export default function GuidePage() {
           </section>
           )}
 
+
+          {/* ===== Expenses ===== */}
+          {isSpanish ? (
+          <section className="help-section" id="g-expenses">
+            <div className="help-eyebrow">
+              <ReceiptIcon />
+              Finanzas
+            </div>
+            <h2>Gastos</h2>
+            <div className="help-tagrow">
+              <span className="help-pill help-pill-plan">Plan Growth</span>
+              <span className="help-pill help-pill-role">Gestión: Owner, o un rol con Gestionar gastos</span>
+            </div>
+            <p className="help-intro">
+              Los gastos e ingresos de tu empresa en un solo lugar: cuentas, tarjetas, gastos fijos e importación de
+              resúmenes. Los montos y descripciones se guardan cifrados.
+            </p>
+
+            <div className="help-sub">
+              <h3>Para empezar</h3>
+              <ol className="help-steps">
+                <li>En <strong>Gastos → Cuentas y categorías</strong>, cargá tus cuentas bancarias, tarjetas y efectivo.</li>
+                <li>En <strong>Gastos fijos</strong>, cargá lo que pagás todos los meses. Si se debita solo o va a la tarjeta, se registra solo el día del cobro como estimado, y la importación lo confirma.</li>
+                <li>En <strong>Importar CSV</strong>, subí el resumen que bajás de tu banco o tarjeta.</li>
+              </ol>
+            </div>
+
+            <div className="help-sub">
+              <h3>Importar un resumen</h3>
+              <p>
+                El archivo se lee en tu navegador y no se sube a Northstack: solo se guardan las filas que confirmás. El
+                asistente reconoce las columnas y qué significa el signo "−" en ese archivo (te explica por qué), y en la
+                revisión podés invertir el signo de una fila. Detecta duplicados, transferencias entre tus cuentas (como el
+                pago de la tarjeta) y cuotas, y aprende las categorías de tus correcciones. Si el resumen trae una columna en
+                dólares, ingresá el tipo de cambio del resumen y esas líneas se pasan a tu moneda, guardando el monto
+                original.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Movimientos, comprobantes y clientes</h3>
+              <p>
+                En <strong>Movimientos</strong> podés cargar un gasto a mano (también en USD con su tipo de cambio),
+                elegirle categoría, departamento y cliente, y adjuntar el comprobante (PDF o imagen de hasta 1 MB, se
+                guarda cifrado). El cliente que elegís cuenta para su <strong>Rentabilidad</strong>.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Avisos y proyección</h3>
+              <ul>
+                <li><strong>Presupuesto por categoría:</strong> aviso al 80% y en rojo al 100% en el Resumen.</li>
+                <li><strong>Suscripciones:</strong> un cargo que se repite 3 meses o más te sugiere cargarlo como gasto fijo.</li>
+                <li><strong>Aumentos:</strong> si un gasto fijo te cobró más de un 10% de lo cargado, te ofrecemos actualizar el monto.</li>
+                <li><strong>Proyección de caja:</strong> 13 semanas de lo que sale (fijos y cuotas) y lo que entra (productos de tus clientes). Podés poner tu saldo de hoy; queda solo en tu navegador.</li>
+              </ul>
+            </div>
+
+            <div className="help-callout help-callout-note">
+              <InfoIcon />
+              <p>
+                Northstack no se conecta con tu banco ni mueve dinero: Gastos es una herramienta de registro. Los
+                gráficos están en <strong>Dashboards → Gastos</strong>.
+              </p>
+            </div>
+          </section>
+          ) : (
+          <section className="help-section" id="g-expenses">
+            <div className="help-eyebrow">
+              <ReceiptIcon />
+              Finance
+            </div>
+            <h2>Expenses</h2>
+            <div className="help-tagrow">
+              <span className="help-pill help-pill-plan">Growth plan</span>
+              <span className="help-pill help-pill-role">Managing: Owner, or a role with Manage expenses</span>
+            </div>
+            <p className="help-intro">
+              Your company's expenses and income in one place: accounts, cards, fixed expenses, and statement imports.
+              Amounts and descriptions are stored encrypted.
+            </p>
+
+            <div className="help-sub">
+              <h3>Getting started</h3>
+              <ol className="help-steps">
+                <li>In <strong>Expenses → Accounts &amp; categories</strong>, add your bank accounts, cards, and cash.</li>
+                <li>In <strong>Fixed expenses</strong>, add what you pay every month. If it's an automatic debit or goes on a card, it books itself as an estimate on its charge day, and the import confirms it.</li>
+                <li>In <strong>Import CSV</strong>, upload the statement you download from your bank or card.</li>
+              </ol>
+            </div>
+
+            <div className="help-sub">
+              <h3>Importing a statement</h3>
+              <p>
+                The file is read in your browser and isn't uploaded to Northstack: only the rows you confirm are saved. The
+                wizard recognizes the columns and what "−" means in that file (and explains why), and in the review you can
+                flip the sign of any row. It spots duplicates, transfers between your own accounts (like paying the card),
+                and installments, and it learns categories from your corrections. If the statement has a dollar column,
+                enter the statement's exchange rate and those lines are converted to your currency, keeping the original
+                amount.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Transactions, receipts, and clients</h3>
+              <p>
+                In <strong>Transactions</strong> you can add an expense by hand (also in USD with its exchange rate), set
+                its category, department, and client, and attach the receipt (a PDF or image up to 1 MB, stored
+                encrypted). The client you choose counts toward their <strong>Profitability</strong>.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Alerts and projection</h3>
+              <ul>
+                <li><strong>Budget per category:</strong> a warning at 80% and red at 100% on the Summary.</li>
+                <li><strong>Subscriptions:</strong> a charge that repeats for 3 months or more suggests adding it as a fixed expense.</li>
+                <li><strong>Increases:</strong> if a fixed expense charged more than 10% over its amount, we offer to update it.</li>
+                <li><strong>Cash projection:</strong> 13 weeks of what goes out (fixed expenses and installments) and what comes in (your clients' products). You can enter today's balance; it stays in your browser only.</li>
+              </ul>
+            </div>
+
+            <div className="help-callout help-callout-note">
+              <InfoIcon />
+              <p>
+                Northstack doesn't connect to your bank or move money: Expenses is a record-keeping tool. The charts live
+                in <strong>Dashboards → Expenses</strong>.
+              </p>
+            </div>
+          </section>
+          )}
+
           {/* ===== Tasks & Notes ===== */}
           {isSpanish ? (
           <section className="help-section" id="g-tasks">
@@ -2364,48 +2724,64 @@ export default function GuidePage() {
           </section>
           )}
 
-          {/* ===== Public forms ===== */}
+          {/* ===== Forms & surveys ===== */}
           {isSpanish ? (
           <section className="help-section" id="g-forms">
             <div className="help-eyebrow">
               <FormIcon />
               Conectar
             </div>
-            <h2>Formularios públicos</h2>
-            <p className="help-intro">Un link web para compartir — sin necesidad de iniciar sesión — para reclutamiento o leads entrantes de ventas.</p>
+            <h2>Formularios y encuestas</h2>
+            <div className="help-tagrow">
+              <span className="help-pill help-pill-plan">Plan Growth</span>
+              <span className="help-pill help-pill-role">Gestión: Owner, o un rol con Gestionar campos personalizados y catálogos</span>
+            </div>
+            <p className="help-intro">
+              Formularios para tu sitio web y encuestas para clientes o empleados, cada uno conectado a un módulo. Las
+              respuestas se guardan cifradas.
+            </p>
 
             <div className="help-sub">
-              <h3>Construyendo uno</h3>
+              <h3>Crear uno</h3>
               <ol className="help-steps">
-                <li>Andá a <strong>Configuración → Formularios públicos</strong> y elegí un tipo: Empleado, Cliente, o Contacto.</li>
-                <li>Ponele un nombre — esto genera un enlace que podés editar antes de crear el formulario (después queda fijo).</li>
-                <li>Arrastrá los campos que querés recolectar, desde tus campos incorporados y cualquier campo personalizado; marcá los que sean obligatorios. Nombre, apellido y correo electrónico siempre se recolectan.</li>
-                <li>Escribí un mensaje de "agradecimiento" que se muestra después de que alguien envía el formulario.</li>
+                <li>Andá a <strong>Formularios y encuestas</strong> y creá un formulario o una encuesta.</li>
+                <li>Elegí a qué <strong>módulo</strong> se conecta (Leads, Clientes, Empleados, Soporte, Proyectos o ninguno) y qué hace cada respuesta: crear un lead, actualizar un contacto, crear un ticket, crear una tarea, guardar en el legajo o solo guardar.</li>
+                <li>Agregá las preguntas y, en cada una, elegí a qué campo "va" (incluidos los campos personalizados).</li>
+                <li>Publicalo. Mientras está en borrador nadie lo puede responder.</li>
               </ol>
+            </div>
+
+            <div className="help-sub">
+              <h3>En tu sitio web o por link</h3>
               <p>
-                Un formulario de <strong>Contacto</strong> se puede vincular opcionalmente a un Pipeline — un envío
-                que coincida con una Empresa existente también crea automáticamente una Oportunidad en la primera
-                etapa de ese pipeline.
+                Los formularios de Leads y Soporte tienen un link público. En la tarjeta <strong>Link y código</strong>{' '}
+                copiás el link o el código para insertarlo en tu web (en la página, como botón flotante o como ventana), y
+                elegís en qué dominios se permite. Los parámetros de campaña del link (utm_source y similares) quedan como
+                origen del lead.
+              </p>
+              <p>
+                Las encuestas a clientes y empleados usan <strong>links personales</strong>: cada persona recibe por mail
+                su propio link, que sirve una vez y vence a los 30 días. Podés enviarlas a mano o con un disparador
+                automático (al terminar el onboarding, al cerrar un ticket, cada 90 días, trimestral, entre otros). A la
+                misma persona no le llega la misma encuesta dos veces en 60 días.
               </p>
             </div>
 
             <div className="help-sub">
-              <h3>Compartirlo y protegerlo</h3>
+              <h3>Respuestas y resultados</h3>
               <p>
-                Copiá el enlace desde la fila del formulario y compartilo donde quieras. Activá o desactivá un
-                formulario (<strong>Activo/Inactivo</strong>) en cualquier momento — un formulario inactivo les
-                muestra a los visitantes un simple mensaje de "ya no se aceptan envíos". Todo formulario tiene un
-                campo honeypot oculto y una verificación CAPTCHA incorporados contra spam.
+                En <strong>Respuestas</strong>, al hacer clic en una ves todas las preguntas, a qué campo se copió cada
+                respuesta y el registro vinculado. Los resultados (NPS, CSAT, eNPS y leads por origen) están en{' '}
+                <strong>Dashboards → Encuestas</strong>.
               </p>
             </div>
 
-            <div className="help-callout help-callout-warn">
-              <AlertTriangleIcon />
+            <div className="help-callout help-callout-note">
+              <InfoIcon />
               <p>
-                Un envío se crea directamente en tu espacio de trabajo, sin ninguna cola de revisión en el medio —
-                el envío de un formulario de Empleado se convierte en un registro real de Empleado en el momento en
-                que se manda, igual que los formularios de Cliente o Contacto. Si querés evaluar a los postulantes
-                primero, usá el estado del registro resultante como tu propio paso de "en revisión".
+                Las encuestas a empleados son <strong>anónimas</strong> por defecto: no se guarda quién respondió, y los
+                resultados y las respuestas se muestran recién cuando hay al menos 3. Igual, evitá preguntas abiertas que
+                puedan identificar a alguien.
               </p>
             </div>
           </section>
@@ -2415,39 +2791,55 @@ export default function GuidePage() {
               <FormIcon />
               Connect
             </div>
-            <h2>Public forms</h2>
-            <p className="help-intro">A shareable web link — no login required — for hiring intake or inbound sales leads.</p>
+            <h2>Forms &amp; surveys</h2>
+            <div className="help-tagrow">
+              <span className="help-pill help-pill-plan">Growth plan</span>
+              <span className="help-pill help-pill-role">Managing: Owner, or a role with Manage custom fields &amp; catalogs</span>
+            </div>
+            <p className="help-intro">
+              Forms for your website and surveys for clients or employees, each connected to a module. Answers are stored
+              encrypted.
+            </p>
 
             <div className="help-sub">
-              <h3>Building one</h3>
+              <h3>Creating one</h3>
               <ol className="help-steps">
-                <li>Go to <strong>Settings → Public Forms</strong> and pick a type: Employee, Client, or Contact.</li>
-                <li>Give it a name — this generates a link you can edit before creating the form (locked afterward).</li>
-                <li>Drag in the fields you want to collect, from your built-in fields and any custom fields; mark any of them required. Name, last name, and email are always collected.</li>
-                <li>Write a "thank you" message shown after someone submits.</li>
+                <li>Go to <strong>Forms &amp; surveys</strong> and create a form or a survey.</li>
+                <li>Choose the <strong>module</strong> it connects to (Leads, Clients, Employees, Support, Projects, or none) and what each answer does: create a lead, update a contact, create a ticket, create a task, save to the employee file, or just save.</li>
+                <li>Add your questions and, for each one, choose the field it "goes to" (custom fields included).</li>
+                <li>Publish it. While it's a draft, nobody can answer it.</li>
               </ol>
+            </div>
+
+            <div className="help-sub">
+              <h3>On your website or by link</h3>
               <p>
-                A <strong>Contact</strong> form can optionally be tied to a Pipeline — a submission that matches an
-                existing Company then also creates an Opportunity in that pipeline's first stage automatically.
+                Leads and Support forms have a public link. In the <strong>Link &amp; code</strong> card you copy the link
+                or the code to embed it on your website (inline, as a floating button, or as a popup), and choose which
+                domains may embed it. The link's campaign parameters (utm_source and similar) become the lead's source.
+              </p>
+              <p>
+                Client and employee surveys use <strong>personal links</strong>: each person gets their own link by email,
+                which works once and expires after 30 days. Send them by hand or with an automatic trigger (end of
+                onboarding, ticket closed, every 90 days, quarterly, and more). The same person never gets the same survey
+                twice within 60 days.
               </p>
             </div>
 
             <div className="help-sub">
-              <h3>Sharing &amp; protecting it</h3>
+              <h3>Responses and results</h3>
               <p>
-                Copy the link from the form's row and share it anywhere. Toggle a form <strong>Active/Inactive</strong>{' '}
-                any time — an inactive form shows visitors a plain "no longer accepting submissions" message. Every
-                form has a hidden honeypot field and a CAPTCHA check built in against spam.
+                In <strong>Responses</strong>, clicking one shows every question, the field each answer was copied to,
+                and the linked record. Results (NPS, CSAT, eNPS, and leads by source) live in{' '}
+                <strong>Dashboards → Surveys</strong>.
               </p>
             </div>
 
-            <div className="help-callout help-callout-warn">
-              <AlertTriangleIcon />
+            <div className="help-callout help-callout-note">
+              <InfoIcon />
               <p>
-                A submission is created directly into your workspace, with no review queue in between — an Employee
-                form submission becomes a real Employee record the moment it's sent, the same as Client or Contact
-                forms. If you want to vet applicants first, treat the resulting record's status as your "under
-                review" step.
+                Employee surveys are <strong>anonymous</strong> by default: who answered isn't stored, and results and
+                answers only show once there are at least 3. Still, avoid open questions that could identify someone.
               </p>
             </div>
           </section>
@@ -2737,7 +3129,7 @@ export default function GuidePage() {
               </div>
               <div className="help-fielddef">
                 <dt>Empresa</dt>
-                <dd>Datos de la empresa, Usuarios, Formularios públicos, Pipelines, Registro de actividad, y Roles y permisos — cada tile solo aparece si tenés el permiso correspondiente.</dd>
+                <dd>Datos de la empresa, Usuarios, Pipelines, Productos, Registro de actividad, y Roles y permisos — cada tile solo aparece si tenés el permiso correspondiente.</dd>
               </div>
             </dl>
 
@@ -2805,7 +3197,7 @@ export default function GuidePage() {
               </div>
               <div className="help-fielddef">
                 <dt>Company</dt>
-                <dd>Company profile, Users, Public Forms, Pipelines, Activity Log, and Roles &amp; Permissions — each tile only appears if you have the matching permission.</dd>
+                <dd>Company profile, Users, Pipelines, Products, Activity Log, and Roles &amp; Permissions — each tile only appears if you have the matching permission.</dd>
               </div>
             </dl>
 

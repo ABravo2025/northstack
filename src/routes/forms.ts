@@ -7,6 +7,7 @@ import { isFormsAllowed } from '../modules/tenant/planLimits.js';
 import { isFormsEncryptionConfigured } from '../lib/formsEncryption.js';
 import { FormError, createForm, deleteForm, getForm, getFormsMeta, listForms, updateForm } from '../modules/forms/formService.js';
 import { getResponse, listResponses } from '../modules/forms/formResponseService.js';
+import { listCandidates, listInvites, sendInvites } from '../modules/forms/formInviteService.js';
 
 // Formularios y encuestas (spec-clientes-gastos-formularios.md, B2): the builder and the responses
 // inbox. Same permission the public forms already used (manage_custom_fields), Growth-only, and the
@@ -106,6 +107,40 @@ formsRouter.delete('/api/forms/:id', async (req, res) => {
   try {
     await deleteForm(user.tenantId!, req.params.id);
     return res.status(204).end();
+  } catch (error) {
+    return fail(res, error);
+  }
+});
+
+// --- Personal links (B4) ---
+
+formsRouter.get('/api/forms/:id/candidates', async (req, res) => {
+  const user = await guard(req, res, { needsKey: true });
+  if (!user) return;
+  try {
+    return res.json(await listCandidates(user.tenantId!, req.params.id, typeof req.query.q === 'string' ? req.query.q : undefined));
+  } catch (error) {
+    return fail(res, error);
+  }
+});
+
+formsRouter.get('/api/forms/:id/invites', async (req, res) => {
+  const user = await guard(req, res, { needsKey: true });
+  if (!user) return;
+  try {
+    return res.json(await listInvites(user.tenantId!, req.params.id));
+  } catch (error) {
+    return fail(res, error);
+  }
+});
+
+formsRouter.post('/api/forms/:id/invites', async (req, res) => {
+  const user = await guard(req, res, { needsKey: true });
+  if (!user) return;
+  const ids = Array.isArray(req.body?.recipientIds) ? req.body.recipientIds.filter((v: unknown): v is string => typeof v === 'string') : [];
+  if (!ids.length) return res.status(400).json({ error: 'Choose who to send it to', code: 'no_recipients' });
+  try {
+    return res.json(await sendInvites(user.tenantId!, req.params.id, { recipientIds: ids, createdById: user.id }));
   } catch (error) {
     return fail(res, error);
   }

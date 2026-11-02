@@ -148,7 +148,7 @@
     "legacyNotice": "Este formulario se creó con el editor anterior y sigue funcionando en su link de siempre. Para pasarlo a este editor, armá las preguntas y guardá: desde ahí funciona con el módulo y la acción que elijas.",
     "shareTitle": "Link y código para tu web",
     "personalTitle": "Cómo llega",
-    "personalBody": "Cada persona recibe un link personal por email, con la plantilla de Northstack. Por eso no hace falta preguntarle quién es. El envío llega en la próxima entrega.",
+    "personalBody": "Cada persona recibe un link personal por email, con la plantilla de Northstack. Por eso no hace falta preguntarle quién es.",
     "previewTitle": "Vista previa",
     "previewAsPublic": "Así lo ve quien entra al link",
     "previewAsPersonal": "Así lo ve quien recibe el link personal",
@@ -310,5 +310,31 @@
     "inline": "El formulario aparece donde pegues el código y se ajusta solo de alto.",
     "button": "Un botón fijo abajo a la derecha abre el formulario en una ventana.",
     "popup": "Un botón donde pegues el código abre el formulario en una ventana."
+  },
+  "send": {
+    "publishFirst": "Publicalo para poder enviarlo.",
+    "search": "Buscar por nombre o email",
+    "selectAll": "Todos los disponibles",
+    "noCandidates": "No hay nadie para mostrar.",
+    "lastSent": "último envío {{date}}",
+    "recent": "enviado el {{date}}, se puede reenviar a los 60 días",
+    "rule": "Una persona recibe el mismo formulario o encuesta como máximo una vez cada 60 días. El link vence a los 30 días y se responde una sola vez.",
+    "button_one": "Enviar a {{count}} persona",
+    "button_other": "Enviar a {{count}} personas",
+    "sending": "Enviando…",
+    "sent_one": "Enviado a {{count}} persona",
+    "sent_other": "Enviado a {{count}} personas",
+    "sentWithSkipped": "Enviado a {{count}}. {{skipped}} no se enviaron porque lo recibieron hace menos de 60 días.",
+    "summary": "Enviado {{sent}} veces · {{responded}} respondieron",
+    "history": "Historial de envíos",
+    "autoTitle": "Envío automático: {{trigger}}",
+    "autoBody": "Northstack lo manda solo todos los días a quien corresponda. También podés enviarlo a mano.",
+    "autoLater": "Este disparador se activa con el módulo de Clientes. Mientras tanto, envialo a mano.",
+    "status": {
+      "pending": "sin responder",
+      "responded": "respondió",
+      "closed": "cerrado",
+      "expired": "venció"
+    }
   }
 }

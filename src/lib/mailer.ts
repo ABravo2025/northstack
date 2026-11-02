@@ -1320,3 +1320,54 @@ export async function sendSkillExpiryEmail(input: SendSkillExpiryEmailInput): Pr
     'skillsExpiring',
   );
 }
+
+// Formularios y encuestas (B4): a personal link to a form or survey. Category "surveys" so a
+// Northstack user can turn these off; clients' contacts aren't users and always get them.
+export interface SendFormInviteEmailInput {
+  to: string;
+  firstName: string;
+  tenantName: string;
+  formName: string;
+  isSurvey: boolean;
+  anonymous: boolean;
+  url: string;
+  expiresAt: Date;
+  locale?: string | null;
+}
+
+export async function sendFormInviteEmail(input: SendFormInviteEmailInput): Promise<void> {
+  if (!mailerConfigured()) return;
+
+  const lng = resolveEmailLocale(input.locale);
+  const t = (key: string, opts?: Record<string, unknown>) => i18n.t(key, { lng, ns: 'emails', ...opts });
+  const kind = input.isSurvey ? 'survey' : 'form';
+  const expires = formatEmailDate(input.expiresAt, lng);
+
+  await dispatchMail(
+    {
+      from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
+      to: input.to,
+      subject: t(`formInvite.subject_${kind}`, { tenantName: input.tenantName, formName: input.formName }),
+      text: [
+        t('formInvite.greeting', { firstName: input.firstName }),
+        '',
+        t(`formInvite.body_${kind}`, { tenantName: input.tenantName, formName: input.formName }),
+        ...(input.anonymous ? ['', t('formInvite.anonymous')] : []),
+        '',
+        `${t('formInvite.cta')}: ${input.url}`,
+        '',
+        t('formInvite.expires', { date: expires }),
+      ].join('\n'),
+      html: [
+        `<p>${t('formInvite.greeting', { firstName: escapeHtml(input.firstName) })}</p>`,
+        `<p>${t(`formInvite.body_${kind}`, { tenantName: strong(input.tenantName), formName: strong(input.formName) })}</p>`,
+        ...(input.anonymous ? [`<p>${t('formInvite.anonymous')}</p>`] : []),
+        `<p><a href="${escapeHtml(input.url)}">${t('formInvite.cta')}</a></p>`,
+        `<p style="color:#706b88;font-size:12px">${t('formInvite.expires', { date: expires })}</p>`,
+      ].join('\n'),
+    },
+    'Failed to send form invite email:',
+    lng,
+    'surveys',
+  );
+}

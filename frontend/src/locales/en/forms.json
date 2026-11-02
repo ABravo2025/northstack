@@ -148,7 +148,7 @@
     "legacyNotice": "This form was built with the previous editor and keeps working at its usual link. To move it to this editor, build the questions and save: from then on it works with the module and action you choose.",
     "shareTitle": "Link and code for your website",
     "personalTitle": "How it's delivered",
-    "personalBody": "Each person gets a personal link by email, with Northstack's template. That's why there's no need to ask who they are. Sending comes in the next release.",
+    "personalBody": "Each person gets a personal link by email, with Northstack's template. That's why there's no need to ask who they are.",
     "previewTitle": "Preview",
     "previewAsPublic": "What visitors to the link see",
     "previewAsPersonal": "What the person with the personal link sees",
@@ -310,5 +310,31 @@
     "inline": "The form appears where you paste the code and adjusts its height on its own.",
     "button": "A fixed button at the bottom right opens the form in a window.",
     "popup": "A button where you paste the code opens the form in a window."
+  },
+  "send": {
+    "publishFirst": "Publish it to be able to send it.",
+    "search": "Search by name or email",
+    "selectAll": "All available",
+    "noCandidates": "No one to show.",
+    "lastSent": "last sent {{date}}",
+    "recent": "sent on {{date}}, can be resent after 60 days",
+    "rule": "A person gets the same form or survey at most once every 60 days. The link expires after 30 days and can be answered once.",
+    "button_one": "Send to {{count}} person",
+    "button_other": "Send to {{count}} people",
+    "sending": "Sending…",
+    "sent_one": "Sent to {{count}} person",
+    "sent_other": "Sent to {{count}} people",
+    "sentWithSkipped": "Sent to {{count}}. {{skipped}} weren't sent because they got it less than 60 days ago.",
+    "summary": "Sent {{sent}} times · {{responded}} answered",
+    "history": "Sending history",
+    "autoTitle": "Automatic sending: {{trigger}}",
+    "autoBody": "Northstack sends it every day to whoever it applies to. You can also send it by hand.",
+    "autoLater": "This trigger turns on with the Clients module. Meanwhile, send it by hand.",
+    "status": {
+      "pending": "not answered",
+      "responded": "answered",
+      "closed": "closed",
+      "expired": "expired"
+    }
   }
 }

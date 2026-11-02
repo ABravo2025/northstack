@@ -20,6 +20,16 @@
     "contractNote": "Your contract is attached to this email for your records.",
     "expiry": "This link expires in 7 days."
   },
+  "formInvite": {
+    "subject_survey": "{{tenantName}} would like your opinion",
+    "subject_form": "{{tenantName}}: {{formName}}",
+    "greeting": "Hi {{firstName}},",
+    "body_survey": "{{tenantName}} invites you to answer \"{{formName}}\". It takes a few minutes.",
+    "body_form": "{{tenantName}} asks you to fill in \"{{formName}}\".",
+    "anonymous": "It's anonymous: your name isn't stored with your answer.",
+    "cta": "Answer",
+    "expires": "This link is personal and expires on {{date}}."
+  },
   "publicFormSubmission": {
     "subject": "New submission on \"{{formName}}\"",
     "body": "{{submitterName}} ({{submitterEmail}}) just submitted \"{{formName}}\" for {{tenantName}}."

@@ -18,6 +18,7 @@ export const EMAIL_CATEGORIES = [
   'payslips', // Payroll v2: your payslip when a pay run is confirmed
   'opportunityStage', // a deal moved stage
   'opportunityStalled', // a deal hasn't moved in a while
+  'surveys', // Formularios y encuestas: a personal link to a form or survey
 ] as const;
 
 export type EmailCategory = (typeof EMAIL_CATEGORIES)[number];

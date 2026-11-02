@@ -1156,7 +1156,8 @@
       "payroll": "Payroll",
       "shifts": "Shifts and timesheet",
       "timeOff": "Time off",
-      "sales": "Sales"
+      "sales": "Sales",
+      "forms": "Forms & surveys"
     },
     "category": {
       "projectBudget": "A project I own is near or over its hour budget",
@@ -1170,7 +1171,8 @@
       "timesheet": "My timesheet: weeks sent back or reopened, hours not logged yet",
       "timeOff": "Time off requests to decide, and decisions on mine",
       "opportunityStage": "A deal I own moved stage",
-      "opportunityStalled": "A deal I own hasn't moved in a while"
+      "opportunityStalled": "A deal I own hasn't moved in a while",
+      "surveys": "Personal links to the company's forms and surveys"
     },
     "always": "Emails about your account (password, invitations, billing and legal updates) always arrive.",
     "failed": "Couldn't save: {{message}}"

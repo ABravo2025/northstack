@@ -17,6 +17,7 @@ const GROUPS: { key: string; categories: EmailCategory[] }[] = [
   { key: 'projects', categories: ['projectBudget'] },
   { key: 'payroll', categories: ['payslips'] },
   { key: 'sales', categories: ['opportunityStage', 'opportunityStalled'] },
+  { key: 'forms', categories: ['surveys'] },
 ];
 
 export default function EmailPreferencesCard({ token }: EmailPreferencesCardProps) {

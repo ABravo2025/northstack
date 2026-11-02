@@ -50,12 +50,14 @@ export function checkStamp(formId: string, stamp: unknown, now = Date.now()): 'o
 
 // Empty list = embeddable anywhere (the prototype's "Vacío = cualquier web"); otherwise only on the
 // listed hosts. sanitizeDomains (formService.ts) already guarantees plain hostnames.
-export function frameAncestors(allowedDomains: string[]): string {
+// null = never framed (personal links, error pages).
+export function frameAncestors(allowedDomains: string[] | null): string {
+  if (allowedDomains === null) return "frame-ancestors 'none'";
   if (!allowedDomains.length) return "frame-ancestors 'self' https:";
   return `frame-ancestors 'self' ${allowedDomains.map((d) => `https://${d}`).join(' ')}`;
 }
 
-export function pageCsp(nonce: string, allowedDomains: string[]): string {
+export function pageCsp(nonce: string, allowedDomains: string[] | null): string {
   return [
     "default-src 'none'",
     `script-src 'nonce-${nonce}'`,
@@ -92,6 +94,10 @@ const COPY = {
     notFound: 'Este formulario no está disponible.',
     poweredBy: 'Hecho con Northstack',
     honeypot: 'No completes este campo',
+    hello: 'Hola, {{name}}.',
+    anonymous: 'Es anónima: tu nombre no se guarda con la respuesta.',
+    answered: 'Ya respondiste esto. ¡Gracias!',
+    expired: 'Este link venció. Pedile a la empresa que te lo vuelva a enviar.',
   },
   en: {
     send: 'Submit',
@@ -110,6 +116,10 @@ const COPY = {
     notFound: 'This form is not available.',
     poweredBy: 'Made with Northstack',
     honeypot: 'Leave this field empty',
+    hello: 'Hi {{name}}.',
+    anonymous: "It's anonymous: your name isn't stored with your answer.",
+    answered: 'You already answered this. Thank you!',
+    expired: 'This link expired. Ask the company to send it again.',
   },
 };
 export type PageLang = keyof typeof COPY;
@@ -265,6 +275,9 @@ export interface PageInput {
   // Opened inside a company's website: always light, whatever the visitor's OS theme, so the form
   // matches the page around it. The direct link follows the OS theme.
   embedded?: boolean;
+  // Personal links: "Hola, Ana" and, on anonymous surveys, a note that the name isn't stored.
+  greeting?: string | null;
+  anonymous?: boolean;
 }
 
 export function renderFormPage(p: PageInput): string {
@@ -282,7 +295,9 @@ export function renderFormPage(p: PageInput): string {
 <title>${escapeHtml(p.name)}</title><style nonce="${p.nonce}">${STYLE}</style></head>
 <body><main class="wrap"><div class="sheet">
 <div class="head">${p.logoUrl ? `<img src="${escapeHtml(p.logoUrl)}" alt="">` : ''}<h1>${escapeHtml(p.name)}</h1></div>
+${p.greeting ? `<p class="intro">${escapeHtml(COPY[p.lang].hello.replace('{{name}}', p.greeting))}</p>` : ''}
 ${p.description ? `<p class="intro">${escapeHtml(p.description)}</p>` : ''}
+${p.anonymous ? `<p class="help">${COPY[p.lang].anonymous}</p>` : ''}
 <form id="f" novalidate>
 ${p.questions.map((q) => questionHtml(q, p.lang)).join('\n')}
 <div class="hp" aria-hidden="true"><label for="hp">${c.honeypot}</label><input id="hp" name="website" type="text" tabindex="-1" autocomplete="off"></div>
@@ -296,4 +311,8 @@ ${p.questions.map((q) => questionHtml(q, p.lang)).join('\n')}
 
 export function renderNotFoundPage(nonce: string, lang: PageLang): string {
   return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>404</title><style nonce="${nonce}">${STYLE}</style></head><body><main class="wrap"><div class="sheet"><p class="done">${COPY[lang].notFound}</p></div></main></body></html>`;
+}
+
+export function renderNoticePage(nonce: string, lang: PageLang, notice: 'answered' | 'expired'): string {
+  return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Northstack</title><style nonce="${nonce}">${STYLE}</style></head><body><main class="wrap"><div class="sheet"><p class="done">${COPY[lang][notice]}</p></div></main></body></html>`;
 }

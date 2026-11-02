@@ -8,8 +8,9 @@ vi.mock('../src/lib/prisma.js', () => ({
   default: {
     tenant: { findUnique: vi.fn() },
     form: { findUnique: vi.fn() },
-    contact: { findFirst: vi.fn() },
     user: { findMany: vi.fn() },
+    formInvite: { findUnique: vi.fn() },
+    contact: { findFirst: vi.fn(), findMany: vi.fn() },
   },
 }));
 vi.mock('../src/lib/rateLimit.js', () => ({ isRateLimited: vi.fn(async () => false) }));
@@ -127,5 +128,40 @@ describe('public form routes', () => {
     const res = await fetch(`${base}/f/embed.js`);
     expect(res.headers.get('content-type')).toContain('application/javascript');
     expect(res.headers.get('cross-origin-resource-policy')).toBe('cross-origin');
+  });
+
+  it('serves a personal link that can never be embedded and greets the person', async () => {
+    db.formInvite.findUnique.mockResolvedValue({
+      id: 'i1',
+      tenantId: 't1',
+      recipientType: 'contact',
+      recipientId: 'c1',
+      respondedAt: null,
+      expiresAt: new Date(Date.now() + 86_400_000),
+      form: form({ kind: 'survey', module: 'clients', action: 'save_only', fields: [{ id: 'q1', label: 'NPS', type: 'rating_nps', required: true }] }),
+      tenant,
+    });
+    db.contact.findMany.mockResolvedValue([{ id: 'c1', firstName: 'Ana', lastName: 'Paz', email: 'ana@acme.com' }]);
+    const res = await fetch(`${base}/f/p/${'a'.repeat(43)}`, { headers: { 'accept-language': 'es' } });
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-security-policy')).toContain("frame-ancestors 'none'");
+    expect(await res.text()).toContain('Hola, Ana.');
+  });
+
+  it('tells the person when the link was already answered', async () => {
+    db.formInvite.findUnique.mockResolvedValue({
+      id: 'i1',
+      tenantId: 't1',
+      recipientType: 'contact',
+      recipientId: 'c1',
+      respondedAt: new Date(),
+      expiresAt: new Date(Date.now() + 86_400_000),
+      form: form({ kind: 'survey', module: 'clients', action: 'save_only' }),
+      tenant,
+    });
+    db.contact.findMany.mockResolvedValue([]);
+    const res = await fetch(`${base}/f/p/${'a'.repeat(43)}`, { headers: { 'accept-language': 'es' } });
+    expect(res.status).toBe(410);
+    expect(await res.text()).toContain('Ya respondiste');
   });
 });

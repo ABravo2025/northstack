@@ -10,6 +10,7 @@ import { isFormsAllowed } from '../modules/tenant/planLimits.js';
 import { PUBLIC_ACTIONS, type FormAction, type FormQuestion } from '../modules/forms/formDefinitions.js';
 import { FormError } from '../modules/forms/formService.js';
 import { submitResponse } from '../modules/forms/formResponseService.js';
+import { findInvite, submitInvite } from '../modules/forms/formInviteService.js';
 import { EMBED_SCRIPT } from '../modules/forms/embedScript.js';
 import {
   checkStamp,
@@ -17,6 +18,7 @@ import {
   pageCsp,
   pickLang,
   renderFormPage,
+  renderNoticePage,
   renderNotFoundPage,
   renderStamp,
 } from '../modules/forms/publicFormPage.js';
@@ -60,6 +62,33 @@ formsPublicRouter.get('/f/embed.js', (_req, res) => {
   res.setHeader('Cache-Control', 'public, max-age=300');
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   res.type('application/javascript').send(EMBED_SCRIPT);
+});
+
+// Personal link (B4): /f/p/<token>. Registered before the public route — same two-segment shape.
+formsPublicRouter.get('/f/p/:token', async (req, res) => {
+  const nonce = newNonce();
+  const found = await findInvite(req.params.token);
+  const lang = pickLang(req.headers['accept-language'], found?.tenant.country ?? null);
+  if (!found) return sendHtml(res, 404, renderNotFoundPage(nonce, lang), pageCsp(nonce, []));
+  if (found.state !== 'open') return sendHtml(res, 410, renderNoticePage(nonce, lang, found.state === 'answered' ? 'answered' : 'expired'), pageCsp(nonce, []));
+  const { tenant, form } = found;
+  const survey = (form.surveySettings ?? {}) as { anonymous?: boolean };
+  const html = renderFormPage({
+    nonce,
+    lang,
+    key: `${tenant.slug}/${form.slug}`,
+    name: form.name,
+    description: form.description,
+    questions: form.fields as unknown as FormQuestion[],
+    logoUrl: tenant.logoUpdatedAt ? `/api/public/tenant-logo/${tenant.id}?v=${tenant.logoUpdatedAt.getTime()}` : null,
+    action: `/api/public/invites/${req.params.token}`,
+    stamp: renderStamp(form.id),
+    utm: {},
+    greeting: found.firstName,
+    anonymous: form.kind === 'survey' && survey.anonymous === true,
+  });
+  // Personal links are never embedded.
+  return sendHtml(res, 200, html, pageCsp(nonce, null));
 });
 
 formsPublicRouter.get('/f/:tenantSlug/:formSlug', async (req, res) => {
@@ -109,6 +138,23 @@ async function notifyNewLead(form: Form, contactId: string) {
     });
   }
 }
+
+formsPublicRouter.post('/api/public/invites/:token', async (req, res) => {
+  const ip = getClientIp(req);
+  if (await isRateLimited(`form-submit:${ip}`, SUBMIT_LIMIT)) {
+    return res.status(429).json({ error: 'Too many submissions. Please try again in a few minutes.', code: 'rate_limited' });
+  }
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  const answers = body.answers && typeof body.answers === 'object' && !Array.isArray(body.answers) ? (body.answers as Record<string, unknown>) : {};
+  try {
+    const { form } = await submitInvite(req.params.token, answers);
+    const after = (form.afterSubmit ?? {}) as { mode?: string; message?: string; redirectUrl?: string };
+    return res.json(after.mode === 'redirect' && after.redirectUrl ? { redirectUrl: after.redirectUrl } : { message: after.message ?? null });
+  } catch (error) {
+    if (error instanceof FormError) return res.status(error.status).json({ error: error.message, code: error.code });
+    throw error;
+  }
+});
 
 formsPublicRouter.post('/api/public/forms/:tenantSlug/:formSlug', async (req, res) => {
   const ip = getClientIp(req);

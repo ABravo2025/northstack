@@ -20,6 +20,16 @@
     "contractNote": "Tu contrato está adjunto a este correo para que lo guardes.",
     "expiry": "Este enlace vence en 7 días."
   },
+  "formInvite": {
+    "subject_survey": "{{tenantName}} quiere saber tu opinión",
+    "subject_form": "{{tenantName}}: {{formName}}",
+    "greeting": "Hola {{firstName}},",
+    "body_survey": "{{tenantName}} te invita a responder \"{{formName}}\". Son unos minutos.",
+    "body_form": "{{tenantName}} te pide que completes \"{{formName}}\".",
+    "anonymous": "Es anónima: tu nombre no se guarda con la respuesta.",
+    "cta": "Responder",
+    "expires": "El link es personal y vence el {{date}}."
+  },
   "publicFormSubmission": {
     "subject": "Nueva respuesta en \"{{formName}}\"",
     "body": "{{submitterName}} ({{submitterEmail}}) acaba de enviar \"{{formName}}\" para {{tenantName}}."

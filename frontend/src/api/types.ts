@@ -1869,7 +1869,8 @@ export type EmailCategory =
   | 'timesheet'
   | 'timeOff'
   | 'opportunityStage'
-  | 'opportunityStalled';
+  | 'opportunityStalled'
+  | 'surveys';
 
 export interface EmailPreference {
   key: EmailCategory;

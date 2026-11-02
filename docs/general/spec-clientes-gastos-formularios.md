@@ -142,7 +142,8 @@ Inicio y fin reales se registran al cerrar cada unidad.
 - [x] B2 Backend builder + acciones — 2026-11-02 ≈09:58 → 10:15 (`/api/forms` CRUD + meta + respuestas; acciones crear lead (+oportunidad, UTM → origen), actualizar contacto, agregar contacto a su empresa, actualizar legajo, guardar en legajo, crear tarea de proyecto, solo guardar; ticket espera C7; mapeo validado contra el tenant; columna nueva `actionConfig` → `docs/general/sql-forms-b2-2026-11-02.sql`)
 - [x] B5 Frontend — 2026-11-02 ≈10:20 → 10:45 (se adelantó a B3/B4 para verlo en vivo; área propia `/forms` con sidebar Todos / Respuestas; lista con filtros tipo + módulo; editor con módulo, acción, pipeline / proyecto+responsable, encuesta (métrica, disparador, health, anónima), preguntas con "va a" y vista previa; Respuestas con KPI NPS/CSAT y modal con preguntas, a qué campo se copió y botón al registro; EN/ES. La tarjeta de link/embed y el envío personal se completan con B3/B4)
 - [x] B3 Página pública + embed.js — 2026-11-02 ≈10:50 → 11:20 (`/f/<empresa>/<formulario>` renderizada en el servidor con CSP propia; `/f/embed.js` con 3 estilos; `POST /api/public/forms/...`; dominios permitidos; mensaje o redirección; UTM → origen del lead; aviso por mail a dueño/admins por cada lead nuevo; tarjeta "Link y código" en el editor)
-- [ ] B4 Links personales · B6 Dashboard · B7 Cierre
+- [x] B4 Links personales — 2026-11-02 ≈11:25 → 11:50 (`/f/p/<token>`: se guarda solo el hash, vence a los 30 días, una respuesta, nunca embebible; mail con la plantilla y categoría de preferencias "surveys"; tarjeta "Cómo llega" con buscador, regla de 60 días por persona y formulario, historial; cron diario 14:00 UTC `/api/internal/forms/survey-triggers/run` para trimestral, 30 días del ingreso, baja, cada 90 días (contacto principal) y oportunidad perdida. "Al terminar onboarding" y "al cerrar ticket" esperan C3/C7)
+- [ ] B6 Dashboard · B7 Cierre
 
 ### Revisión de seguridad B3 (2026-11-02)
 

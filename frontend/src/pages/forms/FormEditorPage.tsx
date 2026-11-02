@@ -17,6 +17,7 @@ import {
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import { ArrowDownIcon, ArrowUpIcon, TrashIcon } from '../../components/common/Icons';
 import { useToast } from '../../components/common/ToastProvider';
+import FormSendCard from './FormSendCard';
 import { FormsFrame, Loading, QuestionPreview, targetLabel, useFormsMeta } from './formsShared';
 
 // Formularios y encuestas → editor (B5): module, action, questions with where each answer goes,
@@ -610,10 +611,14 @@ function Editor({
           </section>
 
           {isPersonal ? (
-            <section className="card ex-card">
-              <h3 className="card-title m-0">{t('editor.personalTitle')}</h3>
-              <p className="ex-muted m-0 text-sm">{t('editor.personalBody')}</p>
-            </section>
+            existing && !existing.legacy ? (
+              <FormSendCard token={token} form={existing} />
+            ) : (
+              <section className="card ex-card">
+                <h3 className="card-title m-0">{t('editor.personalTitle')}</h3>
+                <p className="ex-muted m-0 text-sm">{t('editor.personalBody')}</p>
+              </section>
+            )
           ) : (
             <ShareCard draft={draft} set={set} existing={existing} tenantSlug={meta.tenantSlug} />
           )}

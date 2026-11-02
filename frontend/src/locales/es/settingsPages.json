@@ -1161,7 +1161,8 @@
       "payroll": "Nómina",
       "shifts": "Turnos y timesheet",
       "timeOff": "Ausencias",
-      "sales": "Ventas"
+      "sales": "Ventas",
+      "forms": "Formularios y encuestas"
     },
     "category": {
       "projectBudget": "Un proyecto mío está por pasar o pasó sus horas presupuestadas",
@@ -1175,7 +1176,8 @@
       "timesheet": "Mi timesheet: semanas devueltas o reabiertas, horas sin cargar",
       "timeOff": "Pedidos de ausencia para decidir y decisiones sobre los míos",
       "opportunityStage": "Una oportunidad mía cambió de etapa",
-      "opportunityStalled": "Una oportunidad mía lleva tiempo sin moverse"
+      "opportunityStalled": "Una oportunidad mía lleva tiempo sin moverse",
+      "surveys": "Links personales a formularios y encuestas de la empresa"
     },
     "always": "Los emails sobre tu cuenta (contraseña, invitaciones, facturación y novedades legales) siempre llegan.",
     "failed": "No se pudo guardar: {{message}}"

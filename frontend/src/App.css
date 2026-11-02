@@ -4169,6 +4169,12 @@ textarea.overview-field-input {
 .fm-scale.active {
   @apply border-accent bg-accent text-white dark:border-brand-blue-light dark:bg-brand-blue-light dark:text-dark-page;
 }
+.fm-recipients {
+  @apply flex max-h-72 flex-col overflow-y-auto rounded-lg border border-line dark:border-dark-line;
+}
+.fm-recipient {
+  @apply flex cursor-pointer items-center gap-2.5 border-b border-line px-3 py-2 text-sm last:border-b-0 dark:border-dark-line;
+}
 .fm-qa-list {
   @apply flex flex-col;
 }

@@ -9,6 +9,7 @@ import { runActivityLogRetention } from '../modules/activity/activityLogRetentio
 import { runWebhookDeliveryRetries } from '../modules/integrations/webhookDispatchService.js';
 import { runShiftReminders } from '../modules/shifts/shiftReminderService.js';
 import { bookDueFixedExpenses } from '../modules/expenses/expenseService.js';
+import { runSurveyTriggers } from '../modules/forms/formInviteService.js';
 import { isExpenseEncryptionConfigured } from '../lib/expenseEncryption.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 import type express from 'express';
@@ -143,6 +144,14 @@ internalRouter.get('/api/internal/expenses/fixed-charges/run', async (req, res) 
 
   const result = await bookDueFixedExpenses();
   return res.json(result);
+});
+
+// Formularios y encuestas (B4): sends the automatic surveys whose trigger fired today (quarterly,
+// 30 days after hire, offboarding, every 90 days, opportunity lost). The 60-day rule per person
+// and survey makes a second run the same day send nothing. Skipped without FORMS_DATA_ENCRYPTION_KEY.
+internalRouter.get('/api/internal/forms/survey-triggers/run', async (req, res) => {
+  if (!checkCronSecret(req, res, '/api/internal/forms/survey-triggers/run')) return;
+  return res.json(await runSurveyTriggers());
 });
 
 // Private API + Webhooks Unit 4 (spec §7.3) — retries. The FIRST attempt at any WebhookDelivery

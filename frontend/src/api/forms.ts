@@ -131,6 +131,21 @@ export interface FormResponseDetail {
   linked: FormLinked | null;
 }
 
+export interface FormCandidate {
+  id: string;
+  name: string;
+  email: string;
+  detail: string | null;
+  lastSentAt: string | null;
+  canSend: boolean;
+}
+
+export interface FormInvitesSummary {
+  total: number;
+  responded: number;
+  invites: { id: string; recipientName: string; trigger: string; sentAt: string; status: 'pending' | 'responded' | 'closed' | 'expired' }[];
+}
+
 async function call<T>(token: string, path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
   const res = await apiFetch(`${API_BASE_URL}${path}`, {
     method: init.method ?? 'GET',
@@ -154,4 +169,16 @@ export const formsApi = {
   listFormResponses: (token: string, formId?: string) =>
     call<FormResponseRow[]>(token, `/api/forms/responses${formId ? `?formId=${encodeURIComponent(formId)}` : ''}`),
   getFormResponse: (token: string, id: string) => call<FormResponseDetail>(token, `/api/forms/responses/${id}`),
+  // Personal links (B4).
+  listFormCandidates: (token: string, formId: string, q?: string) =>
+    call<{ recipientType: 'contact' | 'employee'; candidates: FormCandidate[] }>(
+      token,
+      `/api/forms/${formId}/candidates${q ? `?q=${encodeURIComponent(q)}` : ''}`,
+    ),
+  listFormInvites: (token: string, formId: string) => call<FormInvitesSummary>(token, `/api/forms/${formId}/invites`),
+  sendFormInvites: (token: string, formId: string, recipientIds: string[]) =>
+    call<{ sent: number; skipped: { id: string; reason: 'recent' | 'not_found' }[] }>(token, `/api/forms/${formId}/invites`, {
+      method: 'POST',
+      body: { recipientIds },
+    }),
 };

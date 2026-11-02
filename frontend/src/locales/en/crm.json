@@ -941,5 +941,49 @@
     },
     "howItWorks": "Computed from the client's health, products, surveys and renewal dates. Not repeated while an open deal of the same kind exists.",
     "pipelinesLink": "See pipelines"
+  },
+  "clientsDash": {
+    "department": "Department",
+    "allDepartments": "All departments",
+    "noDepartment": "No department",
+    "departmentHint": "By the department of each account's owner.",
+    "clients": "Clients",
+    "checkIns_one": "{{count}} check-in in the period",
+    "checkIns_other": "{{count}} check-ins in the period",
+    "mrr": "Monthly recurring revenue",
+    "cancelled_one": "{{count}} cancellation in the period",
+    "cancelled_other": "{{count}} cancellations in the period",
+    "atRisk": "At risk or critical",
+    "critical_one": "{{count}} critical",
+    "critical_other": "{{count}} critical",
+    "sla": "Tickets resolved on time",
+    "ticketsOpen": "{{open}} open · {{overdue}} overdue",
+    "healthSpread": "Client health",
+    "newMrr": "New recurring revenue by month",
+    "ticketsByPriority": "Tickets opened in the period, by priority",
+    "opened": "Opened"
+  },
+  "salesDash": {
+    "title": "Won by purpose and the Leads inbox",
+    "departmentHint": "By the department of the deal's or lead's owner.",
+    "purpose": {
+      "new_business": "New business",
+      "expansion": "Expansion",
+      "renewal": "Renewals",
+      "other": "Other"
+    },
+    "wonByPurpose": "Won in the period, by pipeline purpose",
+    "leads": "New leads",
+    "worked_one": "{{count}} worked",
+    "worked_other": "{{count}} worked",
+    "workedShort": "Worked",
+    "qualified": "Qualified",
+    "converted": "Converted",
+    "conversion": "{{pct}}% conversion",
+    "disqualified": "Disqualified",
+    "leadsFunnel": "Leads funnel",
+    "leadsBySource": "Leads by source",
+    "sourceForm": "Form",
+    "sourceManual": "Entered by hand"
   }
 }

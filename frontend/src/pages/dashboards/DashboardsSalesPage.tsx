@@ -6,11 +6,14 @@ import { useTenantMetrics } from '../../lib/useTenantMetrics';
 import { pivotByCurrency, seriesColor } from '../../lib/metricsFormat';
 import { formatMoney } from '../../lib/currencies';
 import type { DashboardsOutletContext } from '../../layouts/DashboardsLayout';
+import { usePermissions } from '../../contexts/PermissionsContext';
+import SalesExtrasSection from './SalesExtrasSection';
 
 export default function DashboardsSalesPage() {
   const { t } = useTranslation('dashboards');
   const { token, range } = useOutletContext<DashboardsOutletContext>();
   const { metrics, loading } = useTenantMetrics(token, range);
+  const permissions = usePermissions();
 
   if (!metrics) return <p className="text-sm text-ink-muted dark:text-dark-ink-muted">{t('common.loading')}</p>;
   if (!metrics.sales) {
@@ -167,6 +170,7 @@ export default function DashboardsSalesPage() {
           </div>
         </div>
       )}
+      {permissions.features.clients && <SalesExtrasSection token={token} range={range} />}
     </div>
   );
 }

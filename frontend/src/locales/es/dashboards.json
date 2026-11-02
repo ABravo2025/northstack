@@ -20,6 +20,7 @@
     "payments": { "label": "Pagos", "desc": "Facturas abiertas, reembolsos y suscripciones de Stripe." },
     "expenses": { "label": "Gastos", "desc": "En qué se va la plata: fijos y variables, categorías, departamentos y dónde más se gasta." },
     "surveys": { "label": "Encuestas", "desc": "NPS, CSAT y eNPS, leads que llegaron por formularios y respuestas por módulo." },
+    "clients": { "label": "Clientes", "desc": "Clientes, ingreso recurrente, salud, tickets y SLA." },
     "sales": { "label": "Ventas", "desc": "Salud del pipeline y tendencias de oportunidades." },
     "tasks": { "label": "Tareas", "desc": "Tasas de finalización y carga de trabajo." },
     "adoption": { "label": "Adopción", "desc": "Uso de funciones en todo el espacio de trabajo." }

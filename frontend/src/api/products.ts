@@ -87,6 +87,21 @@ export interface ClientSignal {
   renewalDate: string | null;
 }
 
+export interface ClientsDashboard {
+  clients: number;
+  health: { healthy: number; at_risk: number; critical: number };
+  mrr: { currency: string; cents: number }[];
+  newMrrByMonth: { month: string; byCurrency: { currency: string; cents: number }[] }[];
+  cancelledInPeriod: number;
+  checkIns: number;
+  tickets: { opened: number; open: number; overdue: number; resolved: number; slaPct: number | null; byPriority: { priority: string; count: number }[] };
+}
+
+export interface SalesExtras {
+  wonByPurpose: { purpose: string; currency: string; count: number; cents: number }[];
+  leads: { total: number; worked: number; qualified: number; converted: number; disqualified: number; bySource: { source: string; total: number; converted: number }[] };
+}
+
 export type ProductInput = Partial<Pick<Product, 'name' | 'sku' | 'description' | 'unitPriceCents' | 'currency' | 'billing' | 'isActive'>>;
 
 async function call<T>(token: string, path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
@@ -129,4 +144,9 @@ export const productsApi = {
   listClientSignals: (token: string) => call<ClientSignal[]>(token, '/api/client-signals'),
   createSignalOpportunity: (token: string, input: { companyId: string; kind: 'expansion' | 'renewal'; productIds?: string[] }) =>
     call<{ opportunityId: string; pipelineId: string }>(token, '/api/client-signals/opportunity', { method: 'POST', body: input }),
+  // Clientes C9: dashboards.
+  getClientsDashboard: (token: string, f: { from: string; to: string; departmentId?: string }) =>
+    call<ClientsDashboard>(token, `/api/dashboards/clients?${new URLSearchParams({ from: f.from, to: f.to, ...(f.departmentId ? { departmentId: f.departmentId } : {}) })}`),
+  getSalesExtras: (token: string, f: { from: string; to: string; departmentId?: string }) =>
+    call<SalesExtras>(token, `/api/dashboards/sales-extras?${new URLSearchParams({ from: f.from, to: f.to, ...(f.departmentId ? { departmentId: f.departmentId } : {}) })}`),
 };

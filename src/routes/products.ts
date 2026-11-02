@@ -15,6 +15,7 @@ import {
 import { getCompanyOnboarding, getCompanyTimeline } from '../modules/crm/company360Service.js';
 import { addCheckIn, getCompanyHealth } from '../modules/crm/healthService.js';
 import { SignalError, createSignalOpportunity, getSignals } from '../modules/crm/signalService.js';
+import { getClientsDashboard, getSalesExtras } from '../modules/crm/clientsDashboardService.js';
 
 // Clientes C4/C5: the product catalog (Settings, same permission as pipelines), each company's
 // products and its 360 view (company permissions). Growth (clientsEnabled).
@@ -160,4 +161,29 @@ productsRouter.post('/api/client-signals/opportunity', async (req, res) => {
     if (error instanceof SignalError) return res.status(error.status).json({ error: error.message, code: error.code });
     throw error;
   }
+});
+
+// Clientes C9: Dashboards → Clientes, and the Sales additions (won by purpose, leads funnel).
+// Shared Dashboards period + department of the owner.
+function dashboardFilter(req: express.Request) {
+  const isDate = (v: unknown): v is string => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
+  const today = new Date().toISOString().slice(0, 10);
+  return {
+    from: isDate(req.query.from) ? req.query.from : `${today.slice(0, 7)}-01`,
+    to: isDate(req.query.to) ? req.query.to : today,
+    departmentId: typeof req.query.departmentId === 'string' && req.query.departmentId ? req.query.departmentId : undefined,
+  };
+}
+
+productsRouter.get('/api/dashboards/clients', async (req, res) => {
+  const user = await guard(req, res, 'viewCompany');
+  if (!user) return;
+  return res.json(await getClientsDashboard(user.tenantId!, dashboardFilter(req)));
+});
+
+productsRouter.get('/api/dashboards/sales-extras', async (req, res) => {
+  const user = await guard(req, res, 'viewCompany');
+  if (!user) return;
+  if (!canViewOpportunity(user.roleContext)) return res.status(403).json({ error: 'Insufficient permissions' });
+  return res.json(await getSalesExtras(user.tenantId!, dashboardFilter(req)));
 });

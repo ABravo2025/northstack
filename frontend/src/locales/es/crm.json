@@ -941,5 +941,49 @@
     },
     "howItWorks": "Se calculan con la salud del cliente, sus productos, las encuestas y las fechas de renovación. No se repiten si ya hay una oportunidad abierta del mismo tipo.",
     "pipelinesLink": "Ver pipelines"
+  },
+  "clientsDash": {
+    "department": "Departamento",
+    "allDepartments": "Todos los departamentos",
+    "noDepartment": "Sin departamento",
+    "departmentHint": "Por el departamento del responsable de cada cuenta.",
+    "clients": "Clientes",
+    "checkIns_one": "{{count}} check-in en el período",
+    "checkIns_other": "{{count}} check-ins en el período",
+    "mrr": "Ingreso mensual recurrente",
+    "cancelled_one": "{{count}} baja en el período",
+    "cancelled_other": "{{count}} bajas en el período",
+    "atRisk": "En riesgo o críticos",
+    "critical_one": "{{count}} crítico",
+    "critical_other": "{{count}} críticos",
+    "sla": "Tickets resueltos a tiempo",
+    "ticketsOpen": "{{open}} abiertos · {{overdue}} vencidos",
+    "healthSpread": "Salud de los clientes",
+    "newMrr": "Ingreso recurrente nuevo por mes",
+    "ticketsByPriority": "Tickets abiertos en el período, por prioridad",
+    "opened": "Abiertos"
+  },
+  "salesDash": {
+    "title": "Ganado por propósito y bandeja de Leads",
+    "departmentHint": "Por el departamento del responsable de la oportunidad o del lead.",
+    "purpose": {
+      "new_business": "Nuevo negocio",
+      "expansion": "Expansión",
+      "renewal": "Renovaciones",
+      "other": "Otro"
+    },
+    "wonByPurpose": "Ganado en el período, por propósito de la pipeline",
+    "leads": "Leads nuevos",
+    "worked_one": "{{count}} trabajado",
+    "worked_other": "{{count}} trabajados",
+    "workedShort": "Trabajados",
+    "qualified": "Calificados",
+    "converted": "Convertidos",
+    "conversion": "{{pct}} % de conversión",
+    "disqualified": "Descalificados",
+    "leadsFunnel": "Embudo de leads",
+    "leadsBySource": "Leads por origen",
+    "sourceForm": "Formulario",
+    "sourceManual": "Cargado a mano"
   }
 }

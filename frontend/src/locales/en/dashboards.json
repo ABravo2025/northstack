@@ -18,6 +18,7 @@
     "timeOff": { "label": "Time Off", "desc": "Balances, usage and policy trends." },
     "payroll": { "label": "Payroll", "desc": "Runs, cost and payment activity." },
     "payments": { "label": "Payments", "desc": "Open invoices, refunds and subscriptions from Stripe." },
+    "expenses": { "label": "Expenses", "desc": "Where the money goes: fixed and variable, categories, departments and top merchants." },
     "sales": { "label": "Sales", "desc": "Pipeline health and opportunity trends." },
     "tasks": { "label": "Tasks", "desc": "Completion rates and workload." },
     "adoption": { "label": "Adoption", "desc": "Feature usage across the workspace." }

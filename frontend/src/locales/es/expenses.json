@@ -355,5 +355,22 @@
     "doneConfirmed_other": "{{count}} cobros automáticos confirmados",
     "doneReconciled_one": "{{count}} gasto fijo conciliado",
     "doneReconciled_other": "{{count}} gastos fijos conciliados"
+  },
+  "dashboard": {
+    "loading": "Cargando…",
+    "department": "Departamento",
+    "allDepartments": "Todos los departamentos",
+    "total": "Gastos del período",
+    "expenseCount_one": "{{count}} gasto",
+    "expenseCount_other": "{{count}} gastos",
+    "credits": "Acreditaciones",
+    "creditsHint": "no restan del gasto",
+    "empty": "No hay gastos en este período. Cargalos a mano o importá el CSV de una tarjeta o cuenta.",
+    "byMonth": "Por mes: fijos y variables",
+    "byDepartment": "Por departamento",
+    "topMerchants": "Dónde más se gasta",
+    "topMerchantsHint": "Compras agrupadas por comercio (las mismas palabras que usan las reglas de categoría).",
+    "merchant": "Comercio",
+    "purchases": "Compras"
   }
 }

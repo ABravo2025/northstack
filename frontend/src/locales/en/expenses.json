@@ -355,5 +355,22 @@
     "doneConfirmed_other": "{{count}} automatic charges confirmed",
     "doneReconciled_one": "{{count}} fixed expense matched",
     "doneReconciled_other": "{{count}} fixed expenses matched"
+  },
+  "dashboard": {
+    "loading": "Loading…",
+    "department": "Department",
+    "allDepartments": "All departments",
+    "total": "Spending in period",
+    "expenseCount_one": "{{count}} expense",
+    "expenseCount_other": "{{count}} expenses",
+    "credits": "Credits",
+    "creditsHint": "not subtracted from spending",
+    "empty": "No expenses in this period. Add them by hand or import a card or bank CSV.",
+    "byMonth": "By month: fixed and variable",
+    "byDepartment": "By department",
+    "topMerchants": "Where the money goes",
+    "topMerchantsHint": "Purchases grouped by merchant (the same words the category rules use).",
+    "merchant": "Merchant",
+    "purchases": "Purchases"
   }
 }

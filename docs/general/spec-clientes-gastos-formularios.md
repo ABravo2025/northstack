@@ -136,7 +136,7 @@ Inicio y fin reales se registran al cerrar cada unidad.
 - [x] A4 Importación CSV — 2026-11-02 ≈09:25 → 09:35 (parser en el navegador `frontend/src/lib/expenseCsv.ts`; `POST /api/expenses/import/preview` + `/import` con el mismo plan: duplicados, internas, confirma estimados, concilia manuales, reglas, perfil de la cuenta)
 - [x] A5 Frontend hub y pantallas — 2026-11-01 ≈18:10 → 18:20 (se adelantó a A4 para verlo en vivo; "Importar CSV" se habilitó con A4/A6)
 - [x] A6 Asistente de importación — 2026-11-02 ≈09:35 → 09:42 (`/expenses/import`, 4 pasos; también desde Movimientos y desde cada cuenta)
-- [ ] A7 Dashboards → Gastos
+- [x] A7 Dashboards → Gastos — 2026-11-02 ≈09:40 → 09:44 (`GET /api/expenses/dashboard`; período del filtro de Dashboards + filtro de departamento; por mes fijos/variables, categoría, departamento, dónde más se gasta)
 - [ ] A8 Cierre Gastos
 - [ ] B1 … B7 Formularios y encuestas
 - [ ] C1 … C10 Clientes

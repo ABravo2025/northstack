@@ -10,6 +10,7 @@ import type {
   ExpenseImportRowPlan,
   ExpenseKind,
   ExpenseMovement,
+  ExpensesDashboard,
   ExpensesMeta,
   ExpensesSummary,
   FixedExpense,
@@ -103,6 +104,12 @@ export const expensesApi = {
 
   payFixedExpense: (token: string, id: string, input: { period: string; date?: string; amount?: string }) =>
     call<FixedExpense>(token, `/api/expenses/fixed/${id}/pay`, { method: 'POST', body: input }),
+
+  // Dashboards → Gastos (A7). departmentId "none" = movements with no department.
+  getExpensesDashboard: (token: string, filter: { from: string; to: string; departmentId?: string }) => {
+    const qs = new URLSearchParams({ from: filter.from, to: filter.to, ...(filter.departmentId ? { departmentId: filter.departmentId } : {}) });
+    return call<ExpensesDashboard>(token, `/api/expenses/dashboard?${qs}`);
+  },
 
   // CSV import (A4/A6): rows are parsed and normalized in the browser; the file never leaves it.
   previewExpenseImport: (token: string, accountId: string, rows: ExpenseImportRowInput[]) =>

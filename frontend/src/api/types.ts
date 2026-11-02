@@ -2036,6 +2036,22 @@ export interface ExpenseImportResult {
   invalid: number;
 }
 
+export interface ExpensesDashboard {
+  from: string;
+  to: string;
+  currency: string;
+  totalCents: number;
+  fixedCents: number;
+  variableCents: number;
+  creditsCents: number;
+  expenseCount: number;
+  estimatedCount: number;
+  byCategory: { categoryId: string | null; cents: number }[];
+  byDepartment: { departmentId: string | null; cents: number }[];
+  topMerchants: { name: string; cents: number; count: number }[];
+  byMonth: { month: string; fixedCents: number; variableCents: number }[];
+}
+
 export interface ExpenseCategory {
   id: string;
   name: string;

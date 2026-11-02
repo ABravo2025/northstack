@@ -18,6 +18,7 @@
     "timeOff": { "label": "Ausencias", "desc": "Saldos, uso y tendencias de las políticas." },
     "payroll": { "label": "Nómina", "desc": "Liquidaciones, costos y actividad de pagos." },
     "payments": { "label": "Pagos", "desc": "Facturas abiertas, reembolsos y suscripciones de Stripe." },
+    "expenses": { "label": "Gastos", "desc": "En qué se va la plata: fijos y variables, categorías, departamentos y dónde más se gasta." },
     "sales": { "label": "Ventas", "desc": "Salud del pipeline y tendencias de oportunidades." },
     "tasks": { "label": "Tareas", "desc": "Tasas de finalización y carga de trabajo." },
     "adoption": { "label": "Adopción", "desc": "Uso de funciones en todo el espacio de trabajo." }

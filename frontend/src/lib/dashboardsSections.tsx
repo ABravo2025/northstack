@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import i18n from './i18n';
-import { BriefcaseIcon, CalendarIcon, CreditCardIcon, ListIcon, PeopleIcon, TargetIcon, TrendingIcon } from '../components/common/Icons';
+import { BriefcaseIcon, CalendarIcon, CreditCardIcon, ListIcon, PeopleIcon, ReceiptIcon, TargetIcon, TrendingIcon } from '../components/common/Icons';
 
 export interface DashboardSectionItem {
   to: string;
@@ -51,6 +51,14 @@ export function getDashboardSections(permissions: DashboardSectionsPermissions):
       desc: t('sections.payments.desc', { ns: 'dashboards' }),
       icon: <CreditCardIcon />,
       permission: 'manage_payments',
+    },
+    {
+      // Gastos (spec-clientes-gastos-formularios.md, A7): manage_expenses already implies the plan.
+      to: '/dashboards/expenses',
+      label: t('sections.expenses.label', { ns: 'dashboards' }),
+      desc: t('sections.expenses.desc', { ns: 'dashboards' }),
+      icon: <ReceiptIcon />,
+      permission: 'manage_expenses',
     },
     {
       to: '/dashboards/sales',

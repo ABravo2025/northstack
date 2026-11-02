@@ -30,6 +30,7 @@ import {
   updateMovement,
 } from '../modules/expenses/expenseService.js';
 import { commitImport, planImport, sanitizeImportProfile } from '../modules/expenses/expenseImportService.js';
+import { getExpensesDashboard } from '../modules/expenses/expenseDashboardService.js';
 
 // Gastos / Expenses (spec-clientes-gastos-formularios.md, A2). Owner-only by default
 // (manage_expenses), Growth-only, and 503 until EXPENSES_DATA_ENCRYPTION_KEY is set.
@@ -327,4 +328,21 @@ expensesRouter.post('/api/expenses/import', async (req, res) => {
   } catch (error) {
     return fail(res, error);
   }
+});
+
+// --- Dashboards → Gastos (A7) ---
+// The range comes from the Dashboards date filter; departmentId narrows it ("none" = unassigned).
+expensesRouter.get('/api/expenses/dashboard', async (req, res) => {
+  const user = await guard(req, res);
+  if (!user) return;
+  const today = todayUtc();
+  const from = isDate(req.query.from) ? req.query.from : periodBounds(periodOf(today)).from;
+  const to = isDate(req.query.to) ? req.query.to : today;
+  if (from > to) return res.status(400).json({ error: 'The start date must be before the end date' });
+  const departmentId = typeof req.query.departmentId === 'string' && req.query.departmentId ? req.query.departmentId : undefined;
+  const [dashboard, currency] = await Promise.all([
+    getExpensesDashboard(user.tenantId!, { from, to, departmentId }),
+    getTenantCurrency(user.tenantId!),
+  ]);
+  return res.json({ ...dashboard, currency });
 });

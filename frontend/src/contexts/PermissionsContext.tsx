@@ -46,7 +46,7 @@ interface PermissionsContextValue {
 const DEFAULT_VALUE: PermissionsContextValue = {
   isOwner: false,
   growthPlan: true,
-  features: { payroll: true, payments: true, apiAccess: true, projectTemplates: true, shiftSkills: true, billableHours: true, clockIn: true, expenses: true },
+  features: { payroll: true, payments: true, apiAccess: true, projectTemplates: true, shiftSkills: true, billableHours: true, clockIn: true, expenses: true, forms: true },
   roleName: '',
   has: () => false,
   isFieldHidden: () => false,
@@ -67,10 +67,10 @@ export function PermissionsProvider({
   children: React.ReactNode;
 }) {
   // Primitive deps: callers build `features` fresh on every render.
-  const { payroll, payments, apiAccess, projectTemplates, shiftSkills, billableHours, clockIn, expenses } = features;
+  const { payroll, payments, apiAccess, projectTemplates, shiftSkills, billableHours, clockIn, expenses, forms } = features;
   const value = useMemo<PermissionsContextValue>(() => {
     if (!payload) return DEFAULT_VALUE;
-    const features = { payroll, payments, apiAccess, projectTemplates, shiftSkills, billableHours, clockIn, expenses };
+    const features = { payroll, payments, apiAccess, projectTemplates, shiftSkills, billableHours, clockIn, expenses, forms };
     return {
       isOwner: payload.isOwner,
       growthPlan,
@@ -83,7 +83,7 @@ export function PermissionsProvider({
         !payload.isOwner && (payload.hiddenFields[entityType]?.includes(fieldKey) ?? false),
       twoStep: payload.twoStep ?? { enabled: false, required: false },
     };
-  }, [payload, growthPlan, payroll, payments, apiAccess, projectTemplates, shiftSkills, billableHours, clockIn, expenses]);
+  }, [payload, growthPlan, payroll, payments, apiAccess, projectTemplates, shiftSkills, billableHours, clockIn, expenses, forms]);
 
   return <PermissionsContext.Provider value={value}>{children}</PermissionsContext.Provider>;
 }

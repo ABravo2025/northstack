@@ -138,7 +138,8 @@ Inicio y fin reales se registran al cerrar cada unidad.
 - [x] A6 Asistente de importación — 2026-11-02 ≈09:35 → 09:42 (`/expenses/import`, 4 pasos; también desde Movimientos y desde cada cuenta)
 - [x] A7 Dashboards → Gastos — 2026-11-02 ≈09:40 → 09:44 (`GET /api/expenses/dashboard`; período del filtro de Dashboards + filtro de departamento; por mes fijos/variables, categoría, departamento, dónde más se gasta)
 - [ ] A8 Cierre Gastos
-- [ ] B1 … B7 Formularios y encuestas
+- [x] B1 Schema — 2026-11-02 ≈09:45 → 09:55 (Form + kind/module/action/fields v2/status/allowedDomains/afterSubmit/embedSettings/surveySettings, entityType opcional; FormResponse cifrada con `FORMS_DATA_ENCRYPTION_KEY`; FormInvite con hash del token; flag `formsEnabled` Growth + override Admin; los forms existentes migran a module/action según su entityType. Aplicado a la DB de staging con migrate diff + db execute; **en producción hay que correr el mismo SQL al promover**. Gestión con el permiso existente `manage_custom_fields`, el mismo que usan hoy los formularios públicos)
+- [ ] B2 … B7 Formularios y encuestas
 - [ ] C1 … C10 Clientes
 - [ ] D1 … D4 Cruces
 

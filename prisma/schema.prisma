@@ -250,6 +250,34 @@ enum FormAccessMode {
   internal
 }
 
+// Formularios y encuestas (spec-clientes-gastos-formularios.md, Fase B, 2026-11-02).
+enum FormKind {
+  form
+  survey
+}
+
+// The module a form or survey feeds; its questions map to that module's fields.
+enum FormModule {
+  leads // creates a lead (Contact + Opportunity in the chosen pipeline)
+  clients // updates the responding contact / adds a contact to their company
+  employees // updates the employee file / saves to it
+  support // creates a customer ticket (enabled with C7)
+  projects // creates a task
+  none // only stores the response
+}
+
+enum FormStatus {
+  draft // the link doesn't answer
+  published
+}
+
+enum FormResponseSource {
+  public_link
+  embed
+  personal_link
+  internal
+}
+
 // Which stage of a Pipeline a given PipelineStageDefinition represents, so the
 // system can trigger business rules (Opportunity reaching a `won` stage →
 // Company.status moves to Customer; `lost` requires Opportunity.lossReasonId)
@@ -406,6 +434,8 @@ model Tenant {
   timeOffYearCloses         TimeOffYearClose[]
   savedViews                SavedView[]
   forms                     Form[]
+  formResponses             FormResponse[]
+  formInvites               FormInvite[]
   expenseAccounts           ExpenseAccount[]
   expenseCategories         ExpenseCategory[]
   expenseMovements          ExpenseMovement[]
@@ -2573,7 +2603,9 @@ model Form {
   id              String         @id @default(uuid())
   tenantId        String
   tenant          Tenant         @relation(fields: [tenantId], references: [id])
-  entityType      EntityType
+  // Legacy (pre-Fase B) forms: which record a submission creates. New forms use `module` +
+  // `action` instead and leave it null.
+  entityType      EntityType?
   name            String
   slug            String
   fieldsConfig    String // JSON-encoded array of {key, required} — optional fields only (department/company + cf:<id>); firstName/lastName/email are always shown and required
@@ -2584,9 +2616,92 @@ model Form {
   isActive        Boolean        @default(true)
   createdAt       DateTime       @default(now())
 
+  // --- Fase B: forms and surveys connected to a module ---
+  kind           FormKind       @default(form)
+  module         FormModule     @default(none)
+  // What a response does in the module: create_lead, update_contact, add_contact, update_employee,
+  // save_to_file, create_ticket, create_task, save_only. Validated against `module` in the app.
+  action         String?
+  description    String?
+  // v2 questions: [{ id, label, type, options?, required, mapTo? }]. mapTo is a field of the module
+  // (incl. "cf:<customFieldDefinitionId>"), validated against the tenant on save. Null on legacy
+  // forms, which are read through fieldsConfig.
+  fields         Json?
+  // Existing forms stay published so nothing that already works stops answering.
+  status         FormStatus     @default(published)
+  // Hostnames allowed to embed the form (CSP frame-ancestors). Empty = embedding off.
+  allowedDomains String[]       @default([])
+  // { mode: "message" | "redirect", message?, redirectUrl? }
+  afterSubmit    Json?
+  // { style: "inline" | "button" | "popup", buttonLabel?, color? }
+  embedSettings  Json?
+  // Surveys only: { metric: "nps" | "csat" | "enps" | "none", trigger, audience, anonymous,
+  // minAnonymousGroup, countsTowardHealth }
+  surveySettings Json?
+  updatedAt      DateTime       @default(now()) @updatedAt
+  responses      FormResponse[]
+  invites        FormInvite[]
+
   @@unique([tenantId, slug])
   @@index([tenantId])
   @@map("PublicForm")
+}
+
+// A response to a form or survey. The answers are encrypted (FORMS_DATA_ENCRYPTION_KEY); only
+// what dashboards and links need stays in clear: the numeric score, the linked record, the
+// department (for anonymous surveys, shown only with at least minAnonymousGroup answers) and UTM.
+model FormResponse {
+  id               String             @id @default(uuid())
+  tenantId         String
+  tenant           Tenant             @relation(fields: [tenantId], references: [id])
+  formId           String
+  form             Form               @relation(fields: [formId], references: [id], onDelete: Cascade)
+  // { [questionId]: value } as JSON, encrypted.
+  answersEnc       String
+  // NPS / eNPS 0-10, CSAT 1-5 — null when the survey has no metric or for plain forms.
+  score            Int?
+  source           FormResponseSource @default(public_link)
+  // The record the response created or updated (lead contact, employee, ticket, task…).
+  linkedEntityType String?
+  linkedEntityId   String?
+  // Who answered, when known (personal links). Null on anonymous surveys and public links.
+  respondentType   String?
+  respondentId     String?
+  departmentId     String?
+  // Which answers were copied to which module field: [{ questionId, mapTo }] — no values.
+  copiedFields     Json?
+  utmSource        String?
+  utmMedium        String?
+  utmCampaign      String?
+  createdAt        DateTime           @default(now())
+  invite           FormInvite?
+
+  @@index([tenantId, formId, createdAt])
+  @@index([tenantId, linkedEntityType, linkedEntityId])
+}
+
+// A personal link to a form or survey for one known recipient. The token itself is only ever in
+// the email; we keep its hash. One answer per invite.
+model FormInvite {
+  id            String        @id @default(uuid())
+  tenantId      String
+  tenant        Tenant        @relation(fields: [tenantId], references: [id])
+  formId        String
+  form          Form          @relation(fields: [formId], references: [id], onDelete: Cascade)
+  tokenHash     String        @unique
+  recipientType String // "contact" | "employee"
+  recipientId   String
+  // What sent it: "manual", "onboarding_done", "ticket_closed", "every_90_days", "quarterly",
+  // "30_days_after_hire", "offboarding", "opportunity_lost".
+  trigger       String        @default("manual")
+  sentAt        DateTime      @default(now())
+  expiresAt     DateTime
+  respondedAt   DateTime?
+  responseId    String?       @unique
+  response      FormResponse? @relation(fields: [responseId], references: [id], onDelete: SetNull)
+  createdById   String?
+
+  @@index([tenantId, formId, recipientId])
 }
 
 model SavedView {

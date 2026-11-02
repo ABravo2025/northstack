@@ -7,7 +7,7 @@ import { Chip, Panel } from './ui';
 // Admin Center v2, stage 2b: "Módulos y límites" — a per-client agreement on top of the plan.
 // What the backend enforces lives in planLimits.ts (PlanOverride); this only edits it.
 
-type ModuleFlag = 'payrollEnabled' | 'paymentsEnabled' | 'apiAccessEnabled' | 'customProjectTemplatesEnabled' | 'shiftSkillsEnabled' | 'billableHoursEnabled' | 'clockInEnabled' | 'expensesEnabled';
+type ModuleFlag = 'payrollEnabled' | 'paymentsEnabled' | 'apiAccessEnabled' | 'customProjectTemplatesEnabled' | 'shiftSkillsEnabled' | 'billableHoursEnabled' | 'clockInEnabled' | 'expensesEnabled' | 'formsEnabled';
 
 const MODULES: { key: AgreementModule; flag: ModuleFlag; label: string; hint: string }[] = [
   { key: 'payroll', flag: 'payrollEnabled', label: 'Nómina', hint: 'Liquidaciones y recibos (seguimiento)' },
@@ -18,6 +18,7 @@ const MODULES: { key: AgreementModule; flag: ModuleFlag; label: string; hint: st
   { key: 'billableHours', flag: 'billableHoursEnabled', label: 'Horas facturables', hint: 'Timesheet: horas a facturar al cliente' },
   { key: 'clockIn', flag: 'clockInEnabled', label: 'Fichaje', hint: 'Turnos: fichar entrada y salida' },
   { key: 'expenses', flag: 'expensesEnabled', label: 'Gastos', hint: 'Gastos fijos, tarjetas y bancos (cifrado)' },
+  { key: 'forms', flag: 'formsEnabled', label: 'Formularios y encuestas', hint: 'Formularios públicos y embebibles, encuestas NPS/CSAT/eNPS' },
 ];
 
 const LIMITS: { key: AgreementLimit; label: string; unlimitedOk: boolean }[] = [

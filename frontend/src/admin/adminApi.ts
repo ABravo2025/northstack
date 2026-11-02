@@ -72,7 +72,7 @@ export interface ClientRow {
   attention: Attention[];
 }
 
-export type AgreementModule = 'payroll' | 'payments' | 'apiAccess' | 'projectTemplates' | 'shiftSkills' | 'billableHours' | 'clockIn' | 'expenses';
+export type AgreementModule = 'payroll' | 'payments' | 'apiAccess' | 'projectTemplates' | 'shiftSkills' | 'billableHours' | 'clockIn' | 'expenses' | 'forms';
 export type AgreementLimit = 'maxPipelines' | 'maxTimeOffPolicies' | 'maxCustomRoles' | 'activityLogRetentionDays' | 'freeTrialSeatCap' | 'maxActiveProjects' | 'maxActiveLocations';
 
 export interface PlanLimitsView {
@@ -91,6 +91,7 @@ export interface PlanLimitsView {
   billableHoursEnabled: boolean;
   clockInEnabled: boolean;
   expensesEnabled?: boolean;
+  formsEnabled?: boolean;
 }
 
 export interface Agreement {

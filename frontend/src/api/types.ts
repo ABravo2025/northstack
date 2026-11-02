@@ -41,6 +41,8 @@ export interface PlanFeatures {
   clockIn?: boolean;
   // Gastos / Expenses (2026-10-30, Growth). Optional on the wire, same as above.
   expenses?: boolean;
+  // Formularios y encuestas (2026-11-02, Growth). Optional on the wire, same as above.
+  forms?: boolean;
 }
 
 export interface AuthResponse {
@@ -1609,6 +1611,7 @@ export interface PublicPlanLimits {
   billableHoursEnabled: boolean;
   clockInEnabled: boolean;
   expensesEnabled?: boolean;
+  formsEnabled?: boolean;
 }
 
 // Shifts module (docs/general/spec-shifts.md, 2026-10-04).

@@ -1155,6 +1155,10 @@ model Opportunity {
   createdAt          DateTime                  @default(now())
   contactLinks       OpportunityContact[]
   // Clientes C1: ticked exit-checklist items per stage: { [stageId]: [itemId, …] }.
+  // Clientes C3: the hand-off to the account owner once the deal is won (onboarding project from a
+  // template, kickoff, welcome email). Null until it's done.
+  handoffAt          DateTime?
+  handoffProjectId   String?
   checklistState     Json?
   stageHistory       OpportunityStageHistory[]
 

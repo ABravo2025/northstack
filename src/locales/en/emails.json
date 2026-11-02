@@ -30,6 +30,13 @@
     "cta": "Answer",
     "expires": "This link is personal and expires on {{date}}."
   },
+  "clientWelcome": {
+    "subject": "Welcome to {{tenantName}}!",
+    "greeting": "Hi {{firstName}},",
+    "body": "Thanks for choosing {{tenantName}}. We're starting your onboarding.",
+    "owner": "Your account owner is {{ownerName}} ({{ownerEmail}}): reply to this email to reach them directly.",
+    "kickoff": "The kickoff meeting is on {{date}}. A calendar invitation is on its way."
+  },
   "publicFormSubmission": {
     "subject": "New submission on \"{{formName}}\"",
     "body": "{{submitterName}} ({{submitterEmail}}) just submitted \"{{formName}}\" for {{tenantName}}."

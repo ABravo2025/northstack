@@ -125,4 +125,19 @@ export const pipelinesApi = {
     if (!res.ok) await throwApiError(res);
     return res.json();
   },
+
+  // Clientes C3: hand a won deal off to its account owner.
+  handoffOpportunity: async (
+    token: string,
+    opportunityId: string,
+    data: { accountOwnerId: string; templateId?: string | null; kickoffAt?: string | null; welcomeContactId?: string | null },
+  ): Promise<{ projectId: string | null; kickoffScheduled: boolean; welcomeSent: boolean }> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/opportunities/${opportunityId}/handoff`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
 };

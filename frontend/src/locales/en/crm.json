@@ -699,5 +699,23 @@
     "disqualified": "Lead disqualified",
     "disqualifiedBecause": "Disqualified: {{reason}}",
     "reopen": "Reopen"
+  },
+  "handoff": {
+    "title": "Hand-off to the account owner",
+    "subtitle": "Onboarding project, kickoff meeting and welcome email.",
+    "start": "Hand off",
+    "owner": "Account owner",
+    "template": "Onboarding project",
+    "noProject": "No project",
+    "templateHint": "Created from the template, for the company, with the account owner as its owner.",
+    "kickoff": "Kickoff meeting (optional)",
+    "kickoffHint": "Saved as a task with a video call for the account owner; with Google Calendar connected, it's scheduled and the contact is invited.",
+    "welcome": "Welcome email",
+    "noWelcome": "Don't send",
+    "cancel": "Cancel",
+    "confirm": "Confirm hand-off",
+    "done": "Hand-off done",
+    "doneTitle": "Handed off",
+    "doneBody": "Handed off to the account owner on {{date}}."
   }
 }

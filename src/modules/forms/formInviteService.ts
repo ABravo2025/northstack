@@ -227,8 +227,8 @@ const dateOnly = (d: Date) => d.toISOString().slice(0, 10);
 const startOf = (iso: string) => new Date(`${iso}T00:00:00Z`);
 
 // Runs every published survey that has an automatic trigger. Each trigger looks at a window that
-// ends today, and the 60-day rule makes a second run the same day send nothing new. "When
-// onboarding ends" and "when a ticket is closed" arrive with the Clients phase (C3/C7).
+// ends today, and the 60-day rule makes a second run the same day send nothing new. "When a ticket
+// is closed" arrives with customer tickets (C7).
 export async function runSurveyTriggers(today = dateOnly(new Date())) {
   if (!isFormsEncryptionConfigured()) return { forms: 0, sent: 0, skipped: true };
   const surveys = await prisma.form.findMany({
@@ -261,6 +261,19 @@ export async function runSurveyTriggers(today = dateOnly(new Date())) {
           select: { employeeId: true },
         })
       ).map((t) => t.employeeId);
+    } else if (trigger === 'onboarding_done') {
+      // Clientes C3: the onboarding project of a handed-off deal was completed in the last day.
+      const done = await prisma.project.findMany({
+        where: { tenantId, status: 'completed', updatedAt: { gte: yesterday } },
+        select: { id: true },
+      });
+      if (done.length) {
+        const deals = await prisma.opportunity.findMany({
+          where: { tenantId, handoffProjectId: { in: done.map((p) => p.id) } },
+          select: { contactLinks: { select: { contactId: true } } },
+        });
+        ids = deals.flatMap((d) => d.contactLinks.map((c) => c.contactId));
+      }
     } else if (trigger === 'opportunity_lost') {
       const lost = await prisma.opportunityStageHistory.findMany({
         where: { tenantId, enteredAt: { gte: yesterday }, stage: { outcome: 'lost' } },

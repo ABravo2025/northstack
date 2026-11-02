@@ -1345,3 +1345,50 @@ export async function sendFormInviteEmail(input: SendFormInviteEmailInput): Prom
     'surveys',
   );
 }
+
+// Clientes C3: the welcome email to the client's contact when a won deal is handed off — who their
+// account owner is and, if scheduled, when the kickoff is. Not optional (no category): the contact
+// isn't a Northstack user.
+export interface SendClientWelcomeEmailInput {
+  to: string;
+  firstName: string;
+  tenantName: string;
+  ownerName: string;
+  ownerEmail: string;
+  kickoffAt: Date | null;
+  locale?: string | null;
+}
+
+export async function sendClientWelcomeEmail(input: SendClientWelcomeEmailInput): Promise<void> {
+  if (!mailerConfigured()) return;
+
+  const lng = resolveEmailLocale(input.locale);
+  const t = (key: string, opts?: Record<string, unknown>) => i18n.t(key, { lng, ns: 'emails', ...opts });
+  const kickoff = input.kickoffAt
+    ? input.kickoffAt.toLocaleString(lng === 'es' ? 'es-AR' : 'en-US', { dateStyle: 'full', timeStyle: 'short', timeZone: 'UTC' }) + ' UTC'
+    : null;
+
+  await dispatchMail(
+    {
+      from: `"${input.tenantName.replace(/"/g, '')} vía Northstack" <${process.env.ZOHO_SMTP_USER}>`,
+      replyTo: input.ownerEmail,
+      to: input.to,
+      subject: t('clientWelcome.subject', { tenantName: input.tenantName }),
+      text: [
+        t('clientWelcome.greeting', { firstName: input.firstName }),
+        '',
+        t('clientWelcome.body', { tenantName: input.tenantName }),
+        t('clientWelcome.owner', { ownerName: input.ownerName, ownerEmail: input.ownerEmail }),
+        ...(kickoff ? ['', t('clientWelcome.kickoff', { date: kickoff })] : []),
+      ].join('\n'),
+      html: [
+        `<p>${t('clientWelcome.greeting', { firstName: escapeHtml(input.firstName) })}</p>`,
+        `<p>${t('clientWelcome.body', { tenantName: strong(input.tenantName) })}</p>`,
+        `<p>${t('clientWelcome.owner', { ownerName: strong(input.ownerName), ownerEmail: escapeHtml(input.ownerEmail) })}</p>`,
+        ...(kickoff ? [`<p>${t('clientWelcome.kickoff', { date: strong(kickoff) })}</p>`] : []),
+      ].join('\n'),
+    },
+    'Failed to send client welcome email:',
+    lng,
+  );
+}

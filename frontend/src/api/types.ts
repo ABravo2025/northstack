@@ -572,6 +572,9 @@ export interface Opportunity {
   stageHistory?: { id: string; stageId: string; enteredAt: string }[];
   // Clientes C1: ticked exit-checklist items per stage.
   checklistState?: Record<string, string[]> | null;
+  // Clientes C3: set once the won deal was handed off to its account owner.
+  handoffAt?: string | null;
+  handoffProjectId?: string | null;
 }
 
 export type TaskEntityType = 'employee' | 'company' | 'contact' | 'opportunity' | 'project';

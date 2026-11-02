@@ -10,6 +10,8 @@ import OverviewActionsMenu from '../common/OverviewActionsMenu';
 import FieldCatalogMenu from '../entity-views/FieldCatalogMenu';
 import { PlusIcon, XIcon } from '../common/Icons';
 import StageChecklist, { checklistErrorMessage } from './StageChecklist';
+import HandoffPanel from './HandoffPanel';
+import { usePermissions } from '../../contexts/PermissionsContext';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
 interface OpportunityDetailModalProps {
@@ -54,6 +56,7 @@ export default function OpportunityDetailModal({
   onRequestDelete,
 }: OpportunityDetailModalProps) {
   const { t } = useTranslation('crm');
+  const permissions = usePermissions();
   const toast = useToast();
   const [newContactId, setNewContactId] = useState('');
   const [newContactRole, setNewContactRole] = useState('');
@@ -562,6 +565,9 @@ export default function OpportunityDetailModal({
           </div>
         )}
         <StageChecklist token={token} opportunity={opportunity} stage={currentStage} onSaved={(patch) => onSaved({ ...opportunity, ...patch })} />
+        {currentStage?.outcome === 'won' && permissions.features.clients && permissions.has('manage_opportunity') && (
+          <HandoffPanel token={token} opportunity={opportunity} onDone={(patch) => onSaved({ ...opportunity, ...patch })} />
+        )}
 
         {isMobile ? (
           <div className="overview-panel-mobile-body">

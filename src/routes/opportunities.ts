@@ -18,6 +18,9 @@ import { findUserById } from '../modules/tenant/tenantService.js';
 import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 import { OpportunityChecklistError, setChecklistItem } from '../modules/crm/stageAutomationService.js';
+import { HandoffError, performHandoff } from '../modules/crm/handoffService.js';
+import { isClientsAllowed } from '../modules/tenant/planLimits.js';
+import prisma from '../lib/prisma.js';
 import type { PipelineStageOutcome } from '@prisma/client';
 
 export const opportunitiesRouter = createAsyncRouter();
@@ -261,6 +264,43 @@ opportunitiesRouter.patch('/api/opportunities/:opportunityId', async (req, res) 
   }
   const full = await findOpportunityById(updated.id);
   return res.json(redactEntityFields(full!, 'opportunity', user.roleContext));
+});
+
+// Clientes C3: hand a won deal off to its account owner — onboarding project from a template,
+// kickoff on the calendar, welcome email. Growth (clientsEnabled), once per deal.
+opportunitiesRouter.post('/api/opportunities/:opportunityId/handoff', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canManageOpportunity(user.roleContext)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+  if (!isClientsAllowed(user.tenant)) {
+    return res.status(403).json({ error: 'The hand-off is part of the Growth plan', code: 'plan_required' });
+  }
+
+  const b = req.body ?? {};
+  if (typeof b.accountOwnerId !== 'string' || !b.accountOwnerId) {
+    return res.status(400).json({ error: 'Choose the account owner', code: 'owner_required' });
+  }
+  try {
+    const tenant = await prisma.tenant.findUniqueOrThrow({
+      where: { id: user.tenantId! },
+      select: { id: true, name: true, country: true, plan: true, planOverride: true },
+    });
+    const result = await performHandoff(tenant, user.id, req.params.opportunityId, {
+      accountOwnerId: b.accountOwnerId,
+      templateId: typeof b.templateId === 'string' && b.templateId ? b.templateId : null,
+      kickoffAt: typeof b.kickoffAt === 'string' && b.kickoffAt ? b.kickoffAt : null,
+      welcomeContactId: typeof b.welcomeContactId === 'string' && b.welcomeContactId ? b.welcomeContactId : null,
+    });
+    return res.json(result);
+  } catch (error) {
+    if (error instanceof HandoffError) return res.status(error.status).json({ error: error.message, code: error.code });
+    throw error;
+  }
 });
 
 // Clientes C1: tick or untick one exit-checklist item of a stage on this deal.

@@ -68,7 +68,7 @@ export default function FormSendCard({ token, form }: { token: string; form: For
       {form.kind === 'survey' && trigger && trigger !== 'manual' && (
         <div className="fm-lands">
           <strong>{t('send.autoTitle', { trigger: t(`trigger.${trigger}`) })}</strong>
-          <span>{['onboarding_done', 'ticket_closed'].includes(trigger) ? t('send.autoLater') : t('send.autoBody')}</span>
+          <span>{trigger === 'ticket_closed' ? t('send.autoLater') : t('send.autoBody')}</span>
         </div>
       )}
       {!published ? (

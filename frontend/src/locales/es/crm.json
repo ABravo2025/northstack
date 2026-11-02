@@ -699,5 +699,23 @@
     "disqualified": "Lead descalificado",
     "disqualifiedBecause": "Descalificado: {{reason}}",
     "reopen": "Reabrir"
+  },
+  "handoff": {
+    "title": "Traspaso al responsable de cuenta",
+    "subtitle": "Proyecto de onboarding, reunión de inicio y mail de bienvenida.",
+    "start": "Hacer el traspaso",
+    "owner": "Responsable de cuenta",
+    "template": "Proyecto de onboarding",
+    "noProject": "Sin proyecto",
+    "templateHint": "Se crea desde la plantilla, a nombre de la empresa y con el responsable como dueño.",
+    "kickoff": "Reunión de inicio (opcional)",
+    "kickoffHint": "Queda como tarea con videollamada para el responsable; si tiene Google Calendar conectado, se agenda con invitación al contacto.",
+    "welcome": "Mail de bienvenida",
+    "noWelcome": "No mandar",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar traspaso",
+    "done": "Traspaso hecho",
+    "doneTitle": "Traspaso hecho",
+    "doneBody": "El {{date}} se pasó al responsable de cuenta."
   }
 }

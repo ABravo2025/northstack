@@ -30,6 +30,13 @@
     "cta": "Responder",
     "expires": "El link es personal y vence el {{date}}."
   },
+  "clientWelcome": {
+    "subject": "¡Bienvenido/a a {{tenantName}}!",
+    "greeting": "Hola {{firstName}},",
+    "body": "Gracias por elegir a {{tenantName}}. Arrancamos con el onboarding.",
+    "owner": "Tu responsable de cuenta es {{ownerName}} ({{ownerEmail}}): podés responder este mail para hablar directo.",
+    "kickoff": "La reunión de inicio es el {{date}}. Te llega la invitación al calendario."
+  },
   "publicFormSubmission": {
     "subject": "Nueva respuesta en \"{{formName}}\"",
     "body": "{{submitterName}} ({{submitterEmail}}) acaba de enviar \"{{formName}}\" para {{tenantName}}."

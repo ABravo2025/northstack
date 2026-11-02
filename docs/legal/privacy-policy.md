@@ -261,12 +261,36 @@ applicable"); Cookie Policy governs the public marketing website, a different au
 already cross-referenced from Privacy Policy §2.4 instead — same scoping logic as Section 7
 not needing a touch for this. No Effective Date change needed beyond what's already here
 (still October 25) — same day, third substantive pass.
+2026-11-02 — Clientes / Gastos / Formularios y encuestas (spec-clientes-gastos-formularios.md,
+phases A-D, staging branch feat/crm-gastos-forms). Written against the code, not the spec:
+- 2.2: three new Processed Data bullets. Gastos field list taken from schema.prisma (every *Enc
+  column) and expenseEncryption.ts (own key EXPENSES_DATA_ENCRYPTION_KEY); the CSV file never
+  leaves the browser (frontend/src/lib/expenseCsv.ts, only confirmed rows are POSTed). Form
+  answers use their own key FORMS_DATA_ENCRYPTION_KEY (formsEncryption.ts).
+- New 2.5 for respondents who are not users. IP: only Upstash rate-limit keys
+  (form-submit:/quote-answer:, windows of 10 min; the longest window anywhere is 1 h), never a
+  DB column on FormResponse. Quote acceptance DOES store acceptedName + acceptedIp + acceptedAt
+  (quoteService.ts). Personal links: tokenHash only, 30-day expiry, 60-day resend gap
+  (formInviteService.ts). Anonymous surveys: verified AND FIXED the same day (c284ab14) — the
+  invite used to keep responseId and both sides kept exact timestamps; now no responseId,
+  day-only time, "sent" status for every invite, and single answers hidden below the threshold.
+- 4.1: Upstash row added. NOTE it was already missing before this change (login/register/
+  forgot-password rate limits have used it since the 2026-09-10 security follow-up); confirm
+  UPSTASH_REDIS_REST_URL is set in production before publishing, otherwise the row is
+  inaccurate (rate limiting silently disabled). Zoho row: survey invitations.
+- 4.8 visibility rules from routes/expenses.ts (manage_expenses), routes/products.ts
+  profitabilityAccess (labor needs manage_payroll, expenses need manage_expenses) and
+  routes/forms.ts (manage_custom_fields).
+- 5 and 8 extended. ExpenseReceipt → movement is onDelete: Cascade.
+Effective Date set to November 2, 2026: bump it to the real publication day if the release is
+promoted later. Mirrored to landing/privacy.html + es/privacy.html (branch
+landing-legal/clientes-gastos-forms), to publish together with the app release, not before.
 -->
 
 
 # Northstack Privacy Policy
 
-**Effective Date:** October 25, 2026
+**Effective Date:** November 2, 2026
 
 This Privacy Policy explains how Northstack ("**Northstack**," "**we**," "**us**," or
 "**our**"), operated by Alejandro Bravo, an individual based in Buenos Aires, Argentina,
@@ -346,6 +370,28 @@ such requests if they reach us directly.
 - Invoice records a Tenant creates for its own clients through the Stripe integration
   (line items, descriptions, amounts, and memos). This data is sent to that Tenant's own
   connected Stripe account so Stripe can deliver and collect the invoice; see Section 4.5.
+- If the Tenant uses Clients: leads (name, email, phone, company, job title, notes, how they
+  arrived — including the campaign parameters of the link, such as utm_source — and each
+  contact attempt), support tickets from its clients (the requester's name and email,
+  subject, and conversation), check-in notes, the products each client has contracted, and
+  quotes.
+- If the Tenant uses Expenses: its own company's bank account, card, and cash movements,
+  fixed expenses, categories, budgets, and, optionally, a receipt file for a movement. When
+  a Tenant imports a bank or card statement, the CSV file is read in the user's browser and
+  is never uploaded to Northstack — only the rows the user confirms are sent. Account names,
+  movement descriptions, amounts (including the original amount of a charge in another
+  currency), notes, fixed-expense names and amounts, budgets, categorization rules, and
+  receipt files and their names are stored encrypted with a key used only for this module.
+  Dates, categories, the exchange rate, and the client or department a movement is assigned
+  to are not encrypted. A movement description can name other people or businesses (for
+  example, the recipient of a transfer); that information is Processed Data controlled by
+  the Tenant.
+- If the Tenant uses Forms and surveys: the answers people submit (see Section 2.5), stored
+  encrypted with a key used only for this module, together with the date, how it was
+  answered (public link or personal link), the campaign parameters of the link, and — when
+  the Tenant configures it — the record the answer created or updated (for example, a lead,
+  a contact, a support ticket, or a task), into which some answers are copied. Score
+  questions (such as NPS) are also stored as a number, for reporting.
 
 ### 2.3 Information collected automatically
 
@@ -383,6 +429,36 @@ the authenticated application too, to measure usage such as pages visited, sessi
 in-product usage events, with the same commitments: no Google Signals, no cross-device
 tracking, and no advertising or remarketing features. Once it is in use, we will update
 this section, our Cookie Policy, and Section 4.1, and post a new effective date.
+
+### 2.5 People who answer a form or survey, or receive a quote
+
+A Tenant can publish forms on its own website or share them by link, send surveys to its
+clients or employees, and send its clients a quote to accept online. The people who answer
+or accept are usually not Northstack users, and their information is Processed Data
+controlled by that Tenant (Section 1); the Tenant is responsible for telling them how it
+uses their answers.
+
+- **Public forms.** Anyone with the link, or visiting a website where the Tenant embedded
+  the form, can answer it. We use the visitor's IP address only to limit repeated
+  submissions, in a counter that expires on its own within an hour at most (Section 4.1); it
+  is not stored with the answer. These pages do not set cookies and do not load analytics or
+  advertising tools.
+- **Personal links.** A survey or form sent to one specific person (a client contact or an
+  employee) uses a personal link that can be answered once and expires after 30 days. We
+  store only a one-way hash of the link, not the link itself, and the invitation is sent by
+  email (Section 4.1). The same person is not sent the same survey again within 60 days.
+- **Anonymous surveys.** Employee surveys are anonymous by default, and a Tenant may make
+  other surveys anonymous too. For an anonymous survey we do not store who answered with the
+  answer, the answer is not linked to the invitation, and its time is kept only to the day.
+  The answer keeps the respondent's department so results can be grouped; results and
+  individual answers stay hidden until there are at least three answers (or the higher
+  minimum the Tenant sets), and a department's result is hidden whenever it could be worked
+  out from the others. Anonymity also depends on the questions the Tenant asks: an answer to
+  an open question can identify someone by what it says.
+- **Quotes.** A quote link shows the quote to whoever has the link. When the recipient
+  accepts it, we record the name they type, the date and time, and their IP address, as a
+  record of the acceptance; when they decline it, the date and the optional reason they
+  give.
 
 ---
 
@@ -422,7 +498,8 @@ obligations consistent with the purpose for which we share data with them:
 | Vercel | Application hosting (frontend and backend) | All data transmitted through the Service |
 | Google (Google Analytics, Google Tag Manager) | Analytics on our public website, only after the visitor accepts analytics cookies (Section 2.4) | Pages visited, referring site, approximate location derived from IP address, device and browser type, and analytics cookie identifiers |
 | Neon | Database hosting (PostgreSQL) | All Account Data and Processed Data at rest |
-| Zoho Mail | Transactional email delivery (e.g., invitations) | Recipient email address, name, and email content, including a payslip PDF attachment, which on an Argentine payslip carries the person's full tax identification number |
+| Zoho Mail | Transactional email delivery (e.g., invitations) | Recipient email address, name, and email content (including survey and form invitations a Tenant sends), including a payslip PDF attachment, which on an Argentine payslip carries the person's full tax identification number |
+| Upstash | Abuse protection: temporary request counters, for example for sign-in attempts and public form submissions | IP address, kept only in counters that expire on their own within an hour at most |
 | Dodo Payments | Payment processing for Tenants billed internationally in USD | Billing contact information, plan/subscription data, and transaction data. Dodo Payments collects and stores full payment card details directly — we do not store your full card number. |
 | Mercado Pago | Payment processing for Tenants billed in Argentina in ARS | Billing contact information, plan/subscription data, and transaction data. Mercado Pago collects and stores full payment/bank account details directly — we do not store your full account or card number. |
 
@@ -519,6 +596,24 @@ shows only the company name, the payslip number, the person's first name and las
 the pay period, the payment date, and when it was issued — **never an amount or a tax
 identification number.**
 
+### 4.8 Expenses, forms, and client data within a Tenant
+
+Within a Tenant, these modules follow the roles the Tenant configures (Section 4.2), with
+these limits built in:
+
+- Expenses — movements, receipts, budgets, and the Expenses dashboard — are visible only to
+  the owner and roles with "Manage expenses" permission.
+- Client profitability combines a client's revenue with the cost of the hours worked for it
+  and the expenses assigned to it. Each part is shown only to those who can already see it:
+  the cost of hours only to the owner and roles with "Manage payroll", and expenses only to
+  those with "Manage expenses".
+- Forms, surveys, and their answers are managed by the owner and roles with "Manage custom
+  fields & catalogs" permission. Anonymous survey results are shown only as described in
+  Section 2.5.
+- Health scores and upsell signals are calculated, when they are viewed, from the Tenant's
+  own data (activity, tickets, check-ins, survey scores, and contracted products). They are
+  not shared outside the Tenant, and Northstack does not use them for any other purpose.
+
 ---
 
 ## 5. Data Retention
@@ -557,6 +652,11 @@ exist after that Tenant's account is deleted, for our own operational and compli
 purposes. It is no longer linked to the deleted Tenant, but it may still contain limited
 details a staff member included when taking an action — for example, a user's email
 address noted when resetting a password.
+
+Expense records and receipts, form and survey answers, leads, support tickets, and quotes
+are Processed Data and are deleted with the Tenant account, as described above. A receipt is
+also deleted when the Tenant removes it or deletes its movement. The IP counters described
+in Section 2.5 expire on their own within an hour at most.
 
 You (or your Tenant's owner/admin) can request earlier deletion by contacting
 info@joinnorthstack.com.
@@ -625,6 +725,10 @@ shown to you only once, when you generate them. No method of transmission or sto
 100% secure, and we cannot
 guarantee absolute security. If we become aware of a security incident affecting your data
 that we are required by law to notify you of, we will do so without undue delay.
+
+Expense records and receipts, and form and survey answers, are additionally encrypted at
+rest (AES-256-GCM) with keys specific to each of those modules, separate from the keys used
+for other data. Personal survey links and quote links are stored only as a one-way hash.
 
 ---
 

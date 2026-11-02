@@ -336,5 +336,36 @@
       "closed": "closed",
       "expired": "expired"
     }
+  },
+  "dash": {
+    "department": "Department",
+    "allDepartments": "All departments",
+    "noDepartment": "No department",
+    "departmentHint": "The department filters employee surveys (eNPS).",
+    "nps": "Client NPS",
+    "csat": "CSAT",
+    "enps": "eNPS",
+    "leads": "Leads from forms",
+    "answers_one": "{{count}} response",
+    "answers_other": "{{count}} responses",
+    "responses_one": "{{count}} response in total",
+    "responses_other": "{{count}} responses in total",
+    "satisfied": "{{pct}}% satisfied (4 or 5)",
+    "belowThreshold": "Hidden: fewer than {{min}} responses",
+    "empty": "No responses in this period. Publish a form or send a survey to get started.",
+    "npsDistribution": "NPS distribution (0 to 10)",
+    "npsByMonth": "NPS by month",
+    "answersSeries": "Responses",
+    "enpsByDepartment": "eNPS by department",
+    "thresholdNote": "For anonymity, a department shows its eNPS only with {{min}} or more responses.",
+    "departmentsHidden": "No department shows its eNPS: those with fewer than {{min}} responses could be worked out from the total.",
+    "noEnps": "No employee survey responses yet.",
+    "hidden": "hidden",
+    "leadsBySource": "Leads by source",
+    "byModule": "Responses by module",
+    "source": {
+      "website": "Your website (embedded)",
+      "direct": "Direct link"
+    }
   }
 }

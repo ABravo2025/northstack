@@ -8,6 +8,7 @@ import { isFormsEncryptionConfigured } from '../lib/formsEncryption.js';
 import { FormError, createForm, deleteForm, getForm, getFormsMeta, listForms, updateForm } from '../modules/forms/formService.js';
 import { getResponse, listResponses } from '../modules/forms/formResponseService.js';
 import { listCandidates, listInvites, sendInvites } from '../modules/forms/formInviteService.js';
+import { getFormsDashboard } from '../modules/forms/formDashboardService.js';
 
 // Formularios y encuestas (spec-clientes-gastos-formularios.md, B2): the builder and the responses
 // inbox. Same permission the public forms already used (manage_custom_fields), Growth-only, and the
@@ -52,6 +53,18 @@ formsRouter.get('/api/forms', async (req, res) => {
   const kind = KINDS.includes(req.query.kind as FormKind) ? (req.query.kind as FormKind) : undefined;
   const module = MODULES.includes(req.query.module as FormModule) ? (req.query.module as FormModule) : undefined;
   return res.json(await listForms(user.tenantId!, { kind, module }));
+});
+
+// Dashboards → Encuestas (B6). Registered before /api/forms/:id. Scores only, nothing decrypted.
+formsRouter.get('/api/forms/dashboard', async (req, res) => {
+  const user = await guard(req, res);
+  if (!user) return;
+  const isDate = (v: unknown): v is string => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
+  const today = new Date().toISOString().slice(0, 10);
+  const from = isDate(req.query.from) ? req.query.from : `${today.slice(0, 7)}-01`;
+  const to = isDate(req.query.to) ? req.query.to : today;
+  const departmentId = typeof req.query.departmentId === 'string' && req.query.departmentId ? req.query.departmentId : undefined;
+  return res.json(await getFormsDashboard(user.tenantId!, { from, to, departmentId }));
 });
 
 formsRouter.get('/api/forms/responses', async (req, res) => {

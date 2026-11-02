@@ -336,5 +336,36 @@
       "closed": "cerrado",
       "expired": "venció"
     }
+  },
+  "dash": {
+    "department": "Departamento",
+    "allDepartments": "Todos los departamentos",
+    "noDepartment": "Sin departamento",
+    "departmentHint": "El departamento filtra las encuestas de empleados (eNPS).",
+    "nps": "NPS clientes",
+    "csat": "CSAT",
+    "enps": "eNPS",
+    "leads": "Leads por formularios",
+    "answers_one": "{{count}} respuesta",
+    "answers_other": "{{count}} respuestas",
+    "responses_one": "{{count}} respuesta en total",
+    "responses_other": "{{count}} respuestas en total",
+    "satisfied": "{{pct}} % satisfechos (4 o 5)",
+    "belowThreshold": "Oculto: menos de {{min}} respuestas",
+    "empty": "No hay respuestas en este período. Publicá un formulario o enviá una encuesta para empezar.",
+    "npsDistribution": "Distribución NPS (0 a 10)",
+    "npsByMonth": "NPS por mes",
+    "answersSeries": "Respuestas",
+    "enpsByDepartment": "eNPS por departamento",
+    "thresholdNote": "Por anonimato, un departamento muestra su eNPS recién con {{min}} respuestas o más.",
+    "departmentsHidden": "Ningún departamento muestra su eNPS: los que tienen menos de {{min}} respuestas se podrían deducir restando del total.",
+    "noEnps": "Todavía no hay respuestas de encuestas de empleados.",
+    "hidden": "oculto",
+    "leadsBySource": "Leads por origen",
+    "byModule": "Respuestas por módulo",
+    "source": {
+      "website": "Tu web (embebido)",
+      "direct": "Link directo"
+    }
   }
 }

@@ -36,6 +36,7 @@ import DashboardsPaymentsPage from './pages/dashboards/DashboardsPaymentsPage';
 import DashboardsTasksPage from './pages/dashboards/DashboardsTasksPage';
 import DashboardsAdoptionPage from './pages/dashboards/DashboardsAdoptionPage';
 import DashboardsExpensesPage from './pages/dashboards/DashboardsExpensesPage';
+import DashboardsSurveysPage from './pages/dashboards/DashboardsSurveysPage';
 import EmployeesPage from './pages/EmployeesPage';
 import TimeOffOverviewPage from './pages/TimeOffOverviewPage';
 import CompaniesPage from './pages/CompaniesPage';
@@ -452,6 +453,7 @@ export default function App() {
           <Route path="payroll" element={featureOnly('payroll', <DashboardsPayrollPage />, '/dashboards')} />
           <Route path="payments" element={featureOnly('payments', <DashboardsPaymentsPage />, '/dashboards')} />
           <Route path="expenses" element={featureOnly('expenses', <DashboardsExpensesPage />, '/dashboards')} />
+          <Route path="surveys" element={featureOnly('forms', <DashboardsSurveysPage />, '/dashboards')} />
           <Route path="sales" element={<DashboardsSalesPage />} />
           <Route path="tasks" element={<DashboardsTasksPage />} />
           <Route path="adoption" element={<DashboardsAdoptionPage />} />

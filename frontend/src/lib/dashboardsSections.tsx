@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import i18n from './i18n';
-import { BriefcaseIcon, CalendarIcon, CreditCardIcon, ListIcon, PeopleIcon, ReceiptIcon, TargetIcon, TrendingIcon } from '../components/common/Icons';
+import { BriefcaseIcon, CalendarIcon, CreditCardIcon, ListIcon, PeopleIcon, ReceiptIcon, ClipboardIcon, TargetIcon, TrendingIcon } from '../components/common/Icons';
 
 export interface DashboardSectionItem {
   to: string;
@@ -10,10 +10,13 @@ export interface DashboardSectionItem {
   permission?: string;
   // A live snapshot (Stripe), not a period — the layout hides the date range filter for it.
   noDateRange?: boolean;
+  // A plan module the section also needs, for permissions not tied to one (manage_custom_fields).
+  feature?: 'forms';
 }
 
 export interface DashboardSectionsPermissions {
   has: (permission: string) => boolean;
+  features?: { forms?: boolean };
 }
 
 // Single source of truth for what's in Dashboards, consumed by both the tile
@@ -61,6 +64,15 @@ export function getDashboardSections(permissions: DashboardSectionsPermissions):
       permission: 'manage_expenses',
     },
     {
+      // Formularios y encuestas (B6): same permission as managing forms, plus the Growth plan.
+      to: '/dashboards/surveys',
+      label: t('sections.surveys.label', { ns: 'dashboards' }),
+      desc: t('sections.surveys.desc', { ns: 'dashboards' }),
+      icon: <ClipboardIcon />,
+      permission: 'manage_custom_fields',
+      feature: 'forms',
+    },
+    {
       to: '/dashboards/sales',
       label: t('sections.sales.label', { ns: 'dashboards' }),
       desc: t('sections.sales.desc', { ns: 'dashboards' }),
@@ -82,5 +94,5 @@ export function getDashboardSections(permissions: DashboardSectionsPermissions):
       permission: 'view_dashboards',
     },
   ];
-  return sections.filter((s) => !s.permission || permissions.has(s.permission));
+  return sections.filter((s) => (!s.permission || permissions.has(s.permission)) && (!s.feature || !!permissions.features?.[s.feature]));
 }

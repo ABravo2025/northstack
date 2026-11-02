@@ -146,6 +146,31 @@ export interface FormInvitesSummary {
   invites: { id: string; recipientName: string; trigger: string; sentAt: string; status: 'pending' | 'responded' | 'closed' | 'expired' }[];
 }
 
+export interface FormsDashboard {
+  from: string;
+  to: string;
+  totalResponses: number;
+  nps: {
+    score: number | null;
+    count: number;
+    promoters: number;
+    passives: number;
+    detractors: number;
+    distribution: { value: number; count: number }[];
+    byMonth: { month: string; score: number | null; count: number }[];
+  };
+  csat: { average: number | null; count: number; satisfiedPct: number | null };
+  enps: {
+    minGroup: number;
+    count: number;
+    score: number | null;
+    departmentsHidden: boolean;
+    byDepartment: { departmentId: string | null; name: string | null; count: number; score: number | null }[];
+  };
+  leads: { count: number; bySource: { source: string; count: number }[]; byMonth: { month: string; count: number }[] };
+  byModule: { module: FormModule; count: number }[];
+}
+
 async function call<T>(token: string, path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
   const res = await apiFetch(`${API_BASE_URL}${path}`, {
     method: init.method ?? 'GET',
@@ -169,6 +194,10 @@ export const formsApi = {
   listFormResponses: (token: string, formId?: string) =>
     call<FormResponseRow[]>(token, `/api/forms/responses${formId ? `?formId=${encodeURIComponent(formId)}` : ''}`),
   getFormResponse: (token: string, id: string) => call<FormResponseDetail>(token, `/api/forms/responses/${id}`),
+  getFormsDashboard: (token: string, filter: { from: string; to: string; departmentId?: string }) => {
+    const qs = new URLSearchParams({ from: filter.from, to: filter.to, ...(filter.departmentId ? { departmentId: filter.departmentId } : {}) });
+    return call<FormsDashboard>(token, `/api/forms/dashboard?${qs}`);
+  },
   // Personal links (B4).
   listFormCandidates: (token: string, formId: string, q?: string) =>
     call<{ recipientType: 'contact' | 'employee'; candidates: FormCandidate[] }>(

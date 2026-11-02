@@ -13,6 +13,7 @@ import {
   updateProduct,
 } from '../modules/crm/productService.js';
 import { getCompanyOnboarding, getCompanyTimeline } from '../modules/crm/company360Service.js';
+import { addCheckIn, getCompanyHealth } from '../modules/crm/healthService.js';
 
 // Clientes C4/C5: the product catalog (Settings, same permission as pipelines), each company's
 // products and its 360 view (company permissions). Growth (clientsEnabled).
@@ -113,4 +114,25 @@ productsRouter.get('/api/companies/:companyId/onboarding', async (req, res) => {
   const projects = await getCompanyOnboarding(user.tenantId!, req.params.companyId);
   if (!projects) return res.status(404).json({ error: 'Company not found' });
   return res.json(projects);
+});
+
+// Clientes C6: health score with its breakdown, and check-ins.
+productsRouter.get('/api/companies/:companyId/health', async (req, res) => {
+  const user = await guard(req, res, 'viewCompany');
+  if (!user) return;
+  const health = await getCompanyHealth(user.tenantId!, req.params.companyId);
+  if (!health) return res.status(404).json({ error: 'Company not found' });
+  return res.json(health);
+});
+
+productsRouter.post('/api/companies/:companyId/check-ins', async (req, res) => {
+  const user = await guard(req, res, 'manageCompany');
+  if (!user) return;
+  const result = await addCheckIn(user.tenantId!, user.id, req.params.companyId, {
+    sentiment: String(req.body?.sentiment ?? ''),
+    note: typeof req.body?.note === 'string' ? req.body.note : null,
+    nextCheckInAt: typeof req.body?.nextCheckInAt === 'string' ? req.body.nextCheckInAt : null,
+  });
+  if ('error' in result) return res.status(result.status ?? 400).json({ error: result.error });
+  return res.status(201).json(result.checkIn);
 });

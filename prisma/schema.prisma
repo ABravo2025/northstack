@@ -316,6 +316,13 @@ enum ProductBilling {
   yearly
 }
 
+// Clientes C6: how a check-in with a client went.
+enum CheckInSentiment {
+  good
+  neutral
+  bad
+}
+
 enum PipelinePurpose {
   new_business
   expansion
@@ -463,6 +470,7 @@ model Tenant {
   leads                     Lead[]
   products                  Product[]
   companyProducts           CompanyProduct[]
+  companyCheckIns           CompanyCheckIn[]
   leadTouches               LeadTouch[]
   formInvites               FormInvite[]
   expenseAccounts           ExpenseAccount[]
@@ -985,7 +993,8 @@ model Company {
   // from being linked to the *same* customer (see stripePaymentsService.ts's
   // linkCompanyToStripeCustomer, which already checks this at the application layer; this is the
   // DB-level backstop against a concurrent-request race).
-  products CompanyProduct[]
+  products       CompanyProduct[]
+  CompanyCheckIn CompanyCheckIn[]
 
   @@unique([tenantId, stripeCustomerId])
   @@index([tenantId])
@@ -3731,4 +3740,21 @@ model CompanyProduct {
 
   @@index([tenantId, companyId])
   @@index([tenantId, productId])
+}
+
+// Clientes C6: a check-in with a client — a call or meeting to see how they're doing. Feeds the
+// health score (recent contact, sentiment) and suggests the next one.
+model CompanyCheckIn {
+  id            String           @id @default(uuid())
+  tenantId      String
+  tenant        Tenant           @relation(fields: [tenantId], references: [id])
+  companyId     String
+  company       Company          @relation(fields: [companyId], references: [id])
+  byUserId      String?
+  at            DateTime         @default(now())
+  sentiment     CheckInSentiment
+  note          String?
+  nextCheckInAt DateTime?        @db.Date
+
+  @@index([tenantId, companyId, at])
 }

@@ -724,7 +724,8 @@
     "tabs": {
       "products": "Products",
       "timeline": "Timeline",
-      "onboarding": "Onboarding"
+      "onboarding": "Onboarding",
+      "health": "Health"
     },
     "billing": {
       "monthly": "Monthly",
@@ -778,6 +779,41 @@
         "completed": "Completed",
         "cancelled": "Cancelled"
       }
+    },
+    "health": {
+      "status": {
+        "healthy": "Healthy",
+        "at_risk": "At risk",
+        "critical": "Critical"
+      },
+      "part": {
+        "satisfaction": "Satisfaction",
+        "contact": "Contact",
+        "onboarding": "Onboarding",
+        "products": "Products",
+        "support": "Support"
+      },
+      "hint": {
+        "satisfaction": "NPS / CSAT from the last 180 days, from surveys that count toward health.",
+        "contact": "How long since a check-in, note or meeting, and how the last check-in went.",
+        "onboarding": "Progress of the hand-off onboarding project.",
+        "products": "Active products, minus cancellations in the last 90 days.",
+        "support": "Open and overdue tickets."
+      },
+      "noData": "no data",
+      "explain": "Each part goes from 0 to 100 and weighs its percentage. Parts with no data count as 70, so a new client doesn't show up red.",
+      "checkIns": "Check-ins",
+      "lastContact": "Last contact: {{date}}",
+      "nextCheckIn": "next check-in: {{date}}",
+      "sentiment": {
+        "good": "Good",
+        "neutral": "Okay",
+        "bad": "Bad"
+      },
+      "notePlaceholder": "How are they doing? What did they ask for?",
+      "logCheckIn": "Log check-in",
+      "checkInSaved": "Check-in logged",
+      "noCheckIns": "No check-ins yet."
     }
   },
   "productsCatalog": {

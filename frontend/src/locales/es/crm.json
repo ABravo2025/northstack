@@ -724,7 +724,8 @@
     "tabs": {
       "products": "Productos",
       "timeline": "Línea de tiempo",
-      "onboarding": "Onboarding"
+      "onboarding": "Onboarding",
+      "health": "Salud"
     },
     "billing": {
       "monthly": "Mensual",
@@ -778,6 +779,41 @@
         "completed": "Terminado",
         "cancelled": "Cancelado"
       }
+    },
+    "health": {
+      "status": {
+        "healthy": "Saludable",
+        "at_risk": "En riesgo",
+        "critical": "Crítico"
+      },
+      "part": {
+        "satisfaction": "Satisfacción",
+        "contact": "Contacto",
+        "onboarding": "Onboarding",
+        "products": "Productos",
+        "support": "Soporte"
+      },
+      "hint": {
+        "satisfaction": "NPS / CSAT de los últimos 180 días, de las encuestas que suman a la salud.",
+        "contact": "Hace cuánto hubo un check-in, una nota o una reunión, y cómo salió el último check-in.",
+        "onboarding": "Avance del proyecto de onboarding del traspaso.",
+        "products": "Productos activos, menos las bajas de los últimos 90 días.",
+        "support": "Tickets abiertos y vencidos."
+      },
+      "noData": "sin datos",
+      "explain": "Cada parte va de 0 a 100 y pesa según el porcentaje. Las partes sin datos cuentan como 70, así un cliente nuevo no aparece en rojo.",
+      "checkIns": "Check-ins",
+      "lastContact": "Último contacto: {{date}}",
+      "nextCheckIn": "próximo check-in: {{date}}",
+      "sentiment": {
+        "good": "Bien",
+        "neutral": "Regular",
+        "bad": "Mal"
+      },
+      "notePlaceholder": "¿Cómo están? ¿Qué pidieron?",
+      "logCheckIn": "Registrar check-in",
+      "checkInSaved": "Check-in registrado",
+      "noCheckIns": "Todavía no hay check-ins."
     }
   },
   "productsCatalog": {

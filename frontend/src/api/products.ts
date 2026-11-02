@@ -65,6 +65,15 @@ export interface CompanyOnboardingProject {
   tasksDone: number;
 }
 
+export interface CompanyHealth {
+  score: number;
+  status: 'healthy' | 'at_risk' | 'critical';
+  parts: { part: 'satisfaction' | 'contact' | 'onboarding' | 'products' | 'support'; weight: number; score: number; hasData: boolean }[];
+  lastContactAt: string | null;
+  nextCheckInAt: string | null;
+  checkIns: { id: string; at: string; sentiment: 'good' | 'neutral' | 'bad'; note: string | null; byName: string | null }[];
+}
+
 export type ProductInput = Partial<Pick<Product, 'name' | 'sku' | 'description' | 'unitPriceCents' | 'currency' | 'billing' | 'isActive'>>;
 
 async function call<T>(token: string, path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
@@ -99,4 +108,8 @@ export const productsApi = {
   // Clientes C5: the company 360 view.
   getCompanyTimeline: (token: string, companyId: string) => call<CompanyTimelineEvent[]>(token, `/api/companies/${companyId}/timeline`),
   getCompanyOnboarding: (token: string, companyId: string) => call<CompanyOnboardingProject[]>(token, `/api/companies/${companyId}/onboarding`),
+  // Clientes C6: health and check-ins.
+  getCompanyHealth: (token: string, companyId: string) => call<CompanyHealth>(token, `/api/companies/${companyId}/health`),
+  addCompanyCheckIn: (token: string, companyId: string, input: { sentiment: 'good' | 'neutral' | 'bad'; note?: string | null; nextCheckInAt?: string | null }) =>
+    call<unknown>(token, `/api/companies/${companyId}/check-ins`, { method: 'POST', body: input }),
 };

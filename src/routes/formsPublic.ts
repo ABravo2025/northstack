@@ -35,7 +35,7 @@ const SUBMIT_LIMIT = { windowMs: 10 * 60_000, maxRequests: 10 };
 const SLUG = /^[a-z0-9-]{1,80}$/;
 
 // Only a published, new-editor form whose action can run without knowing who answers is public —
-// personal-link forms and surveys (B4) and legacy forms (/apply) are never served here.
+// personal-link forms and surveys (B4) and pre-Fase B forms without questions are never served here.
 async function findPublicForm(tenantSlug: string, formSlug: string) {
   if (!SLUG.test(tenantSlug) || !SLUG.test(formSlug) || !isFormsEncryptionConfigured()) return null;
   const tenant = await prisma.tenant.findUnique({ where: { slug: tenantSlug } });

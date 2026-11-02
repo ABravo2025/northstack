@@ -50,9 +50,8 @@ export interface UpdateEmployeeInput {
 }
 
 // changedByUserId is optional — every caller with a real authenticated actor (the route, CSV
-// import, onboarding sample data) passes it; publicFormService.ts's anonymous form submission
-// path doesn't (there's no User behind a public form fill-out), and simply doesn't get an Activity
-// Log entry — a deliberate scope cut, see docs/general/spec-activity-log.md.
+// import, onboarding sample data) passes it; a caller with no User behind it simply doesn't get an
+// Activity Log entry — a deliberate scope cut, see docs/general/spec-activity-log.md.
 // Payroll v2: hands out the company's next file number ("legajo") — correlative, 5 digits, 01001
 // first. The increment is atomic, so two people created at once never share a number.
 export async function nextFileNumber(client: Pick<ExtendedPrismaClient, 'tenant'>, tenantId: string): Promise<string> {

@@ -17,7 +17,6 @@ import { companiesRouter } from './routes/companies.js';
 import { contactsRouter } from './routes/contacts.js';
 import { pipelinesRouter } from './routes/pipelines.js';
 import { opportunitiesRouter } from './routes/opportunities.js';
-import { publicFormsRouter } from './routes/publicForms.js';
 import { publicRouter } from './routes/public.js';
 import { feedbackRouter } from './routes/feedback.js';
 import { tasksRouter } from './routes/tasks.js';
@@ -79,13 +78,11 @@ function isAllowedOrigin(origin: string): boolean {
 // /api/public/*) were open to any origin (`cors()` with no options) — found
 // 2026-07-16 security audit, [MEDIO], unfixed until now. Restricted to
 // Northstack's own origins + localhost (any port, for local dev), decided
-// per-request rather than with a single static allowlist so the one
-// deliberate exception below doesn't get lost in a blanket relaxation:
-// /api/public/:tenantSlug/:formSlug(/submit) (routes/public.ts) backs the
-// public, unauthenticated Form page (`/apply/...`) — the original cors()
-// call's own comment says this needs to stay open to any origin "always",
-// not just for local dev, so it's carved out explicitly rather than folded
-// into the origin allowlist above (kept permissive on purpose, not an oversight).
+// per-request rather than with a single static allowlist so the deliberate
+// exceptions below don't get lost in a blanket relaxation: /api/public/* (no
+// session: contract confirmation, the tenant logo) stays open to any origin,
+// except the Formularios y encuestas submissions, which only come from their
+// own page on this origin (the old /apply public forms were removed 2026-11-02).
 app.use(
   cors((req, callback) => {
     // GET /api/plans/prices (2026-09-26) — public price list, read by the landing from its own
@@ -95,7 +92,10 @@ app.use(
     // consent endpoints (/api/oauth/authorize*) are session-bearing and stay behind the allowlist.
     const isPublicOAuth =
       req.path.startsWith('/.well-known/') || ['/api/oauth/register', '/api/oauth/token', '/api/oauth/revoke'].includes(req.path);
-    if (req.path.startsWith('/api/public/') || req.path === '/api/plans/prices' || isPublicOAuth) {
+    // Form submissions (Formularios y encuestas) come from their own page on this same origin, so
+    // they're kept out of the open carve-out: another site can't read their responses.
+    const isFormSubmit = req.path.startsWith('/api/public/forms/') || req.path.startsWith('/api/public/invites/');
+    if ((req.path.startsWith('/api/public/') && !isFormSubmit) || req.path === '/api/plans/prices' || isPublicOAuth) {
       return callback(null, { origin: true });
     }
     const requestOrigin = req.headers.origin;
@@ -149,7 +149,6 @@ app.use(companiesRouter);
 app.use(contactsRouter);
 app.use(pipelinesRouter);
 app.use(opportunitiesRouter);
-app.use(publicFormsRouter);
 app.use(formsPublicRouter);
 app.use(publicRouter);
 app.use(feedbackRouter);

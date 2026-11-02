@@ -144,7 +144,7 @@ Inicio y fin reales se registran al cerrar cada unidad.
 - [x] B3 Página pública + embed.js — 2026-11-02 ≈10:50 → 11:20 (`/f/<empresa>/<formulario>` renderizada en el servidor con CSP propia; `/f/embed.js` con 3 estilos; `POST /api/public/forms/...`; dominios permitidos; mensaje o redirección; UTM → origen del lead; aviso por mail a dueño/admins por cada lead nuevo; tarjeta "Link y código" en el editor)
 - [x] B4 Links personales — 2026-11-02 ≈11:25 → 11:50 (`/f/p/<token>`: se guarda solo el hash, vence a los 30 días, una respuesta, nunca embebible; mail con la plantilla y categoría de preferencias "surveys"; tarjeta "Cómo llega" con buscador, regla de 60 días por persona y formulario, historial; cron diario 14:00 UTC `/api/internal/forms/survey-triggers/run` para trimestral, 30 días del ingreso, baja, cada 90 días (contacto principal) y oportunidad perdida. "Al terminar onboarding" y "al cerrar ticket" esperan C3/C7)
 - [x] B6 Dashboards → Encuestas — 2026-11-02 ≈11:55 → 12:10 (`GET /api/forms/dashboard`, solo puntajes en claro, nada se descifra; NPS clientes con distribución y por mes, CSAT, eNPS con umbral de anonimato por encuesta (mín. 3) **y regla de la diferencia**: si los departamentos ocultos suman menos que el umbral, ningún departamento muestra su eNPS; leads por formularios por origen (UTM / web / link directo); respuestas por módulo; período compartido de Dashboards + filtro de departamento para eNPS)
-- [ ] B7 Cierre
+- [~] B7 Cierre — 2026-11-02: **se retiró la pantalla vieja** (decisión de Alejandro: "eliminala, no van a ser necesarios"): Configuración → Formularios públicos, la página `/apply`, `/api/public-forms`, `/api/public/:empresa/:formulario(/submit)`, `publicFormService.ts`, el flag `PUBLIC_FORMS_ENABLED` / `VITE_PUBLIC_FORMS_ENABLED` y el mail de confirmación viejo. `/settings/public-forms` redirige a `/forms`; Formularios y encuestas queda solo detrás del flag de plan `formsEnabled`. Se corrigió además el CORS: `/api/public/forms/*` y `/api/public/invites/*` quedan fuera de la excepción abierta. **Textos legales, ayuda y anuncio: al final de todo el proyecto** (decisión 2026-11-02).
 
 ### Revisión de seguridad B3 (2026-11-02)
 
@@ -156,7 +156,7 @@ Inicio y fin reales se registran al cerrar cada unidad.
 | Escritura de datos desde internet | Solo formularios publicados, del editor nuevo y con acción pública (crear lead / tarea / solo guardar); se escriben solo los campos mapeados; un contacto existente se vincula sin pisarlo; respuestas cifradas | tests/formResponseService.test.ts |
 | Redirección abierta | La URL de destino la configura la empresa y debe ser `https://`; embed.js solo sigue `https://` | código + test de embed.js |
 | Mensajes del iframe falsificados | embed.js solo acepta mensajes del origen de Northstack, del iframe propio y del formulario propio | test de embed.js |
-| Lectura cruzada de respuestas | El POST no envía CORS: otro sitio no puede leer la respuesta; los datos devueltos son solo el mensaje de gracias o la URL | — |
+| Lectura cruzada de respuestas | `/api/public/forms/*` e `/api/public/invites/*` quedan fuera de la excepción CORS abierta de `/api/public/*` (corregido en B7: al principio estaban dentro); los datos devueltos son solo el mensaje de gracias o la URL | src/app.ts |
 | Pendiente conocido | Un bot que carga la página una vez puede reusar el sello 24 h; lo frena el límite por IP. Si aparece spam real, sumar Turnstile (ya existe `src/lib/turnstile.ts`) | — |
 - [ ] C1 … C10 Clientes
 - [ ] D1 … D4 Cruces

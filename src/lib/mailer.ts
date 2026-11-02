@@ -273,32 +273,6 @@ export async function sendPublicFormSubmissionEmail(input: SendPublicFormSubmiss
   }, 'Failed to send public form submission email:', lng);
 }
 
-export interface SendPublicFormConfirmationEmailInput {
-  to: string;
-  tenantName: string;
-  formName: string;
-  // The external submitter has no Northstack account — no locale to resolve, always English
-  // unless a future signup flow captures a preference before this fires.
-  locale?: string | null;
-}
-
-export async function sendPublicFormConfirmationEmail(input: SendPublicFormConfirmationEmailInput): Promise<void> {
-  if (!mailerConfigured()) return;
-
-  const lng = resolveEmailLocale(input.locale);
-  const t = (key: string, opts?: Record<string, unknown>) => i18n.t(key, { lng, ns: 'emails', ...opts });
-
-  await dispatchMail({
-    from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
-    to: input.to,
-    subject: t('publicFormConfirmation.subject', { formName: input.formName }),
-    text: [t('publicFormConfirmation.body', { tenantName: input.tenantName, formName: input.formName })].join('\n'),
-    html: [
-      `<p>${t('publicFormConfirmation.body', { tenantName: escapeHtml(input.tenantName), formName: strong(input.formName) })}</p>`,
-    ].join('\n'),
-  }, 'Failed to send public form confirmation email:', lng);
-}
-
 export interface SendTimeOffRequestPendingEmailInput {
   to: string;
   approverName: string;

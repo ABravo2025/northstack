@@ -6,13 +6,11 @@ import {
   CalendarIcon,
   ClockIcon,
   GridIcon,
-  ListIcon,
   LockIcon,
   TeamIcon,
   TrendingIcon,
   UserCircleIcon,
 } from '../components/common/Icons';
-import { isPublicFormsEnabled } from './featureFlags';
 
 export interface SettingsSectionItem {
   to: string;
@@ -72,9 +70,6 @@ export function getSettingsSections(permissions: SettingsSectionsPermissions): S
     companyItems.push({ to: 'users', label: t('settings.users.label'), desc: t('settings.users.desc'), icon: <TeamIcon /> });
   }
   if (permissions.has('manage_custom_fields')) {
-    if (isPublicFormsEnabled()) {
-      companyItems.push({ to: 'public-forms', label: t('settings.publicForms.label'), desc: t('settings.publicForms.desc'), icon: <ListIcon /> });
-    }
     companyItems.push({ to: 'pipelines', label: t('settings.pipelines.label'), desc: t('settings.pipelines.desc'), icon: <TrendingIcon /> });
   }
   if (permissions.has('view_activity_log')) {

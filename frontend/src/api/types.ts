@@ -1047,43 +1047,6 @@ export interface SavedView {
   createdAt: string;
 }
 
-export interface PublicFormFieldConfig {
-  key: string;
-  required: boolean;
-}
-
-export interface Form {
-  id: string;
-  tenantId: string;
-  entityType: 'employee' | 'client' | 'contact';
-  name: string;
-  slug: string;
-  fieldsConfig: string;
-  thankYouMessage: string | null;
-  isActive: boolean;
-  accessMode: 'public' | 'internal';
-  pipelineId: string | null;
-  createdAt: string;
-}
-
-export interface PublicFormCustomFieldDef {
-  id: string;
-  name: string;
-  fieldType: string;
-  options: string | null;
-  required: boolean;
-}
-
-export interface PublicFormConfig {
-  id: string;
-  name: string;
-  entityType: 'employee' | 'client' | 'contact';
-  fields: PublicFormFieldConfig[];
-  customFieldDefs: PublicFormCustomFieldDef[];
-  departmentOptions: { id: string; name: string }[];
-  thankYouMessage: string | null;
-}
-
 // Payroll (docs/spec-payroll.md) — anchorConfig is JSON-encoded server-side,
 // its shape depends on cadence (see the spec's Unidad 1 for the 3 shapes).
 export type PayFrequencyCadence = 'weekly' | 'semimonthly' | 'monthly';

@@ -42,7 +42,7 @@ const CONTACT_INCLUDE = {
 } satisfies Prisma.ContactInclude;
 
 // changedByUserId is optional — see employeeService.ts's createEmployee for why
-// (publicFormService.ts's anonymous submission path doesn't pass one, and gets no Activity Log entry).
+// (a form response (src/modules/forms) with no logged-in user doesn't pass one, and gets no Activity Log entry).
 export async function createContact(input: CreateContactInput, changedByUserId?: string, client: ExtendedPrismaClient = prisma): Promise<Contact> {
   const companyId = input.companyId ?? null;
   const isPrimary = input.isPrimary ?? false;

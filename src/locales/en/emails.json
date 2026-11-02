@@ -34,10 +34,6 @@
     "subject": "New submission on \"{{formName}}\"",
     "body": "{{submitterName}} ({{submitterEmail}}) just submitted \"{{formName}}\" for {{tenantName}}."
   },
-  "publicFormConfirmation": {
-    "subject": "We received your submission — {{formName}}",
-    "body": "Thanks! {{tenantName}} received your submission for \"{{formName}}\"."
-  },
   "timeOffPending": {
     "subject": "Time off request awaiting your approval",
     "greeting": "Hi {{approverName}},",

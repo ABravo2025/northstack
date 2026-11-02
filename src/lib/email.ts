@@ -1,5 +1,5 @@
 // Leaf module (no imports) — shared by authService.ts, tenantService.ts, and
-// publicFormService.ts, none of which should depend on each other for something this generic.
+// src/modules/forms/formResponseService.ts, none of which should depend on each other for something this generic.
 const EMAIL_FORMAT_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function isEmailFormatValid(email: string): boolean {

@@ -247,10 +247,6 @@
       "label": "Users",
       "desc": "Invite people and manage roles."
     },
-    "publicForms": {
-      "label": "Public Forms",
-      "desc": "External intake forms per module."
-    },
     "pipelines": {
       "label": "Pipelines",
       "desc": "Sales stages and their outcomes."

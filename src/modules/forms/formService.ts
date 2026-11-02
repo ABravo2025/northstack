@@ -195,7 +195,8 @@ function present(form: Form & { _count?: { responses: number } }) {
     kind: form.kind,
     module: form.module,
     action: form.action,
-    // Pre-Fase B forms keep their old builder and /apply page until they're rebuilt here.
+    // Pre-Fase B forms (the old public-forms page, removed 2026-11-02) answer nowhere until they're
+    // rebuilt here with questions.
     legacy: form.fields === null,
     entityType: form.entityType,
     fields: (form.fields as unknown as FormQuestion[] | null) ?? [],

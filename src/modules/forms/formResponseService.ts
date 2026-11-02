@@ -2,7 +2,8 @@ import type { Form, FormResponseSource, Prisma } from '@prisma/client';
 import prisma from '../../lib/prisma.js';
 import { decryptAnswers, encryptAnswers } from '../../lib/formsEncryption.js';
 import { isValueValidForFieldType, createCustomFieldValue } from '../hr/customFieldService.js';
-import { matchOrCreateCompanyForContact } from '../hr/publicFormService.js';
+import { GENERIC_EMAIL_DOMAINS } from '../tenant/tenantService.js';
+import { getEmailDomain } from '../../lib/email.js';
 import { createContact } from '../crm/contactService.js';
 import { addOpportunityContact, createOpportunity } from '../crm/opportunityService.js';
 import { getDefaultStatusId } from '../hr/statusService.js';
@@ -55,6 +56,38 @@ async function writeCustomFields(tenantId: string, entityType: 'contact' | 'empl
     if (existing) await prisma.customFieldValue.update({ where: { id: existing.id }, data: { value } });
     else await createCustomFieldValue({ tenantId, customFieldDefinitionId: def.id, entityType, entityId, value });
   }
+}
+
+// Matching criterion (spec's open question, resolved): match by an existing
+// Contact at this tenant sharing the submitter's email domain who's already
+// linked to a Company — reuse that Company. Generic/free email domains
+// (gmail.com, etc. — same list tenant registration already excludes for its
+// own duplicate-domain check) never match or create a Company: there's no
+// reliable signal there, so the Contact is created without one instead (spec
+// item 9, "calificación de leads sin volumen" — this is that fallback,
+// already needed here even though full lead-qualification-at-volume tooling
+// is explicitly out of scope for this tier). Deliberately never touches an
+// existing Company's fields when matched — only reuses its id — so a
+// public submission can't silently overwrite real CRM data.
+export async function matchOrCreateCompanyForContact(tenantId: string, email: string): Promise<string | null> {
+  const domain = getEmailDomain(email);
+  if (!domain || GENERIC_EMAIL_DOMAINS.has(domain)) {
+    return null;
+  }
+
+  const existingContactSameDomain = await prisma.contact.findFirst({
+    where: { tenantId, companyId: { not: null }, email: { endsWith: `@${domain}` } },
+    select: { companyId: true },
+  });
+  if (existingContactSameDomain?.companyId) {
+    return existingContactSameDomain.companyId;
+  }
+
+  const statusId = await getDefaultStatusId(tenantId, 'company');
+  const domainName = domain.split('.')[0];
+  const companyName = domainName.charAt(0).toUpperCase() + domainName.slice(1);
+  const company = await prisma.company.create({ data: { tenantId, name: companyName, statusId } });
+  return company.id;
 }
 
 async function leadSourceFor(tenantId: string, utmSource?: string) {

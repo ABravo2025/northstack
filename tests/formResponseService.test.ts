@@ -15,7 +15,6 @@ vi.mock('../src/lib/prisma.js', () => ({
 }));
 vi.mock('../src/modules/crm/contactService.js', () => ({ createContact: vi.fn() }));
 vi.mock('../src/modules/crm/opportunityService.js', () => ({ createOpportunity: vi.fn(), addOpportunityContact: vi.fn() }));
-vi.mock('../src/modules/hr/publicFormService.js', () => ({ matchOrCreateCompanyForContact: vi.fn() }));
 vi.mock('../src/modules/hr/statusService.js', () => ({ getDefaultStatusId: vi.fn() }));
 vi.mock('../src/modules/hr/customFieldService.js', () => ({ createCustomFieldValue: vi.fn(), isValueValidForFieldType: () => true }));
 
@@ -23,7 +22,6 @@ import prisma from '../src/lib/prisma.js';
 import { decryptAnswers } from '../src/lib/formsEncryption.js';
 import { createContact } from '../src/modules/crm/contactService.js';
 import { createOpportunity } from '../src/modules/crm/opportunityService.js';
-import { matchOrCreateCompanyForContact } from '../src/modules/hr/publicFormService.js';
 import { submitResponse } from '../src/modules/forms/formResponseService.js';
 
 const db = prisma as unknown as Record<string, Record<string, ReturnType<typeof vi.fn>>>;
@@ -65,7 +63,8 @@ const form = (over: Record<string, unknown> = {}) =>
 describe('submitResponse', () => {
   it('creates a lead with an opportunity, and stores the answers encrypted with what was copied', async () => {
     db.contact.findUnique.mockResolvedValue(null);
-    vi.mocked(matchOrCreateCompanyForContact).mockResolvedValue('co1');
+    // Another contact at acme.com already belongs to a company: the lead joins it.
+    db.contact.findFirst.mockResolvedValue({ companyId: 'co1' });
     vi.mocked(createContact).mockResolvedValue({ id: 'c1' } as never);
     vi.mocked(createOpportunity).mockResolvedValue({ id: 'o1' } as never);
 

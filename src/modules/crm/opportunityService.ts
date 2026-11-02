@@ -145,7 +145,7 @@ async function maybeAdvanceCompanyToCustomer(tenantId: string, companyId: string
 }
 
 // changedByUserId is optional — see employeeService.ts's createEmployee for why
-// (publicFormService.ts's anonymous submission path doesn't pass one, and gets no Activity Log entry).
+// (a form response (src/modules/forms) with no logged-in user doesn't pass one, and gets no Activity Log entry).
 export async function createOpportunity(input: CreateOpportunityInput, changedByUserId?: string, client: ExtendedPrismaClient = prisma): Promise<Opportunity> {
   let stageId = input.stageId;
   if (!stageId) {

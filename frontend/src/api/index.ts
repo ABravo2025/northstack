@@ -15,8 +15,6 @@ import { pipelinesApi } from './pipelines.js';
 import { pipelineAssignmentsApi } from './pipelineAssignments.js';
 import { opportunitiesApi } from './opportunities.js';
 import { savedViewsApi } from './savedViews.js';
-import { publicFormsAdminApi } from './publicFormsAdmin.js';
-import { publicFormsPublicApi } from './publicFormsPublic.js';
 import { feedbackApi } from './feedback.js';
 import { onboardingApi } from './onboarding.js';
 import { csvApi } from './csv.js';
@@ -61,8 +59,6 @@ export const api = {
   ...pipelineAssignmentsApi,
   ...opportunitiesApi,
   ...savedViewsApi,
-  ...publicFormsAdminApi,
-  ...publicFormsPublicApi,
   ...feedbackApi,
   ...onboardingApi,
   ...csvApi,

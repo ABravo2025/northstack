@@ -34,10 +34,6 @@
     "subject": "Nueva respuesta en \"{{formName}}\"",
     "body": "{{submitterName}} ({{submitterEmail}}) acaba de enviar \"{{formName}}\" para {{tenantName}}."
   },
-  "publicFormConfirmation": {
-    "subject": "Recibimos tu respuesta — {{formName}}",
-    "body": "¡Gracias! {{tenantName}} recibió tu respuesta a \"{{formName}}\"."
-  },
   "timeOffPending": {
     "subject": "Solicitud de ausencia esperando tu aprobación",
     "greeting": "Hola {{approverName}},",

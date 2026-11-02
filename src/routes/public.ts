@@ -1,24 +1,12 @@
-import { findCustomFieldDefinitionById } from '../modules/hr/customFieldService.js';
-import { listFieldCatalogDefinitions } from '../modules/hr/fieldCatalogService.js';
-import { findActivePublicForm, submitPublicForm } from '../modules/hr/publicFormService.js';
 import { confirmContract, getContractConfirmationDetails } from '../modules/hr/contractConfirmationService.js';
 import { sanitizeUser } from '../modules/auth/authService.js';
-import { verifyTurnstileToken } from '../lib/turnstile.js';
 import { isRateLimited } from '../lib/rateLimit.js';
 import { getClientIp } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
-import { isPublicFormsEnabled } from '../lib/featureFlags.js';
 import { getTenantLogo } from '../modules/tenant/tenantProfileService.js';
 
 export const publicRouter = createAsyncRouter();
 
-// Registered before the generic /api/public/:tenantSlug/:formSlug catch-all
-// below on purpose — Express matches routes in registration order, and
-// "contract-confirmation"/:token has the exact same 2-segment shape as
-// :tenantSlug/:formSlug, so it would otherwise be swallowed by the public
-// Forms route (misread as tenantSlug="contract-confirmation") and always
-// 404 with "Form not found" instead of ever reaching this handler.
-//
 // Public, unauthenticated: powers the standalone /confirm-contract/:token
 // page (docs/spec-payroll.md Unidad 7) — no session exists yet, the person
 // isn't a User until they submit the POST below.
@@ -59,8 +47,7 @@ publicRouter.post('/api/public/contract-confirmation/:token', async (req, res) =
 
 // Public, unauthenticated: the company logo (Settings → Company), served as an image so it can
 // be shown in the app sidebar and embedded in invitation emails (mail clients fetch it with no
-// session). Registered before the :tenantSlug/:formSlug catch-all below for the same reason as
-// contract-confirmation above. Only the logo bytes are exposed — keyed by the tenant's UUID, not
+// session). Only the logo bytes are exposed — keyed by the tenant's UUID, not
 // its slug. The `?v=<logoUpdatedAt>` query the frontend/emails append changes on every upload,
 // so the response can be cached as immutable.
 publicRouter.get('/api/public/tenant-logo/:tenantId', async (req, res) => {
@@ -71,85 +58,4 @@ publicRouter.get('/api/public/tenant-logo/:tenantId', async (req, res) => {
   res.setHeader('Content-Type', logo.mimeType);
   res.setHeader('Cache-Control', req.query.v ? 'public, max-age=31536000, immutable' : 'public, max-age=300');
   return res.send(logo.bytes);
-});
-
-// Public, unauthenticated: powers the standalone /apply/:tenantSlug/:formSlug page.
-publicRouter.get('/api/public/:tenantSlug/:formSlug', async (req, res) => {
-  if (!isPublicFormsEnabled()) {
-    return res.status(404).json({ error: 'Form not found' });
-  }
-  const form = await findActivePublicForm(req.params.tenantSlug, req.params.formSlug);
-  if (!form) {
-    return res.status(404).json({ error: 'Form not found' });
-  }
-
-  const fields = JSON.parse(form.fieldsConfig) as { key: string; required: boolean }[];
-  const customFieldIds = fields.filter((f) => f.key.startsWith('cf:')).map((f) => f.key.slice(3));
-  // findCustomFieldDefinitionById has no tenant filter of its own (it's reused by authenticated,
-  // already-tenant-scoped callers elsewhere) — this is the one call site reachable with no auth at
-  // all, so re-verify tenantId here even though publicForms.ts now also blocks a cross-tenant `cf:`
-  // key from being saved in the first place (belt-and-suspenders against any pre-existing bad data).
-  const customFieldDefs = (await Promise.all(customFieldIds.map((id) => findCustomFieldDefinitionById(id)))).filter(
-    (d): d is NonNullable<typeof d> => d !== null && d.tenantId === form.tenantId,
-  );
-
-  // Department is a catalog dropdown now, not free text — only relevant/included
-  // when this form actually has that field configured.
-  const departmentOptions = fields.some((f) => f.key === 'department')
-    ? (await listFieldCatalogDefinitions(form.tenantId, 'department' as any))
-        .filter((d) => d.isActive)
-        .map((d) => ({ id: d.id, name: d.name }))
-    : [];
-
-  return res.json({
-    id: form.id,
-    name: form.name,
-    entityType: form.entityType,
-    fields,
-    customFieldDefs,
-    departmentOptions,
-    thankYouMessage: form.thankYouMessage,
-  });
-});
-
-// Public, unauthenticated: submits the form. Turnstile + a per-IP rate limit
-// are the only guards — no session, so anyone with the link can reach this.
-publicRouter.post('/api/public/:tenantSlug/:formSlug/submit', async (req, res) => {
-  if (!isPublicFormsEnabled()) {
-    return res.status(404).json({ error: 'Form not found' });
-  }
-  const clientIp = getClientIp(req);
-  if (await isRateLimited(`public-form:${clientIp}`)) {
-    return res.status(429).json({ error: 'Too many submissions. Please try again in a minute.' });
-  }
-
-  // Honeypot: a hidden field a real user never fills in. Any value means a bot
-  // filled the whole form — fake a normal success without creating anything or
-  // spending a Turnstile verification call, so the bot gets no signal it was caught.
-  if ((req.body.honeypot ?? '').trim()) {
-    return res.status(201).json({ success: true });
-  }
-
-  const turnstileValid = await verifyTurnstileToken(req.body.turnstileToken, clientIp);
-  if (!turnstileValid) {
-    return res.status(400).json({ error: 'CAPTCHA verification failed. Please try again.' });
-  }
-
-  const form = await findActivePublicForm(req.params.tenantSlug, req.params.formSlug);
-  if (!form) {
-    return res.status(404).json({ error: 'Form not found' });
-  }
-
-  const result = await submitPublicForm(form, {
-    firstName: req.body.firstName ?? '',
-    lastName: req.body.lastName ?? '',
-    email: req.body.email ?? '',
-    values: req.body.values ?? {},
-  });
-
-  if (!result.success) {
-    return res.status(400).json({ error: result.error });
-  }
-
-  return res.status(201).json({ success: true });
 });

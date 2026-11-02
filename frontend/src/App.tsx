@@ -65,10 +65,8 @@ import ShiftResponsePage from './pages/shifts/ShiftResponsePage';
 import ClientReportPage from './pages/shifts/ClientReportPage';
 import { useCanSchedule } from './components/layout/ShiftsSidebar';
 import CompanyUsersPage from './pages/CompanyUsersPage';
-import PublicFormsSettingsPage from './pages/PublicFormsSettingsPage';
 import ActivityLogSettingsPage from './pages/ActivityLogSettingsPage';
 import RolesPermissionsPage from './pages/RolesPermissionsPage';
-import PublicFormPage from './pages/PublicFormPage';
 import ApiDocsPage from './pages/ApiDocsPage';
 import BillingPage from './pages/BillingPage';
 import PaymentsOverviewPage from './pages/PaymentsOverviewPage';
@@ -85,7 +83,6 @@ import PayrollRunDetailPage from './pages/PayrollRunDetailPage';
 import AppLayout from './layouts/AppLayout';
 import WorkspaceSettingsLayout from './layouts/WorkspaceSettingsLayout';
 import SettingsHomePage from './pages/SettingsHomePage';
-import { isPublicFormsEnabled } from './lib/featureFlags';
 import { clearReturnTo, peekReturnTo, rememberReturnTo } from './lib/returnTo';
 import OAuthConsentPage from './pages/OAuthConsentPage';
 import './App.css';
@@ -404,12 +401,6 @@ export default function App() {
       <Route path="/client-report/:token" element={<ClientReportPage />} />
       {/* Payroll v2: the QR / code printed on a payslip — public, shows no amounts. */}
       <Route path="/verify/:code" element={<VerifyPayslipPage />} />
-      <Route
-        path="/apply/:tenantSlug/:formSlug"
-        element={
-          isPublicFormsEnabled() ? <PublicFormPage /> : <Navigate to={isAuthenticated ? '/overview' : '/login'} replace />
-        }
-      />
       {/* Private API reference (spec-private-api-webhooks.md §8) — authenticated-only (Alejandro,
           2026-09-08: not public, only reachable by someone already logged into the workspace),
           linked from Settings -> Integrations -> API & Webhooks. Deliberately NOT nested under
@@ -510,10 +501,8 @@ export default function App() {
             path="users"
             element={<CompanyUsersPage user={user} token={token ?? ''} onUserUpdated={setUser} />}
           />
-          <Route
-            path="public-forms"
-            element={isPublicFormsEnabled() ? <PublicFormsSettingsPage token={token ?? ''} /> : <Navigate to="/settings" replace />}
-          />
+          {/* The old public-forms page lives on as Formularios y encuestas (/forms). */}
+          <Route path="public-forms" element={<Navigate to="/forms" replace />} />
           <Route path="pipelines" element={<PipelinesSettingsPage token={token ?? ''} />} />
           <Route path="activity" element={<ActivityLogSettingsPage token={token ?? ''} />} />
           <Route path="roles" element={<RolesPermissionsPage token={token ?? ''} />} />

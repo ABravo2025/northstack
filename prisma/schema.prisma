@@ -2622,6 +2622,9 @@ model Form {
   // What a response does in the module: create_lead, update_contact, add_contact, update_employee,
   // save_to_file, create_ticket, create_task, save_only. Validated against `module` in the app.
   action         String?
+  // What the action needs beyond the mapping: create_task → { projectId, phaseId?, assigneeId }.
+  // create_lead keeps using pipelineId above.
+  actionConfig   Json?
   description    String?
   // v2 questions: [{ id, label, type, options?, required, mapTo? }]. mapTo is a field of the module
   // (incl. "cf:<customFieldDefinitionId>"), validated against the tenant on save. Null on legacy

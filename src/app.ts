@@ -43,6 +43,7 @@ import { googleCalendarIntegrationRouter } from './routes/googleCalendarIntegrat
 import { stripeIntegrationRouter } from './routes/stripeIntegration.js';
 import { paymentsRouter } from './routes/payments.js';
 import { expensesRouter } from './routes/expenses.js';
+import { formsRouter } from './routes/forms.js';
 import { tenantMetricsRouter } from './routes/tenantMetrics.js';
 import { activityRouter } from './routes/activity.js';
 import { rolesRouter } from './routes/roles.js';
@@ -173,6 +174,7 @@ app.use(googleCalendarIntegrationRouter);
 app.use(stripeIntegrationRouter);
 app.use(paymentsRouter);
 app.use(expensesRouter);
+app.use(formsRouter);
 app.use(tenantMetricsRouter);
 app.use(activityRouter);
 app.use(rolesRouter);

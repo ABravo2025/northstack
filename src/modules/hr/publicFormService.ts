@@ -180,7 +180,7 @@ export async function findActivePublicForm(tenantSlug: string, formSlug: string)
 // is explicitly out of scope for this tier). Deliberately never touches an
 // existing Company's fields when matched — only reuses its id — so a
 // public submission can't silently overwrite real CRM data.
-async function matchOrCreateCompanyForContact(tenantId: string, email: string): Promise<string | null> {
+export async function matchOrCreateCompanyForContact(tenantId: string, email: string): Promise<string | null> {
   const domain = getEmailDomain(email);
   if (!domain || GENERIC_EMAIL_DOMAINS.has(domain)) {
     return null;

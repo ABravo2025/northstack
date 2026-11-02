@@ -4,7 +4,7 @@ Running context of the whole project, kept current so any session (or person) ca
 last one left off. **Update this file whenever a feature ships or something important changes**
 (newest entries on top in "Changelog"). Rule set in `README.md`.
 
-_Last updated: 2026-10-26_
+_Last updated: 2026-11-02_
 
 ---
 
@@ -80,12 +80,14 @@ FAQPage), sitemap, hreflang. Module page: Time Off (EN/ES) since 2026-10-03.
 
 ## Marketing rules (short)
 Payroll = tracking only · no Payments marketing · no referral-program promo until its terms are reviewed · no "EN & ES" claim · no Android claim until Play
-Store · no hard-coded prices in posts · demo data only (tenant "Acme Latam" on staging).
+Store · no hard-coded prices in posts · demo data only (tenant "Acme Latam" on staging) · no Clients /
+Expenses / Forms & surveys posts until they're in production · Expenses is never "accounting" or "bank sync".
 SEO is part of marketing: every SEO change is logged in `seo/README.md` + a changelog line here.
 
 ---
 
 ## Changelog (newest first)
+- **2026-11-02** — **Clients, Expenses and Forms & surveys built, on staging only** (branch `feat/crm-gastos-forms` → `staging` 3383ca0a, all Growth, EN/ES), waiting for Alejandro's review; **nothing to market until it's in production**. *Clients*: Leads inbox (5-touch cadence, 4-question qualification, convert), pipelines with a purpose + per-stage checklist and automations (still fully customizable), quotes from a product catalog with an online-accept link, handoff to the account owner, client 360 tabs (Products, Timeline, Onboarding, Health score + check-ins, Tickets with SLA, Profitability), Expansion & renewals, Dashboards → Clients. *Expenses* ("Gastos"): accounts, fixed expenses that book themselves, bank/card CSV import read in the browser (never uploaded), dollar charges at the statement rate, encrypted receipts, budgets, subscription and price-increase alerts, 13-week cash projection; all amounts encrypted. *Forms & surveys* replaces the old Public Forms (removed): forms tied to a module, embeddable on the customer's website, personal survey links, NPS/CSAT/eNPS with anonymous employee surveys. Privacy Policy + Terms drafted for it (branches `legal/clientes-gastos-forms` and `landing-legal/clientes-gastos-forms`, publish only with the release). Marketing angles for later: "from lead to renewal in one place — know which clients are at risk before they leave" (agencies, consultancies, SaaS-style service firms) and "upload your card statement and see where the money goes — the file never leaves your computer" (owners of small teams). Expenses is record-keeping, never "accounting" or "bank connection".
 - **2026-10-26** — Marketing: 38 s HR product video ES/EN (1:1 + 16:9) in `2026-10/semana-05/video/`, recorded from the real production app against staging (demo tenant Acme Latam): profile, onboarding project, time off request + approval, who's out, shifts + QR + Today board, timesheet approval. New synthesized music (`tools/video/music4.py`, 132 BPM funk-pop). Post 04 (vie 30/10) on the copy page. Payslips deliberately left out of the video (could read as a legal payroll service). Found while recording: the employee profile modal shows "Actions", "Notes", "Tasks", "Activity" in English on a Spanish UI.
 - **2026-10-26** — Landing: SEO pass 3 (HR records + payroll tracking pages) and the plans review (comparison by module, Projects/Shifts cards, 3-user trial) LIVE together (landing 9f69930); plans table now also lists clock-in, numbered pay stubs, AI assistants (Growth) and 2FA (all plans). Every module now has its own EN/ES page. App side of the plans review (staging 18ac75e, pricing API `limits`) still pending; landing falls back to static numbers that match planLimits.ts. Gap: suggested schedule is documented as Growth but not plan-gated in code.
 - **2026-10-26** — SEO pass 2 LIVE: Shifts/CRM/Projects module pages EN/ES (landing af03098). Pass 3 (HR records + payroll tracking pages) built, awaiting approval. Payroll page is tracking-only and says payslips are not legal documents.

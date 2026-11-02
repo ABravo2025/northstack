@@ -1,7 +1,7 @@
 import type express from 'express';
 import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
-import { canManageCompany, canManageCustomFields, canViewCompany, canViewOpportunity } from '../modules/auth/permissionService.js';
+import { canManageCompany, canManageCustomFields, canManageOpportunity, canViewCompany, canViewOpportunity } from '../modules/auth/permissionService.js';
 import { isClientsAllowed } from '../modules/tenant/planLimits.js';
 import {
   ProductError,
@@ -14,6 +14,7 @@ import {
 } from '../modules/crm/productService.js';
 import { getCompanyOnboarding, getCompanyTimeline } from '../modules/crm/company360Service.js';
 import { addCheckIn, getCompanyHealth } from '../modules/crm/healthService.js';
+import { SignalError, createSignalOpportunity, getSignals } from '../modules/crm/signalService.js';
 
 // Clientes C4/C5: the product catalog (Settings, same permission as pipelines), each company's
 // products and its 360 view (company permissions). Growth (clientsEnabled).
@@ -135,4 +136,28 @@ productsRouter.post('/api/companies/:companyId/check-ins', async (req, res) => {
   });
   if ('error' in result) return res.status(result.status ?? 400).json({ error: result.error });
   return res.status(201).json(result.checkIn);
+});
+
+// Clientes C8: upsell / renewal / risk signals across clients, and the opportunity from one.
+productsRouter.get('/api/client-signals', async (req, res) => {
+  const user = await guard(req, res, 'viewCompany');
+  if (!user) return;
+  return res.json(await getSignals(user.tenantId!));
+});
+
+productsRouter.post('/api/client-signals/opportunity', async (req, res) => {
+  const user = await guard(req, res, 'viewCompany');
+  if (!user) return;
+  if (!canManageOpportunity(user.roleContext)) return res.status(403).json({ error: 'Insufficient permissions' });
+  const b = req.body ?? {};
+  if (typeof b.companyId !== 'string' || (b.kind !== 'expansion' && b.kind !== 'renewal')) {
+    return res.status(400).json({ error: 'companyId and kind (expansion | renewal) are required' });
+  }
+  try {
+    const productIds = Array.isArray(b.productIds) ? b.productIds.filter((x: unknown): x is string => typeof x === 'string').slice(0, 20) : [];
+    return res.status(201).json(await createSignalOpportunity(user.tenantId!, user.id, { companyId: b.companyId, kind: b.kind, productIds }));
+  } catch (error) {
+    if (error instanceof SignalError) return res.status(error.status).json({ error: error.message, code: error.code });
+    throw error;
+  }
 });

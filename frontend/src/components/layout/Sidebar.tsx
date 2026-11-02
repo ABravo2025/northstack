@@ -20,7 +20,7 @@ import {
   TargetIcon,
   TaskCircleIcon,
   UserCircleIcon,
-  XIcon, ReceiptIcon, ClipboardIcon, InboxIcon, LifebuoyIcon } from '../common/Icons';
+  XIcon, ReceiptIcon, ClipboardIcon, InboxIcon, LifebuoyIcon, TrendingIcon } from '../common/Icons';
 
 interface SidebarProps {
   mobileOpen: boolean;
@@ -154,6 +154,12 @@ export default function Sidebar({ mobileOpen, onMobileClose, tenant }: SidebarPr
               <NavLink to="/opportunities" className={linkClass} title={t('sidebar.opportunities')} onClick={onMobileClose}>
                 <TargetIcon className="h-4 w-4 shrink-0" />
                 {label(t('sidebar.opportunities'))}
+              </NavLink>
+            )}
+            {canSeeTickets && (
+              <NavLink to="/signals" className={linkClass} title={t('sidebar.signals')} onClick={onMobileClose}>
+                <TrendingIcon className="h-4 w-4 shrink-0" />
+                {label(t('sidebar.signals'))}
               </NavLink>
             )}
             {canSeeTickets && (

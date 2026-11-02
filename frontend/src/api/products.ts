@@ -74,6 +74,19 @@ export interface CompanyHealth {
   checkIns: { id: string; at: string; sentiment: 'good' | 'neutral' | 'bad'; note: string | null; byName: string | null }[];
 }
 
+export interface ClientSignal {
+  companyId: string;
+  companyName: string;
+  accountOwnerId: string | null;
+  kind: 'expansion' | 'renewal' | 'risk';
+  reasons: ('healthy' | 'promoter' | 'white_space' | 'renews_soon' | 'critical' | 'detractor')[];
+  healthScore: number;
+  healthStatus: string;
+  mrr: { currency: string; cents: number }[];
+  products: { id: string; name: string; amountCents: number; currency: string }[];
+  renewalDate: string | null;
+}
+
 export type ProductInput = Partial<Pick<Product, 'name' | 'sku' | 'description' | 'unitPriceCents' | 'currency' | 'billing' | 'isActive'>>;
 
 async function call<T>(token: string, path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
@@ -112,4 +125,8 @@ export const productsApi = {
   getCompanyHealth: (token: string, companyId: string) => call<CompanyHealth>(token, `/api/companies/${companyId}/health`),
   addCompanyCheckIn: (token: string, companyId: string, input: { sentiment: 'good' | 'neutral' | 'bad'; note?: string | null; nextCheckInAt?: string | null }) =>
     call<unknown>(token, `/api/companies/${companyId}/check-ins`, { method: 'POST', body: input }),
+  // Clientes C8: upsell / renewal / risk signals.
+  listClientSignals: (token: string) => call<ClientSignal[]>(token, '/api/client-signals'),
+  createSignalOpportunity: (token: string, input: { companyId: string; kind: 'expansion' | 'renewal'; productIds?: string[] }) =>
+    call<{ opportunityId: string; pipelineId: string }>(token, '/api/client-signals/opportunity', { method: 'POST', body: input }),
 };

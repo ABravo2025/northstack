@@ -899,5 +899,47 @@
     "addReply": "Registrar respuesta",
     "addNote": "Agregar nota",
     "replyHint": "Queda registrada acá; el envío por mail al cliente desde el ticket todavía no está."
+  },
+  "signals": {
+    "title": "Expansión y renovaciones",
+    "subtitle": "Clientes donde hay algo para hacer: sumar productos, renovar a tiempo o cuidar una cuenta en riesgo.",
+    "filter": {
+      "all": "Todas",
+      "risk": "En riesgo",
+      "renewal": "Renovaciones",
+      "expansion": "Expansión"
+    },
+    "kind": {
+      "risk": "En riesgo",
+      "renewal": "Renovación",
+      "expansion": "Expansión"
+    },
+    "columns": {
+      "kind": "Señal",
+      "company": "Cliente",
+      "why": "Por qué",
+      "health": "Salud",
+      "mrr": "Ingreso mensual",
+      "what": "Qué"
+    },
+    "reason": {
+      "healthy": "cliente sano",
+      "promoter": "promotor (NPS 9-10)",
+      "white_space": "productos que todavía no tiene",
+      "renews_soon": "renueva en menos de 90 días",
+      "critical": "salud crítica",
+      "detractor": "detractor reciente (NPS 0-6)"
+    },
+    "renews": "Renueva el {{date}}",
+    "createDeal": "Crear oportunidad",
+    "createRenewal": "Crear renovación",
+    "created": "Oportunidad creada",
+    "empty": "No hay señales. Aparecen cuando los clientes tienen productos cargados, renovaciones con fecha o encuestas respondidas.",
+    "noPipeline": {
+      "expansion": "Primero creá una pipeline de Expansión (Configuración → Pipelines → plantillas).",
+      "renewal": "Primero creá una pipeline de Renovaciones (Configuración → Pipelines → plantillas)."
+    },
+    "howItWorks": "Se calculan con la salud del cliente, sus productos, las encuestas y las fechas de renovación. No se repiten si ya hay una oportunidad abierta del mismo tipo.",
+    "pipelinesLink": "Ver pipelines"
   }
 }

@@ -899,5 +899,47 @@
     "addReply": "Log reply",
     "addNote": "Add note",
     "replyHint": "It's logged here; emailing the client from the ticket isn't built yet."
+  },
+  "signals": {
+    "title": "Expansion & renewals",
+    "subtitle": "Clients where there's something to do: add products, renew on time or look after an account at risk.",
+    "filter": {
+      "all": "All",
+      "risk": "At risk",
+      "renewal": "Renewals",
+      "expansion": "Expansion"
+    },
+    "kind": {
+      "risk": "At risk",
+      "renewal": "Renewal",
+      "expansion": "Expansion"
+    },
+    "columns": {
+      "kind": "Signal",
+      "company": "Client",
+      "why": "Why",
+      "health": "Health",
+      "mrr": "Monthly revenue",
+      "what": "What"
+    },
+    "reason": {
+      "healthy": "healthy client",
+      "promoter": "promoter (NPS 9-10)",
+      "white_space": "products they don't have yet",
+      "renews_soon": "renews within 90 days",
+      "critical": "critical health",
+      "detractor": "recent detractor (NPS 0-6)"
+    },
+    "renews": "Renews on {{date}}",
+    "createDeal": "Create opportunity",
+    "createRenewal": "Create renewal",
+    "created": "Opportunity created",
+    "empty": "No signals. They show up when clients have products, renewal dates or survey answers.",
+    "noPipeline": {
+      "expansion": "Create an Expansion pipeline first (Settings → Pipelines → templates).",
+      "renewal": "Create a Renewals pipeline first (Settings → Pipelines → templates)."
+    },
+    "howItWorks": "Computed from the client's health, products, surveys and renewal dates. Not repeated while an open deal of the same kind exists.",
+    "pipelinesLink": "See pipelines"
   }
 }

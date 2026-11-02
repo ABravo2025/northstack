@@ -579,5 +579,125 @@
     "ready": "ready to move forward",
     "optional": "(optional)",
     "blocked": "To move forward, complete this stage's checklist: {{items}}."
+  },
+  "leadsInbox": {
+    "title": "Leads",
+    "subtitle": "New contacts who aren't clients yet. Work them with 5 touches, qualify them with 4 questions and convert them when they're ready.",
+    "new": "New lead",
+    "search": "Search by name, email or company",
+    "views": {
+      "open": "Open",
+      "converted": "Converted",
+      "disqualified": "Disqualified"
+    },
+    "owner": {
+      "all": "All owners",
+      "mine": "Mine",
+      "none": "Unassigned"
+    },
+    "columns": {
+      "lead": "Lead",
+      "company": "Company",
+      "source": "Source",
+      "score": "Score",
+      "qualification": "Qualification",
+      "touches": "Touches",
+      "nextTouch": "Next touch",
+      "status": "Status",
+      "owner": "Owner"
+    },
+    "empty": {
+      "open": "No open leads. Add one or connect a Leads form.",
+      "converted": "You haven't converted any lead yet.",
+      "disqualified": "No disqualified leads."
+    },
+    "sourceForm": "Form",
+    "overdue": "Overdue · {{date}}",
+    "cadenceDone": "Cadence complete",
+    "status": {
+      "new": "New",
+      "working": "In progress",
+      "qualified": "Qualified",
+      "converted": "Converted",
+      "disqualified": "Disqualified"
+    },
+    "infoCadenceTitle": "5 touches",
+    "infoCadenceBody": "The day it arrives, then at 2, 5, 9 and 14 days. The inbox sorts what's due first.",
+    "infoQualifyTitle": "4 questions",
+    "infoQualifyBody": "Need, budget, decision maker and timing. With 3 of 4 \"yes\", Convert unlocks.",
+    "infoConvertTitle": "Convert",
+    "infoConvertBody": "Creates the company, contact and opportunity together, in the pipeline you choose.",
+    "fields": {
+      "firstName": "First name",
+      "lastName": "Last name",
+      "email": "Email",
+      "phone": "Phone",
+      "company": "Company",
+      "title": "Title",
+      "dealName": "Opportunity name",
+      "amount": "Estimated amount",
+      "source": "Source",
+      "notes": "Notes"
+    },
+    "cameFrom": "Came in through: {{source}}",
+    "qualifyTitle": "Qualification",
+    "qualifyHint": "With 3 of 4 \"yes\" it can be converted.",
+    "questions": {
+      "need": "Do they have a clear need?",
+      "budget": "Do they have a budget?",
+      "authority": "Are we talking to the decision maker?",
+      "timing": "Do they need it soon?"
+    },
+    "yes": "Yes",
+    "no": "No",
+    "cadenceTitle": "Cadence (5 touches)",
+    "dayN": "Day {{day}}",
+    "extraTouches_one": "+{{count}} more touch",
+    "extraTouches_other": "+{{count}} more touches",
+    "channelLabel": "Channel",
+    "outcomeLabel": "Outcome",
+    "touchNote": "Note (optional)",
+    "logTouch": "Log touch",
+    "touchLogged": "Touch logged",
+    "channel": {
+      "call": "Call",
+      "email": "Email",
+      "whatsapp": "WhatsApp",
+      "linkedin": "LinkedIn",
+      "meeting": "Meeting",
+      "other": "Other"
+    },
+    "outcome": {
+      "no_answer": "No answer",
+      "replied": "Replied",
+      "meeting_booked": "Meeting booked",
+      "not_interested": "Not interested"
+    },
+    "save": "Save",
+    "saved": "Saved",
+    "create": "Create lead",
+    "created": "Lead created",
+    "cancel": "Cancel",
+    "scoreLabel": "score {{score}}",
+    "convert": "Convert",
+    "convertHint": "Qualify the lead first: 3 of 4 questions \"yes\".",
+    "convertTitle": "Convert into a prospect",
+    "convertBody": "The company, contact and opportunity are created together. If the email is already a contact, that one is used.",
+    "company": {
+      "new": "New company",
+      "existing": "Existing company"
+    },
+    "pipeline": "Pipeline",
+    "stage": "Stage",
+    "firstStage": "First stage",
+    "converted": "Converted: company, contact and opportunity created",
+    "goOpportunity": "See opportunities",
+    "disqualify": "Disqualify",
+    "disqualifyTitle": "Disqualify lead",
+    "reason": "Reason",
+    "reasonPlaceholder": "E.g.: no budget this year",
+    "disqualified": "Lead disqualified",
+    "disqualifiedBecause": "Disqualified: {{reason}}",
+    "reopen": "Reopen"
   }
 }

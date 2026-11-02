@@ -43,6 +43,8 @@ export interface PlanFeatures {
   expenses?: boolean;
   // Formularios y encuestas (2026-11-02, Growth). Optional on the wire, same as above.
   forms?: boolean;
+  // Clientes, Fase C (2026-11-02, Growth).
+  clients?: boolean;
 }
 
 export interface AuthResponse {
@@ -1594,6 +1596,7 @@ export interface PublicPlanLimits {
   clockInEnabled: boolean;
   expensesEnabled?: boolean;
   formsEnabled?: boolean;
+  clientsEnabled?: boolean;
 }
 
 // Shifts module (docs/general/spec-shifts.md, 2026-10-04).

@@ -37,6 +37,9 @@ export interface PlanLimits {
   // Formularios y encuestas (spec-clientes-gastos-formularios.md, Fase B, 2026-11-02): Growth-only
   // under the standing rule. Replaces the PUBLIC_FORMS_ENABLED env flag when the phase closes (B7).
   formsEnabled: boolean;
+  // Clientes (spec-clientes-gastos-formularios.md, Fase C, 2026-11-02): Leads inbox, handoff, 360
+  // view, health, tickets, upsell. Growth-only under the standing rule.
+  clientsEnabled: boolean;
 }
 
 export type EffectivePlan = 'starter' | 'growth';
@@ -64,6 +67,7 @@ export const PLAN_LIMITS: Record<EffectivePlan, PlanLimits> = {
     clockInEnabled: false,
     expensesEnabled: false,
     formsEnabled: false,
+    clientsEnabled: false,
   },
   growth: {
     maxPipelines: null,
@@ -82,6 +86,7 @@ export const PLAN_LIMITS: Record<EffectivePlan, PlanLimits> = {
     clockInEnabled: true,
     expensesEnabled: true,
     formsEnabled: true,
+    clientsEnabled: true,
   },
 };
 
@@ -105,13 +110,13 @@ export function getEffectivePlan(tenant: { plan: PlanTier | null } | null): Effe
 
 // 2026-10-14 (plan review): the Projects/Shifts/Timesheet gates joined the list, so a special
 // agreement can also grant e.g. 3 locations or billable hours to a Starter client.
-export type OverridableModule = 'payroll' | 'payments' | 'apiAccess' | 'projectTemplates' | 'shiftSkills' | 'billableHours' | 'clockIn' | 'expenses' | 'forms';
+export type OverridableModule = 'payroll' | 'payments' | 'apiAccess' | 'projectTemplates' | 'shiftSkills' | 'billableHours' | 'clockIn' | 'expenses' | 'forms' | 'clients';
 export type OverridableLimit = 'maxPipelines' | 'maxTimeOffPolicies' | 'maxCustomRoles' | 'activityLogRetentionDays' | 'freeTrialSeatCap' | 'maxActiveProjects' | 'maxActiveLocations';
 
-export const OVERRIDABLE_MODULES: OverridableModule[] = ['payroll', 'payments', 'apiAccess', 'projectTemplates', 'shiftSkills', 'billableHours', 'clockIn', 'expenses', 'forms'];
+export const OVERRIDABLE_MODULES: OverridableModule[] = ['payroll', 'payments', 'apiAccess', 'projectTemplates', 'shiftSkills', 'billableHours', 'clockIn', 'expenses', 'forms', 'clients'];
 export const OVERRIDABLE_LIMITS: OverridableLimit[] = ['maxPipelines', 'maxTimeOffPolicies', 'maxCustomRoles', 'activityLogRetentionDays', 'freeTrialSeatCap', 'maxActiveProjects', 'maxActiveLocations'];
 
-type ModuleFlag = 'payrollEnabled' | 'paymentsEnabled' | 'apiAccessEnabled' | 'customProjectTemplatesEnabled' | 'shiftSkillsEnabled' | 'billableHoursEnabled' | 'clockInEnabled' | 'expensesEnabled' | 'formsEnabled';
+type ModuleFlag = 'payrollEnabled' | 'paymentsEnabled' | 'apiAccessEnabled' | 'customProjectTemplatesEnabled' | 'shiftSkillsEnabled' | 'billableHoursEnabled' | 'clockInEnabled' | 'expensesEnabled' | 'formsEnabled' | 'clientsEnabled';
 
 const MODULE_FLAG: Record<OverridableModule, ModuleFlag> = {
   payroll: 'payrollEnabled',
@@ -123,6 +128,7 @@ const MODULE_FLAG: Record<OverridableModule, ModuleFlag> = {
   clockIn: 'clockInEnabled',
   expenses: 'expensesEnabled',
   forms: 'formsEnabled',
+  clients: 'clientsEnabled',
 };
 
 export interface PlanOverride {
@@ -202,6 +208,10 @@ export function isFormsAllowed(tenant: TenantLike): boolean {
   return getPlanLimits(tenant).formsEnabled;
 }
 
+export function isClientsAllowed(tenant: TenantLike): boolean {
+  return getPlanLimits(tenant).clientsEnabled;
+}
+
 // What the customer app's UI needs to show/hide plan-gated modules (GET /api/auth/me).
 export function planFeatures(tenant: TenantLike) {
   const l = getPlanLimits(tenant);
@@ -215,5 +225,6 @@ export function planFeatures(tenant: TenantLike) {
     clockIn: l.clockInEnabled,
     expenses: l.expensesEnabled,
     forms: l.formsEnabled,
+    clients: l.clientsEnabled,
   };
 }

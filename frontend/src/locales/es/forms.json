@@ -60,8 +60,8 @@
     "create_client": "Crea un cliente (formulario anterior)"
   },
   "lands": {
-    "create_lead": "En Contactos, como lead nuevo{{pipeline}}. Si el mail ya existe, se vincula sin pisar datos.",
-    "pipelineSuffix": ", con una oportunidad en {{name}}",
+    "create_lead": "En la bandeja de Leads, para trabajarlo y calificarlo antes de convertirlo{{pipeline}}. Si el mail ya es un contacto, se vincula sin pisar datos.",
+    "pipelineSuffix": " (sin la bandeja: oportunidad directa en {{name}})",
     "update_contact": "En la ficha del contacto que responde: solo los campos que elegiste abajo.",
     "add_contact": "Como contacto nuevo en la empresa de quien responde.",
     "update_employee": "En el legajo de quien responde: solo los campos que elegiste abajo.",

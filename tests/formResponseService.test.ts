@@ -11,10 +11,12 @@ vi.mock('../src/lib/prisma.js', () => ({
     customFieldDefinition: { findMany: vi.fn() },
     customFieldValue: { findFirst: vi.fn(), update: vi.fn() },
     formResponse: { create: vi.fn() },
+    lead: { findFirst: vi.fn() },
   },
 }));
 vi.mock('../src/modules/crm/contactService.js', () => ({ createContact: vi.fn() }));
 vi.mock('../src/modules/crm/opportunityService.js', () => ({ createOpportunity: vi.fn(), addOpportunityContact: vi.fn() }));
+vi.mock('../src/modules/crm/leadService.js', () => ({ createLead: vi.fn(async () => ({ id: 'lead-new' })) }));
 vi.mock('../src/modules/hr/statusService.js', () => ({ getDefaultStatusId: vi.fn() }));
 vi.mock('../src/modules/hr/customFieldService.js', () => ({ createCustomFieldValue: vi.fn(), isValueValidForFieldType: () => true }));
 
@@ -23,6 +25,7 @@ import { decryptAnswers } from '../src/lib/formsEncryption.js';
 import { createContact } from '../src/modules/crm/contactService.js';
 import { createOpportunity } from '../src/modules/crm/opportunityService.js';
 import { submitResponse } from '../src/modules/forms/formResponseService.js';
+import { createLead as createInboxLead } from '../src/modules/crm/leadService.js';
 
 const db = prisma as unknown as Record<string, Record<string, ReturnType<typeof vi.fn>>>;
 let previousKey: string | undefined;
@@ -39,7 +42,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   db.customFieldDefinition.findMany.mockResolvedValue([]);
   db.formResponse.create.mockImplementation(async ({ data }) => ({ id: 'r1', ...data }));
-  db.tenant.findUnique.mockResolvedValue({ currency: 'ARS' });
+  // Starter: no Leads inbox, so a lead form creates the contact (and opportunity) directly.
+  db.tenant.findUnique.mockResolvedValue({ currency: 'ARS', plan: 'starter', planOverride: null });
 });
 
 const form = (over: Record<string, unknown> = {}) =>
@@ -81,6 +85,16 @@ describe('submitResponse', () => {
       { questionId: 'q1', mapTo: 'contact.email' },
       { questionId: 'q2', mapTo: 'contact.firstName' },
     ]);
+  });
+
+  it('with the Leads inbox on, a new lead lands in the inbox with its campaign', async () => {
+    db.contact.findUnique.mockResolvedValue(null);
+    db.tenant.findUnique.mockResolvedValue({ currency: 'ARS', plan: 'growth', planOverride: null });
+    db.lead.findFirst.mockResolvedValue(null);
+    const result = await submitResponse(form(), { q1: 'ana@acme.com', q2: 'Ana' }, { source: 'embed', utm: { source: 'google' } });
+    expect(result.linked).toEqual({ type: 'lead', id: 'lead-new' });
+    expect(createInboxLead).toHaveBeenCalledWith('t1', null, expect.objectContaining({ email: 'ana@acme.com', firstName: 'Ana', formId: 'f1', utm: { source: 'google' } }));
+    expect(createContact).not.toHaveBeenCalled();
   });
 
   it('links an existing contact instead of overwriting it', async () => {

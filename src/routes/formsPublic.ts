@@ -119,9 +119,11 @@ formsPublicRouter.get('/f/:tenantSlug/:formSlug', async (req, res) => {
 });
 
 // New leads tell the owner and admins, like the old public forms did.
-async function notifyNewLead(form: Form, contactId: string) {
+async function notifyNewLead(form: Form, linked: { type: string; id: string }) {
+  const where = { id: linked.id, tenantId: form.tenantId };
+  const select = { firstName: true, lastName: true, email: true };
   const [contact, tenant, admins] = await Promise.all([
-    prisma.contact.findFirst({ where: { id: contactId, tenantId: form.tenantId }, select: { firstName: true, lastName: true, email: true } }),
+    linked.type === 'lead' ? prisma.lead.findFirst({ where, select }) : prisma.contact.findFirst({ where, select }),
     prisma.tenant.findUnique({ where: { id: form.tenantId }, select: { name: true } }),
     prisma.user.findMany({ where: { tenantId: form.tenantId, role: { in: ['owner', 'admin'] }, status: 'active' }, select: { email: true, locale: true } }),
   ]);
@@ -183,7 +185,7 @@ formsPublicRouter.post('/api/public/forms/:tenantSlug/:formSlug', async (req, re
   };
   try {
     const result = await submitResponse(form, answers, { source: body.embed === true ? 'embed' : 'public_link', utm });
-    if (form.action === 'create_lead' && result.linked?.type === 'contact') await notifyNewLead(form, result.linked.id);
+    if (form.action === 'create_lead' && result.linked) await notifyNewLead(form, result.linked);
     return res.json(success);
   } catch (error) {
     if (error instanceof FormError) return res.status(error.status).json({ error: error.message, code: error.code });

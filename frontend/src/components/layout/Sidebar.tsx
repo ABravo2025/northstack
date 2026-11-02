@@ -20,7 +20,7 @@ import {
   TargetIcon,
   TaskCircleIcon,
   UserCircleIcon,
-  XIcon, ReceiptIcon, ClipboardIcon } from '../common/Icons';
+  XIcon, ReceiptIcon, ClipboardIcon, InboxIcon } from '../common/Icons';
 
 interface SidebarProps {
   mobileOpen: boolean;
@@ -51,6 +51,8 @@ export default function Sidebar({ mobileOpen, onMobileClose, tenant }: SidebarPr
   const canSeeExpenses = permissions.features.expenses && permissions.has('manage_expenses');
   // Formularios y encuestas: same permission the public forms already used, plus the Growth plan.
   const canSeeForms = !!permissions.features.forms && permissions.has('manage_custom_fields');
+  // Clientes C2: the Leads inbox, with the contacts permission and the Growth plan.
+  const canSeeLeads = canSeeContact && !!permissions.features.clients;
   const showSalesGroup = canSeeCompany || canSeeContact || canSeeOpportunity || canSeePayments;
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -128,6 +130,12 @@ export default function Sidebar({ mobileOpen, onMobileClose, tenant }: SidebarPr
         {showSalesGroup && (
           <div className="sidebar-divider">
             {!collapsed && <p className="sidebar-group-label">{t('sidebar.sales')}</p>}
+            {canSeeLeads && (
+              <NavLink to="/leads" className={linkClass} title={t('sidebar.leads')} onClick={onMobileClose}>
+                <InboxIcon className="h-4 w-4 shrink-0" />
+                {label(t('sidebar.leads'))}
+              </NavLink>
+            )}
             {canSeeCompany && (
               <NavLink to="/companies" className={linkClass} title={t('sidebar.companies')} onClick={onMobileClose} data-tour="nav-sales">
                 <BuildingIcon className="h-4 w-4 shrink-0" />

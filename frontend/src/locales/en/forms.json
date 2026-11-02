@@ -60,8 +60,8 @@
     "create_client": "Creates a client (previous form)"
   },
   "lands": {
-    "create_lead": "In Contacts, as a new lead{{pipeline}}. If the email already exists, it's linked without overwriting anything.",
-    "pipelineSuffix": ", with an opportunity in {{name}}",
+    "create_lead": "In the Leads inbox, to be worked and qualified before converting it{{pipeline}}. If the email is already a contact, it's linked without overwriting anything.",
+    "pipelineSuffix": " (without the inbox: straight to an opportunity in {{name}})",
     "update_contact": "On the responding contact's record: only the fields you chose below.",
     "add_contact": "As a new contact in the responder's company.",
     "update_employee": "In the responder's employee file: only the fields you chose below.",

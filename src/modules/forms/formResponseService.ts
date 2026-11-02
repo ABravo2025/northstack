@@ -4,6 +4,8 @@ import { decryptAnswers, encryptAnswers } from '../../lib/formsEncryption.js';
 import { isValueValidForFieldType, createCustomFieldValue } from '../hr/customFieldService.js';
 import { GENERIC_EMAIL_DOMAINS } from '../tenant/tenantService.js';
 import { getEmailDomain } from '../../lib/email.js';
+import { isClientsAllowed } from '../tenant/planLimits.js';
+import { createLead as createInboxLead } from '../crm/leadService.js';
 import { createContact } from '../crm/contactService.js';
 import { addOpportunityContact, createOpportunity } from '../crm/opportunityService.js';
 import { getDefaultStatusId } from '../hr/statusService.js';
@@ -105,6 +107,29 @@ async function createLead(form: Form, values: Values, ctx: SubmitContext): Promi
   const existing = await prisma.contact.findUnique({ where: { tenantId_email: { tenantId: form.tenantId, email } } });
   // A known contact is linked, never overwritten by an anonymous submission.
   if (existing) return { type: 'contact', id: existing.id };
+
+  // Clientes C2: with the Leads inbox on, a new lead lands there to be worked and qualified, and
+  // "Convert" creates the company, contact and opportunity later.
+  const tenant = await prisma.tenant.findUnique({ where: { id: form.tenantId } });
+  if (tenant && isClientsAllowed(tenant)) {
+    const open = await prisma.lead.findFirst({ where: { tenantId: form.tenantId, email, status: { in: ['new', 'working', 'qualified'] } }, select: { id: true } });
+    if (open) return { type: 'lead', id: open.id };
+    const amount = Number(values.get('opportunity.amount'));
+    const lead = await createInboxLead(form.tenantId, null, {
+      firstName,
+      lastName: str(values.get('contact.lastName')),
+      email,
+      phone: str(values.get('contact.phone')) || null,
+      title: str(values.get('contact.title')) || null,
+      companyName: str(values.get('company.name')) || null,
+      dealName: str(values.get('opportunity.name')) || null,
+      estimatedAmountCents: Number.isFinite(amount) && amount > 0 ? Math.round(amount * 100) : null,
+      leadSourceId: await leadSourceFor(form.tenantId, ctx.utm?.source),
+      formId: form.id,
+      utm: ctx.utm,
+    });
+    return { type: 'lead', id: lead.id };
+  }
 
   let companyId: string | null = null;
   const companyName = str(values.get('company.name'));
@@ -309,15 +334,17 @@ export async function submitResponse(form: Form, rawAnswers: Record<string, unkn
 
 async function linkedLabels(tenantId: string, rows: { linkedEntityType: string | null; linkedEntityId: string | null }[]) {
   const ids = (type: string) => [...new Set(rows.filter((r) => r.linkedEntityType === type && r.linkedEntityId).map((r) => r.linkedEntityId!))];
-  const [contacts, employees, tasks] = await Promise.all([
+  const [contacts, employees, tasks, leads] = await Promise.all([
     prisma.contact.findMany({ where: { tenantId, id: { in: ids('contact') } }, select: { id: true, firstName: true, lastName: true, email: true } }),
     prisma.employee.findMany({ where: { tenantId, id: { in: ids('employee') } }, select: { id: true, firstName: true, lastName: true } }),
     prisma.task.findMany({ where: { tenantId, id: { in: ids('task') } }, select: { id: true, title: true, entityId: true } }),
+    prisma.lead.findMany({ where: { tenantId, id: { in: ids('lead') } }, select: { id: true, firstName: true, lastName: true, email: true } }),
   ]);
   const labels = new Map<string, { label: string; href: string }>();
   for (const c of contacts) labels.set(`contact:${c.id}`, { label: `${c.firstName} ${c.lastName}`.trim() || c.email, href: `/contacts?open=${c.id}` });
   for (const e of employees) labels.set(`employee:${e.id}`, { label: `${e.firstName} ${e.lastName}`.trim(), href: '/hr/people' });
   for (const t of tasks) labels.set(`task:${t.id}`, { label: t.title, href: `/projects/${t.entityId}` });
+  for (const l of leads) labels.set(`lead:${l.id}`, { label: `${l.firstName} ${l.lastName}`.trim() || l.email, href: `/leads?open=${l.id}` });
   return labels;
 }
 

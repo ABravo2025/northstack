@@ -43,6 +43,7 @@ describe('getPlanLimits', () => {
       clockInEnabled: false,
       expensesEnabled: false,
       formsEnabled: false,
+      clientsEnabled: false,
     });
   });
 

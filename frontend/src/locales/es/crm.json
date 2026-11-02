@@ -579,5 +579,125 @@
     "ready": "listo para avanzar",
     "optional": "(opcional)",
     "blocked": "Para avanzar, completá el checklist de esta etapa: {{items}}."
+  },
+  "leadsInbox": {
+    "title": "Leads",
+    "subtitle": "Los contactos nuevos que todavía no son clientes. Trabajalos con 5 toques, calificalos con 4 preguntas y convertilos cuando estén listos.",
+    "new": "Nuevo lead",
+    "search": "Buscar por nombre, email o empresa",
+    "views": {
+      "open": "Abiertos",
+      "converted": "Convertidos",
+      "disqualified": "Descalificados"
+    },
+    "owner": {
+      "all": "Todos los responsables",
+      "mine": "Míos",
+      "none": "Sin asignar"
+    },
+    "columns": {
+      "lead": "Lead",
+      "company": "Empresa",
+      "source": "Origen",
+      "score": "Score",
+      "qualification": "Calificación",
+      "touches": "Toques",
+      "nextTouch": "Próximo toque",
+      "status": "Estado",
+      "owner": "Responsable"
+    },
+    "empty": {
+      "open": "No hay leads abiertos. Cargá uno o conectá un formulario de Leads.",
+      "converted": "Todavía no convertiste ningún lead.",
+      "disqualified": "No hay leads descalificados."
+    },
+    "sourceForm": "Formulario",
+    "overdue": "Vencido · {{date}}",
+    "cadenceDone": "Cadencia completa",
+    "status": {
+      "new": "Nuevo",
+      "working": "En curso",
+      "qualified": "Calificado",
+      "converted": "Convertido",
+      "disqualified": "Descalificado"
+    },
+    "infoCadenceTitle": "5 toques",
+    "infoCadenceBody": "El día que llega, y a los 2, 5, 9 y 14 días. La bandeja ordena primero lo que vence.",
+    "infoQualifyTitle": "4 preguntas",
+    "infoQualifyBody": "Necesidad, presupuesto, decisor y momento. Con 3 de 4 en \"sí\" se habilita Convertir.",
+    "infoConvertTitle": "Convertir",
+    "infoConvertBody": "Crea la empresa, el contacto y la oportunidad juntos, en la pipeline que elijas.",
+    "fields": {
+      "firstName": "Nombre",
+      "lastName": "Apellido",
+      "email": "Email",
+      "phone": "Teléfono",
+      "company": "Empresa",
+      "title": "Cargo",
+      "dealName": "Nombre de la oportunidad",
+      "amount": "Monto estimado",
+      "source": "Origen",
+      "notes": "Notas"
+    },
+    "cameFrom": "Llegó por: {{source}}",
+    "qualifyTitle": "Calificación",
+    "qualifyHint": "Con 3 de 4 en \"sí\" se puede convertir.",
+    "questions": {
+      "need": "¿Tiene una necesidad clara?",
+      "budget": "¿Tiene presupuesto?",
+      "authority": "¿Hablamos con quien decide?",
+      "timing": "¿Lo necesita pronto?"
+    },
+    "yes": "Sí",
+    "no": "No",
+    "cadenceTitle": "Cadencia (5 toques)",
+    "dayN": "Día {{day}}",
+    "extraTouches_one": "+{{count}} toque más",
+    "extraTouches_other": "+{{count}} toques más",
+    "channelLabel": "Canal",
+    "outcomeLabel": "Resultado",
+    "touchNote": "Nota (opcional)",
+    "logTouch": "Registrar toque",
+    "touchLogged": "Toque registrado",
+    "channel": {
+      "call": "Llamada",
+      "email": "Email",
+      "whatsapp": "WhatsApp",
+      "linkedin": "LinkedIn",
+      "meeting": "Reunión",
+      "other": "Otro"
+    },
+    "outcome": {
+      "no_answer": "Sin respuesta",
+      "replied": "Respondió",
+      "meeting_booked": "Reunión agendada",
+      "not_interested": "No le interesa"
+    },
+    "save": "Guardar",
+    "saved": "Guardado",
+    "create": "Crear lead",
+    "created": "Lead creado",
+    "cancel": "Cancelar",
+    "scoreLabel": "score {{score}}",
+    "convert": "Convertir",
+    "convertHint": "Calificá el lead primero: 3 de 4 preguntas en \"sí\".",
+    "convertTitle": "Convertir en cliente potencial",
+    "convertBody": "Se crean la empresa, el contacto y la oportunidad juntos. Si el mail ya es un contacto, se usa ese.",
+    "company": {
+      "new": "Empresa nueva",
+      "existing": "Empresa existente"
+    },
+    "pipeline": "Pipeline",
+    "stage": "Etapa",
+    "firstStage": "Primera etapa",
+    "converted": "Convertido: empresa, contacto y oportunidad creados",
+    "goOpportunity": "Ver oportunidades",
+    "disqualify": "Descalificar",
+    "disqualifyTitle": "Descalificar lead",
+    "reason": "Motivo",
+    "reasonPlaceholder": "Ej.: no tiene presupuesto este año",
+    "disqualified": "Lead descalificado",
+    "disqualifiedBecause": "Descalificado: {{reason}}",
+    "reopen": "Reabrir"
   }
 }

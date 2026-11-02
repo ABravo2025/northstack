@@ -300,6 +300,15 @@ enum PipelineType {
 
 // Clientes (spec-clientes-gastos-formularios.md, C1): what a Pipeline is for, so dashboards know
 // where to count each deal. Independent of the name and fully editable.
+// Clientes C2: where a lead is in the inbox. Separate from Contact.leadStatus (legacy CSV / metrics).
+enum LeadInboxStatus {
+  new // no touch yet
+  working // at least one touch of the cadence
+  qualified // 3 of the 4 qualification questions answered yes
+  converted // became Company + Contact + Opportunity
+  disqualified
+}
+
 enum PipelinePurpose {
   new_business
   expansion
@@ -444,6 +453,8 @@ model Tenant {
   savedViews                SavedView[]
   forms                     Form[]
   formResponses             FormResponse[]
+  leads                     Lead[]
+  leadTouches               LeadTouch[]
   formInvites               FormInvite[]
   expenseAccounts           ExpenseAccount[]
   expenseCategories         ExpenseCategory[]
@@ -746,6 +757,7 @@ model User {
   timesheetsDecided           Timesheet[]                 @relation("TimesheetDecidedBy")
   shiftCalendarSyncs          ShiftCalendarSync[]
   referralMember              ReferralMember?
+  ownedLeads                  Lead[]                      @relation("LeadOwner")
 
   @@index([emailDomain])
 }
@@ -1238,6 +1250,8 @@ model FieldCatalogDefinition {
   companiesBySize           Company[]
   expenseMovementsByDept    ExpenseMovement[] @relation("ExpenseMovementDepartment")
   fixedExpensesByDept       FixedExpense[]    @relation("FixedExpenseDepartment")
+
+  leadsBySource Lead[] @relation("LeadSource")
 
   @@index([tenantId, kind])
 }
@@ -3598,4 +3612,67 @@ model ExpenseCategoryRule {
   createdAt   DateTime        @default(now())
 
   @@index([tenantId])
+}
+
+// Clientes C2 (spec-clientes-gastos-formularios.md): the Leads inbox, separate from the pipelines.
+// A lead is worked through a 5-touch cadence and qualified with 4 questions (need, budget, decision
+// maker, timing); with 3 of 4, "Convert" creates the Company, Contact and Opportunity together.
+model Lead {
+  id                     String                  @id @default(uuid())
+  tenantId               String
+  tenant                 Tenant                  @relation(fields: [tenantId], references: [id])
+  firstName              String
+  lastName               String                  @default("")
+  email                  String
+  phone                  String?
+  companyName            String?
+  title                  String?
+  dealName               String?
+  estimatedAmountCents   Int?
+  notes                  String?
+  leadSourceId           String?
+  leadSource             FieldCatalogDefinition? @relation("LeadSource", fields: [leadSourceId], references: [id])
+  ownerId                String?
+  owner                  User?                   @relation("LeadOwner", fields: [ownerId], references: [id])
+  status                 LeadInboxStatus         @default(new)
+  // { need, budget, authority, timing }: true / false / null (not asked yet).
+  qualification          Json?
+  // 0-100: qualification (20 each) + an answer to a touch (10) + came in on its own (10).
+  score                  Int                     @default(0)
+  touchCount             Int                     @default(0)
+  nextTouchAt            DateTime?
+  // Came in through a form (Formularios y encuestas) and its campaign, if any.
+  formId                 String?
+  utmSource              String?
+  utmMedium              String?
+  utmCampaign            String?
+  disqualifyReason       String?
+  convertedAt            DateTime?
+  convertedCompanyId     String?
+  convertedContactId     String?
+  convertedOpportunityId String?
+  createdById            String?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @default(now()) @updatedAt
+  touches                LeadTouch[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, email])
+}
+
+// One touch of a lead's cadence: a call, email, message or meeting, and how it went.
+model LeadTouch {
+  id       String   @id @default(uuid())
+  tenantId String
+  tenant   Tenant   @relation(fields: [tenantId], references: [id])
+  leadId   String
+  lead     Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  step     Int // 1-5 within the cadence
+  channel  String // call | email | whatsapp | linkedin | meeting | other
+  outcome  String // no_answer | replied | meeting_booked | not_interested
+  note     String?
+  byUserId String?
+  at       DateTime @default(now())
+
+  @@index([tenantId, leadId])
 }

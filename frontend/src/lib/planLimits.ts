@@ -22,7 +22,8 @@ export function planFeaturesFor(tenant: Tenant | null, payload: PermissionsPaylo
       clockIn: payload.planFeatures.clockIn ?? growth,
       expenses: payload.planFeatures.expenses ?? growth,
       forms: payload.planFeatures.forms ?? growth,
+      clients: payload.planFeatures.clients ?? growth,
     };
   }
-  return { payroll: growth, payments: growth, apiAccess: growth, projectTemplates: growth, shiftSkills: growth, billableHours: growth, clockIn: growth, expenses: growth, forms: growth };
+  return { payroll: growth, payments: growth, apiAccess: growth, projectTemplates: growth, shiftSkills: growth, billableHours: growth, clockIn: growth, expenses: growth, forms: growth, clients: growth };
 }

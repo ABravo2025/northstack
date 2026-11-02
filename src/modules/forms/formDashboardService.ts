@@ -70,7 +70,7 @@ export async function getFormsDashboard(tenantId: string, filter: { from: string
   const departmentsHidden = hiddenTotal > 0 && hiddenTotal < minGroup;
 
   // Leads that arrived through forms, and where from.
-  const leadRows = responses.filter((r) => r.form.action === 'create_lead' && r.linkedEntityType === 'contact');
+  const leadRows = responses.filter((r) => r.form.action === 'create_lead' && (r.linkedEntityType === 'contact' || r.linkedEntityType === 'lead'));
   const leadsBySource = new Map<string, number>();
   for (const r of leadRows) {
     const key = r.utmSource || (r.source === 'embed' ? 'website' : 'direct');

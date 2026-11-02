@@ -538,3 +538,13 @@ export function ArrowDownIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+// Clientes C2: the Leads inbox.
+export function InboxIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M4 13h4l2 3h4l2-3h4" />
+      <path d="M5.5 6h13L21 13v5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-5z" />
+    </svg>
+  );
+}

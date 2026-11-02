@@ -31,6 +31,7 @@ import {
 } from '../modules/expenses/expenseService.js';
 import { commitImport, planImport, sanitizeImportProfile } from '../modules/expenses/expenseImportService.js';
 import { getExpensesDashboard } from '../modules/expenses/expenseDashboardService.js';
+import { projectCashflow } from '../modules/expenses/cashflowService.js';
 
 // Gastos / Expenses (spec-clientes-gastos-formularios.md, A2). Owner-only by default
 // (manage_expenses), Growth-only, and 503 until EXPENSES_DATA_ENCRYPTION_KEY is set.
@@ -348,3 +349,21 @@ expensesRouter.get('/api/expenses/dashboard', async (req, res) => {
   ]);
   return res.json({ ...dashboard, currency });
 });
+
+// --- Cruces D2: 90-day cash projection ---
+// ?opening=<amount> is the cash on hand today (optional, never stored): with it, each week shows
+// the running balance.
+expensesRouter.get('/api/expenses/cashflow', async (req, res) => {
+  const user = await guard(req, res);
+  if (!user) return;
+  const opening = typeof req.query.opening === 'string' && req.query.opening.trim() ? parseSignedAmount(req.query.opening) : null;
+  return res.json(await projectCashflow(user.tenantId!, todayUtc(), opening));
+});
+
+// "-1.234,50" / "1,234.50" → signed cents; null when it isn't a number.
+function parseSignedAmount(input: string): number | null {
+  const negative = input.trim().startsWith('-');
+  const cents = parseAmountToCents(input.replace('-', ''));
+  if (cents === null) return /^-?0+([.,]0+)?$/.test(input.trim()) ? 0 : null;
+  return negative ? -cents : cents;
+}

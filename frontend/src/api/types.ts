@@ -2044,6 +2044,25 @@ export interface ExpensesDashboard {
   byMonth: { month: string; fixedCents: number; variableCents: number }[];
 }
 
+export interface CashflowProjection {
+  currency: string;
+  from: string;
+  to: string;
+  weeks: {
+    start: string;
+    end: string;
+    inCents: number;
+    outCents: number;
+    netCents: number;
+    balanceCents: number | null;
+    items: { date: string; label: string; cents: number; kind: 'fixed' | 'installment' | 'revenue' }[];
+  }[];
+  totalInCents: number;
+  totalOutCents: number;
+  negativeWeeks: string[];
+  otherCurrencyLines: number;
+}
+
 export interface ExpenseCategory {
   id: string;
   name: string;

@@ -6,7 +6,8 @@
     "movements": "Transactions",
     "fixed": "Fixed expenses",
     "accounts": "Accounts & categories",
-    "import": "Import CSV"
+    "import": "Import CSV",
+    "cashflow": "Cash projection"
   },
   "encrypted": "Fully encrypted (AES-256-GCM)",
   "titles": {
@@ -14,14 +15,16 @@
     "movements": "Transactions",
     "fixed": "Fixed expenses",
     "accounts": "Accounts & categories",
-    "import": "Import CSV"
+    "import": "Import CSV",
+    "cashflow": "Cash projection"
   },
   "subtitles": {
     "summary": "What the company spent this month, what's still to pay and where the money goes.",
     "movements": "Everything that came in and went out of your accounts and cards. Internal transfers don't count as spending.",
     "fixed": "What gets paid every month. Auto debit and card charges book themselves on their charge day.",
     "accounts": "Your cards, bank accounts and petty cash, and the categories you sort spending into.",
-    "import": "Upload a card statement or your bank's transactions. You review everything before it's saved."
+    "import": "Upload a card statement or your bank's transactions. You review everything before it's saved.",
+    "cashflow": "The next 13 weeks: what goes out (fixed expenses and installments) and what comes in (your clients' recurring revenue)."
   },
   "month": {
     "previous": "Previous month",
@@ -374,5 +377,30 @@
     "topMerchantsHint": "Purchases grouped by merchant (the same words the category rules use).",
     "merchant": "Merchant",
     "purchases": "Purchases"
+  },
+  "cashflow": {
+    "opening": "Today's balance (optional)",
+    "openingPlaceholder": "E.g.: 25,000",
+    "openingHint": "With today's balance you see week by week where you end up. It's only kept in this browser.",
+    "in": "In",
+    "out": "Out",
+    "net": "Net",
+    "balance": "Balance",
+    "week": "Week",
+    "next13": "next 13 weeks",
+    "endBalance": "Ending balance",
+    "negativeWeeks": "Weeks in the red",
+    "negativeBalanceHint": "balance below zero",
+    "negativeNetHint": "more goes out than comes in",
+    "alert": "Heads up: the week of {{date}} goes into the red.",
+    "nothing": "Nothing that week.",
+    "kind": {
+      "fixed": "fixed expense",
+      "installment": "installment",
+      "revenue": "client payment"
+    },
+    "howItWorks": "Active fixed expenses on their charge day, the remaining installments of purchases in installments, and your clients' recurring product revenue on its day (with the Clients module). Company currency only.",
+    "otherCurrency_one": "{{count}} product in another currency was left out.",
+    "otherCurrency_other": "{{count}} products in another currency were left out."
   }
 }

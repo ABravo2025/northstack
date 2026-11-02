@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeftIcon, CreditCardIcon, DashboardIcon, ListIcon, ReceiptIcon, UploadIcon, XIcon } from '../common/Icons';
+import { ChevronLeftIcon, CreditCardIcon, DashboardIcon, ListIcon, ReceiptIcon, TrendingIcon, UploadIcon, XIcon } from '../common/Icons';
 
 interface ExpensesSidebarProps {
   mobileOpen: boolean;
@@ -46,6 +46,10 @@ export default function ExpensesSidebar({ mobileOpen, onMobileClose }: ExpensesS
           <NavLink to="/expenses/accounts" className={linkClass} onClick={onMobileClose}>
             <CreditCardIcon className="h-4 w-4 shrink-0" />
             {t('nav.accounts')}
+          </NavLink>
+          <NavLink to="/expenses/cashflow" className={linkClass} onClick={onMobileClose}>
+            <TrendingIcon className="h-4 w-4 shrink-0" />
+            {t('nav.cashflow')}
           </NavLink>
           <NavLink to="/expenses/import" className={linkClass} onClick={onMobileClose}>
             <UploadIcon className="h-4 w-4 shrink-0" />

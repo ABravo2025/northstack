@@ -6,7 +6,8 @@
     "movements": "Movimientos",
     "fixed": "Gastos fijos",
     "accounts": "Cuentas y categorías",
-    "import": "Importar CSV"
+    "import": "Importar CSV",
+    "cashflow": "Proyección de caja"
   },
   "encrypted": "Todo cifrado (AES-256-GCM)",
   "titles": {
@@ -14,14 +15,16 @@
     "movements": "Movimientos",
     "fixed": "Gastos fijos",
     "accounts": "Cuentas y categorías",
-    "import": "Importar CSV"
+    "import": "Importar CSV",
+    "cashflow": "Proyección de caja"
   },
   "subtitles": {
     "summary": "Cuánto gastó la empresa en el mes, qué falta pagar y en qué se va la plata.",
     "movements": "Todo lo que entró y salió de tus cuentas y tarjetas. Las transferencias internas no suman como gasto.",
     "fixed": "Lo que se paga todos los meses. Débito automático y tarjeta se registran solos en su fecha de cobro.",
     "accounts": "Tus tarjetas, cuentas bancarias y caja chica, y las categorías con las que ordenás los gastos.",
-    "import": "Subí el resumen de una tarjeta o los movimientos del banco. Revisás todo antes de guardar."
+    "import": "Subí el resumen de una tarjeta o los movimientos del banco. Revisás todo antes de guardar.",
+    "cashflow": "Las próximas 13 semanas: lo que sale (gastos fijos y cuotas) y lo que entra (ingreso recurrente de tus clientes)."
   },
   "month": {
     "previous": "Mes anterior",
@@ -374,5 +377,30 @@
     "topMerchantsHint": "Compras agrupadas por comercio (las mismas palabras que usan las reglas de categoría).",
     "merchant": "Comercio",
     "purchases": "Compras"
+  },
+  "cashflow": {
+    "opening": "Saldo de hoy (opcional)",
+    "openingPlaceholder": "Ej.: 2.500.000",
+    "openingHint": "Con el saldo de hoy se ve semana a semana con cuánto quedás. Se guarda solo en este navegador.",
+    "in": "Entra",
+    "out": "Sale",
+    "net": "Neto",
+    "balance": "Saldo",
+    "week": "Semana",
+    "next13": "próximas 13 semanas",
+    "endBalance": "Saldo al final",
+    "negativeWeeks": "Semanas en rojo",
+    "negativeBalanceHint": "saldo por debajo de cero",
+    "negativeNetHint": "sale más de lo que entra",
+    "alert": "Atención: la semana del {{date}} queda en rojo.",
+    "nothing": "Nada esa semana.",
+    "kind": {
+      "fixed": "gasto fijo",
+      "installment": "cuota",
+      "revenue": "cobro de cliente"
+    },
+    "howItWorks": "Gastos fijos activos en su día de cobro, las cuotas que faltan de compras en cuotas, y el ingreso recurrente de los productos de tus clientes en su día (con el módulo de Clientes). Solo en la moneda de la empresa.",
+    "otherCurrency_one": "{{count}} producto en otra moneda quedó afuera.",
+    "otherCurrency_other": "{{count}} productos en otra moneda quedaron afuera."
   }
 }

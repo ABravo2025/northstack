@@ -11,6 +11,7 @@ import type {
   ExpenseKind,
   ExpenseMovement,
   ExpensesDashboard,
+  CashflowProjection,
   ExpensesMeta,
   ExpensesSummary,
   FixedExpense,
@@ -120,4 +121,8 @@ export const expensesApi = {
     token: string,
     input: { accountId: string; rows: ExpenseImportRowInput[]; profile: ExpenseImportProfile; saveProfile: boolean },
   ) => call<ExpenseImportResult>(token, '/api/expenses/import', { method: 'POST', body: input }),
+
+  // Cruces D2: the next 13 weeks of cash. The opening balance is sent, never stored.
+  getCashflow: (token: string, opening?: string) =>
+    call<CashflowProjection>(token, `/api/expenses/cashflow${opening ? `?opening=${encodeURIComponent(opening)}` : ''}`),
 };

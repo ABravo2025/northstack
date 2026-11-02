@@ -505,6 +505,7 @@ model Tenant {
   expenseMovements          ExpenseMovement[]
   fixedExpenses             FixedExpense[]
   expenseCategoryRules      ExpenseCategoryRule[]
+  expenseReceipts           ExpenseReceipt[]
   fieldCatalogDefinitions   FieldCatalogDefinition[]
   companies                 Company[]
   contacts                  Contact[]
@@ -3595,42 +3596,48 @@ model ExpenseCategory {
 }
 
 model ExpenseMovement {
-  id             String                  @id @default(uuid())
-  tenantId       String
-  tenant         Tenant                  @relation(fields: [tenantId], references: [id])
-  accountId      String
-  account        ExpenseAccount          @relation(fields: [accountId], references: [id])
-  date           DateTime                @db.Date
-  descriptionEnc String
-  amountEnc      String // integer cents as a string, encrypted
+  id                String                  @id @default(uuid())
+  tenantId          String
+  tenant            Tenant                  @relation(fields: [tenantId], references: [id])
+  accountId         String
+  account           ExpenseAccount          @relation(fields: [accountId], references: [id])
+  date              DateTime                @db.Date
+  descriptionEnc    String
+  amountEnc         String // integer cents as a string, encrypted
   // Keyed HMAC of (accountId, amount in cents): lets the CSV import find a duplicate or the
   // estimated charge a real one confirms by equality, without decrypting every row or storing the
   // amount in clear.
-  amountHash     String
-  direction      ExpenseDirection
-  kind           ExpenseKind             @default(expense)
-  categoryId     String?
-  category       ExpenseCategory?        @relation(fields: [categoryId], references: [id])
-  departmentId   String?
-  department     FieldCatalogDefinition? @relation("ExpenseMovementDepartment", fields: [departmentId], references: [id])
+  amountHash        String
+  direction         ExpenseDirection
+  kind              ExpenseKind             @default(expense)
+  categoryId        String?
+  category          ExpenseCategory?        @relation(fields: [categoryId], references: [id])
+  departmentId      String?
+  department        FieldCatalogDefinition? @relation("ExpenseMovementDepartment", fields: [departmentId], references: [id])
   // Cruces D1: the client this expense is for, to count it in that client's profitability.
   // In clear like the department: an id, not a spending detail.
-  companyId      String?
-  company        Company?                @relation("ExpenseMovementCompany", fields: [companyId], references: [id])
-  source         ExpenseMovementSource   @default(manual)
+  companyId         String?
+  company           Company?                @relation("ExpenseMovementCompany", fields: [companyId], references: [id])
+  // Cruces D4: a charge in another currency (a card statement's "U$S" column), converted at the
+  // statement's exchange rate. amountEnc stays in the company currency; these keep the original.
+  originalCurrency  String?
+  originalAmountEnc String?
+  exchangeRate      String? // e.g. "1045.50" — the rate is not a spending detail
+  receipt           ExpenseReceipt?
+  source            ExpenseMovementSource   @default(manual)
   // A fixed expense's charge booked automatically on its day, until a CSV import confirms it with
   // the real amount and date (then false). Only fixed_auto movements are ever estimated.
-  isEstimated    Boolean                 @default(false)
-  fixedExpenseId String?
-  fixedExpense   FixedExpense?           @relation(fields: [fixedExpenseId], references: [id])
+  isEstimated       Boolean                 @default(false)
+  fixedExpenseId    String?
+  fixedExpense      FixedExpense?           @relation(fields: [fixedExpenseId], references: [id])
   // The month (YYYY-MM) of the fixed expense this movement pays. Unique with fixedExpenseId, so the
   // daily job can never book the same charge twice, however many times it runs.
-  fixedPeriod    String?
-  installment    String? // "03/12" read from the statement — not a spending detail on its own
-  noteEnc        String?
-  importBatchId  String?
-  createdById    String?
-  createdAt      DateTime                @default(now())
+  fixedPeriod       String?
+  installment       String? // "03/12" read from the statement — not a spending detail on its own
+  noteEnc           String?
+  importBatchId     String?
+  createdById       String?
+  createdAt         DateTime                @default(now())
 
   @@unique([fixedExpenseId, fixedPeriod])
   @@index([tenantId, date])
@@ -3878,4 +3885,21 @@ model Quote {
 
   @@unique([tenantId, number])
   @@index([tenantId, opportunityId])
+}
+
+// Cruces D4: the receipt of an expense (photo or PDF), encrypted like everything in Gastos — the
+// file name too. One per movement, up to 1 MB.
+model ExpenseReceipt {
+  id         String          @id @default(uuid())
+  tenantId   String
+  tenant     Tenant          @relation(fields: [tenantId], references: [id])
+  movementId String          @unique
+  movement   ExpenseMovement @relation(fields: [movementId], references: [id], onDelete: Cascade)
+  nameEnc    String
+  mimeType   String
+  sizeBytes  Int
+  dataEnc    String // the file's bytes (base64), encrypted
+  createdAt  DateTime        @default(now())
+
+  @@index([tenantId])
 }

@@ -9,6 +9,7 @@ import TableBody from '../../components/common/TableBody';
 import TableSkeleton from '../../components/common/TableSkeleton';
 import { TrashIcon, UploadIcon } from '../../components/common/Icons';
 import { useToast } from '../../components/common/ToastProvider';
+import ReceiptButton from './ReceiptButton';
 import { ExpensesPage, MonthStepper, categoryLabel, currentPeriod, monthName, shortDate, useMoney } from './expensesShared';
 
 // Gastos → Movimientos (A5). Changing an expense's category teaches a rule (backend), so the
@@ -248,8 +249,14 @@ function MovementsBody({ token, meta, reloadMeta }: { token: string; meta: Expen
                     <td className={`num text-right whitespace-nowrap ${m.direction === 'credit' ? 'text-emerald-700 dark:text-emerald-300' : ''}`}>
                       {m.direction === 'credit' ? '+ ' : ''}
                       {money(m.amountCents)}
+                      {m.original && (
+                        <span className="ex-muted block text-xs">
+                          {m.original.currency} {(m.original.amountCents / 100).toFixed(2)} × {m.original.rate}
+                        </span>
+                      )}
                     </td>
-                    <td className="w-10 text-right">
+                    <td className="text-right whitespace-nowrap">
+                      <ReceiptButton token={token} movement={m} onChanged={(next) => setRows((prev) => prev?.map((r) => (r.id === next.id ? next : r)) ?? prev)} />
                       {m.source === 'fixed_auto' ? (
                         <span className="ex-muted text-xs" title={t('movements.autoHint')}>
                           ·
@@ -330,6 +337,9 @@ function MovementModal({
     categoryId: '',
     departmentId: '',
     note: '',
+    // Cruces D4: '' = the company currency; 'USD' converts at the rate.
+    currency: '',
+    rate: '',
   });
   const [saving, setSaving] = useState(false);
 
@@ -337,10 +347,12 @@ function MovementModal({
     e.preventDefault();
     setSaving(true);
     try {
+      const { currency, rate, ...rest } = form;
       await api.createExpenseMovement(token, {
-        ...form,
+        ...rest,
         categoryId: form.direction === 'debit' ? form.categoryId || null : null,
         departmentId: form.departmentId || null,
+        ...(currency ? { currency, rate } : {}),
       });
       toast.success(t('movementModal.created'));
       onCreated();
@@ -397,6 +409,24 @@ function MovementModal({
               onChange={(e) => setForm({ ...form, amount: e.target.value })}
               placeholder={t('movementModal.amountPlaceholder')}
             />
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+              <select value={form.currency} aria-label={t('movementModal.currency')} onChange={(e) => setForm({ ...form, currency: e.target.value })}>
+                <option value="">{meta.currency}</option>
+                {meta.currency !== 'USD' && <option value="USD">USD</option>}
+              </select>
+              {form.currency && (
+                <input
+                  required
+                  inputMode="decimal"
+                  className="w-32"
+                  value={form.rate}
+                  placeholder={t('movementModal.rate')}
+                  aria-label={t('movementModal.rate')}
+                  onChange={(e) => setForm({ ...form, rate: e.target.value })}
+                />
+              )}
+            </div>
+            {form.currency && <p className="ex-hint">{t('movementModal.rateHint', { currency: meta.currency })}</p>}
           </div>
           <div className="form-group">
             <label htmlFor="exm-date">{t('movementModal.date')}</label>

@@ -33,6 +33,7 @@ import { commitImport, planImport, sanitizeImportProfile } from '../modules/expe
 import { getExpensesDashboard } from '../modules/expenses/expenseDashboardService.js';
 import { projectCashflow } from '../modules/expenses/cashflowService.js';
 import { getInsights, setCategoryBudget } from '../modules/expenses/insightsService.js';
+import { deleteReceipt, getReceipt, saveReceipt } from '../modules/expenses/receiptService.js';
 
 // Gastos / Expenses (spec-clientes-gastos-formularios.md, A2). Owner-only by default
 // (manage_expenses), Growth-only, and 503 until EXPENSES_DATA_ENCRYPTION_KEY is set.
@@ -49,7 +50,7 @@ async function guard(req: express.Request, res: express.Response) {
 }
 
 function fail(res: express.Response, error: unknown) {
-  if (error instanceof ExpenseError) return res.status(error.status).json({ error: error.message });
+  if (error instanceof ExpenseError) return res.status(error.status).json({ error: error.message, ...(error.code ? { code: error.code } : {}) });
   throw error;
 }
 
@@ -157,7 +158,13 @@ expensesRouter.post('/api/expenses/movements', async (req, res) => {
   const user = await guard(req, res);
   if (!user) return;
   const description = text(req.body.description);
-  const amountCents = parseAmountToCents(req.body.amount);
+  // Cruces D4: an amount in another currency (e.g. USD) is converted at the given rate; the
+  // original amount and the rate are kept with the movement.
+  const foreign = typeof req.body.currency === 'string' && /^[A-Z]{3}$/.test(req.body.currency) ? req.body.currency : null;
+  const rate = foreign ? parseRate(req.body.rate) : null;
+  if (foreign && rate === null) return res.status(400).json({ error: 'Enter the exchange rate' });
+  const enteredCents = parseAmountToCents(req.body.amount);
+  const amountCents = enteredCents === null ? null : foreign && rate !== null ? Math.round(enteredCents * rate) : enteredCents;
   const direction: ExpenseDirection = DIRECTIONS.includes(req.body.direction) ? req.body.direction : 'debit';
   if (!description) return res.status(400).json({ error: 'Description is required' });
   if (amountCents === null) return res.status(400).json({ error: 'Enter an amount greater than zero' });
@@ -174,6 +181,7 @@ expensesRouter.post('/api/expenses/movements', async (req, res) => {
       departmentId: optionalId(req.body.departmentId),
       companyId: optionalId(req.body.companyId),
       note: text(req.body.note, 500) || null,
+      original: foreign && rate !== null && enteredCents !== null ? { currency: foreign, amountCents: enteredCents, rate: String(rate) } : null,
     });
     return res.status(201).json(movement);
   } catch (error) {
@@ -385,6 +393,55 @@ expensesRouter.put('/api/expenses/categories/:id/budget', async (req, res) => {
   if (raw !== null && raw !== '' && raw !== undefined && cents === null) return res.status(400).json({ error: 'Enter an amount greater than zero' });
   try {
     await setCategoryBudget(user.tenantId!, req.params.id, cents);
+    return res.status(204).end();
+  } catch (error) {
+    return fail(res, error);
+  }
+});
+
+// "1.045,50" / "1045.5" → 1045.5; null unless it's a positive number.
+function parseRate(input: unknown): number | null {
+  if (typeof input === 'number') return Number.isFinite(input) && input > 0 ? input : null;
+  if (typeof input !== 'string') return null;
+  const cents = parseAmountToCents(input);
+  return cents === null ? null : cents / 100;
+}
+
+// --- Cruces D4: receipts (encrypted, one per movement, up to 1 MB) ---
+expensesRouter.put('/api/expenses/movements/:id/receipt', async (req, res) => {
+  const user = await guard(req, res);
+  if (!user) return;
+  try {
+    const receipt = await saveReceipt(user.tenantId!, req.params.id, {
+      fileName: text(req.body?.fileName, 200),
+      mimeType: text(req.body?.mimeType, 100),
+      dataBase64: typeof req.body?.data === 'string' ? req.body.data : '',
+    });
+    return res.json(receipt);
+  } catch (error) {
+    return fail(res, error);
+  }
+});
+
+expensesRouter.get('/api/expenses/movements/:id/receipt', async (req, res) => {
+  const user = await guard(req, res);
+  if (!user) return;
+  try {
+    const file = await getReceipt(user.tenantId!, req.params.id);
+    res.setHeader('Content-Type', file.mimeType);
+    res.setHeader('Content-Disposition', `inline; filename="${file.fileName.replace(/[^\w.\- ]/g, '_')}"`);
+    res.setHeader('Cache-Control', 'no-store');
+    return res.send(file.bytes);
+  } catch (error) {
+    return fail(res, error);
+  }
+});
+
+expensesRouter.delete('/api/expenses/movements/:id/receipt', async (req, res) => {
+  const user = await guard(req, res);
+  if (!user) return;
+  try {
+    await deleteReceipt(user.tenantId!, req.params.id);
     return res.status(204).end();
   } catch (error) {
     return fail(res, error);

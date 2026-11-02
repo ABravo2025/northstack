@@ -37,6 +37,10 @@ export interface ImportRowInput {
   installment?: string | null;
   // The person chose "import anyway" on a row the preview flagged as a duplicate.
   forceImport?: boolean;
+  // Cruces D4: converted from another currency at the statement's rate (amountCents is converted).
+  originalCurrency?: string | null;
+  originalAmountCents?: number | null;
+  exchangeRate?: string | null;
 }
 
 export type ImportRowStatus = 'expense' | 'credit' | 'internal' | 'duplicate' | 'invalid';
@@ -49,6 +53,7 @@ export interface ImportRowPlan {
   amountCents: number;
   direction: ExpenseDirection;
   installment: string | null;
+  original?: { currency: string; amountCents: number; rate: string } | null;
   categoryId: string | null;
   duplicateOf: { id: string; date: string; description: string } | null;
   // The real charge that replaces an automatic fixed expense's estimated movement.
@@ -71,6 +76,11 @@ export function sanitizeImportRow(raw: unknown): ImportRowInput | null {
   if (!isIsoDate(r.date) || !description) return null;
   if (typeof amount !== 'number' || !Number.isSafeInteger(amount) || amount <= 0) return null;
   if (r.direction !== 'debit' && r.direction !== 'credit') return null;
+  const original =
+    typeof r.originalCurrency === 'string' && /^[A-Z]{3}$/.test(r.originalCurrency) && Number.isSafeInteger(r.originalAmountCents) && (r.originalAmountCents as number) > 0 &&
+    typeof r.exchangeRate === 'string' && /^\d+(\.\d+)?$/.test(r.exchangeRate)
+      ? { originalCurrency: r.originalCurrency, originalAmountCents: r.originalAmountCents as number, exchangeRate: r.exchangeRate }
+      : {};
   return {
     date: r.date,
     description,
@@ -78,6 +88,7 @@ export function sanitizeImportRow(raw: unknown): ImportRowInput | null {
     direction: r.direction,
     installment: normalizeInstallment(r.installment),
     forceImport: r.forceImport === true,
+    ...original,
   };
 }
 
@@ -136,6 +147,7 @@ export async function planImport(tenantId: string, accountId: string, rawRows: u
       amountCents: row.amountCents,
       direction: row.direction,
       installment: row.installment ?? null,
+      original: row.originalCurrency ? { currency: row.originalCurrency, amountCents: row.originalAmountCents!, rate: row.exchangeRate! } : null,
       categoryId: null,
       duplicateOf: null,
       confirms: null,
@@ -262,6 +274,7 @@ export async function commitImport(
           fixedExpenseId: r.reconciles?.fixedExpenseId ?? null,
           fixedPeriod: r.reconciles?.period ?? null,
           installment: r.installment,
+          ...(r.original ? { originalCurrency: r.original.currency, originalAmountEnc: encryptAmountCents(r.original.amountCents), exchangeRate: r.original.rate } : {}),
           importBatchId: batchId,
           createdById: userId,
         })),

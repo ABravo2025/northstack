@@ -167,7 +167,10 @@
     "save": "Add",
     "saving": "Saving…",
     "cancel": "Cancel",
-    "created": "Expense added."
+    "created": "Expense added.",
+    "currency": "Currency",
+    "rate": "Exchange rate",
+    "rateHint": "It's stored in {{currency}} at the rate you enter, along with the original amount."
   },
   "fixed": {
     "columns": {
@@ -284,7 +287,8 @@
       "debit": "Debit",
       "credit": "Credit",
       "type": "Type (D / C)",
-      "installment": "Installments"
+      "installment": "Installments",
+      "usd": "Amount in dollars"
     },
     "optional": "optional",
     "noColumn": "— Not in the file —",
@@ -359,7 +363,9 @@
     "doneConfirmed_one": "{{count}} automatic charge confirmed",
     "doneConfirmed_other": "{{count}} automatic charges confirmed",
     "doneReconciled_one": "{{count}} fixed expense matched",
-    "doneReconciled_other": "{{count}} fixed expenses matched"
+    "doneReconciled_other": "{{count}} fixed expenses matched",
+    "usdRate": "Statement exchange rate",
+    "usdRateHint": "Lines with only a dollar amount are converted at this rate; the original is kept."
   },
   "dashboard": {
     "loading": "Loading…",
@@ -419,5 +425,12 @@
     "budgetsBody": "Optional. The Summary warns at 80% and turns red past 100%. Stored encrypted.",
     "noBudget": "No budget",
     "budgetSaved": "Budget saved"
+  },
+  "receipt": {
+    "attach": "Attach receipt",
+    "open": "View receipt",
+    "remove": "Remove receipt",
+    "saved": "Receipt saved (encrypted)",
+    "tooLarge": "The file is larger than 1 MB."
   }
 }

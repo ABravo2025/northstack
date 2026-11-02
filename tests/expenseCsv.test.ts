@@ -62,7 +62,7 @@ describe('sign convention', () => {
     const d = detectConvention(rows, map, 'ar', { isCard: true });
     expect(d).toMatchObject({ convention: 'neg_credit', reason: 'negCredit' });
     const purchase = normalizeRow(rows[2], map, { numberFormat: 'ar', dateFormat: 'dmy', convention: d.convention });
-    expect(purchase).toEqual({ date: '2026-10-09', description: 'MERCADOLIBRE*NOTEBOOK', amountCents: 14583333, direction: 'debit', installment: '03/12' });
+    expect(purchase).toEqual({ date: '2026-10-09', description: 'MERCADOLIBRE*NOTEBOOK', amountCents: 14583333, direction: 'debit', installment: '03/12', original: null });
     expect(normalizeRow(rows[1], map, { numberFormat: 'ar', dateFormat: 'dmy', convention: d.convention }).direction).toBe('credit');
   });
 
@@ -85,5 +85,14 @@ describe('sign convention', () => {
     const opts = { numberFormat: 'us' as const, dateFormat: 'ymd' as const, convention: 'cols' as const };
     expect(normalizeRow(rows[0], map, opts)).toMatchObject({ amountCents: 9130, direction: 'debit' });
     expect(normalizeRow(rows[1], map, opts)).toMatchObject({ amountCents: 1200, direction: 'credit' });
+  });
+
+  it('converts a dollar-only line at the statement rate and keeps the original', () => {
+    const [headers, ...rows] = parseCsv(['Fecha;Descripción;Importe ARS;Importe U$S', '05/10/2026;AWS EMEA;;91,30', '06/10/2026;YPF;38.200,00;'].join(String.fromCharCode(10)));
+    const map = guessColumns(headers);
+    expect(map).toMatchObject({ amount: 2, usd: 3 });
+    const opts = { numberFormat: 'ar' as const, dateFormat: 'dmy' as const, convention: 'neg_credit' as const, usdRate: 1047.19 };
+    expect(normalizeRow(rows[0], map, opts)).toMatchObject({ amountCents: 9560845, direction: 'debit', original: { currency: 'USD', amountCents: 9130, rate: '1047.19' } });
+    expect(normalizeRow(rows[1], map, opts)).toMatchObject({ amountCents: 3820000, original: null });
   });
 });

@@ -1996,6 +1996,9 @@ export interface ExpenseImportRowInput {
   direction: ExpenseDirection;
   installment?: string | null;
   forceImport?: boolean;
+  originalCurrency?: string;
+  originalAmountCents?: number;
+  exchangeRate?: string;
 }
 
 export interface ExpenseImportRowPlan {
@@ -2106,6 +2109,9 @@ export interface ExpenseMovement {
   fixedExpenseId: string | null;
   fixedPeriod: string | null;
   installment: string | null;
+  // Cruces D4: in another currency (converted), and the receipt.
+  original?: { currency: string; amountCents: number; rate: string | null } | null;
+  receipt?: { id: string; mimeType: string; sizeBytes: number } | null;
   note: string | null;
 }
 

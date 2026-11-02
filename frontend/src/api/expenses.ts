@@ -85,6 +85,8 @@ export const expensesApi = {
       departmentId: string | null;
       companyId?: string | null;
       note?: string;
+      currency?: string;
+      rate?: string;
     },
   ) => call<ExpenseMovement>(token, '/api/expenses/movements', { method: 'POST', body: input }),
 
@@ -131,4 +133,14 @@ export const expensesApi = {
   getExpenseInsights: (token: string, period: string) => call<ExpenseInsights>(token, `/api/expenses/insights?period=${period}`),
   setExpenseCategoryBudget: (token: string, categoryId: string, budget: string | null) =>
     call<void>(token, `/api/expenses/categories/${categoryId}/budget`, { method: 'PUT', body: { budget } }),
+
+  // Cruces D4: receipts (encrypted on the server).
+  uploadExpenseReceipt: (token: string, movementId: string, input: { fileName: string; mimeType: string; data: string }) =>
+    call<{ id: string; mimeType: string; sizeBytes: number }>(token, `/api/expenses/movements/${movementId}/receipt`, { method: 'PUT', body: input }),
+  downloadExpenseReceipt: async (token: string, movementId: string): Promise<Blob> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/expenses/movements/${movementId}/receipt`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) await throwApiError(res);
+    return res.blob();
+  },
+  deleteExpenseReceipt: (token: string, movementId: string) => call<void>(token, `/api/expenses/movements/${movementId}/receipt`, { method: 'DELETE' }),
 };

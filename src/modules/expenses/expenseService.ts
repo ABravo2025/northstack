@@ -26,6 +26,7 @@ export class ExpenseError extends Error {
   constructor(
     message: string,
     public status = 400,
+    public code?: string,
   ) {
     super(message);
   }
@@ -214,6 +215,10 @@ const movementSelect = {
   fixedExpenseId: true,
   fixedPeriod: true,
   installment: true,
+  originalCurrency: true,
+  originalAmountEnc: true,
+  exchangeRate: true,
+  receipt: { select: { id: true, mimeType: true, sizeBytes: true } },
   noteEnc: true,
 } satisfies Prisma.ExpenseMovementSelect;
 
@@ -236,6 +241,12 @@ function presentMovement(m: MovementRow) {
     fixedExpenseId: m.fixedExpenseId,
     fixedPeriod: m.fixedPeriod,
     installment: m.installment,
+    // Cruces D4: the charge as it came, in another currency, and the rate it was converted at.
+    original:
+      m.originalCurrency && m.originalAmountEnc
+        ? { currency: m.originalCurrency, amountCents: decryptAmountCents(m.originalAmountEnc), rate: m.exchangeRate }
+        : null,
+    receipt: m.receipt,
     note: m.noteEnc ? decryptExpenseData(m.noteEnc) : null,
   };
 }
@@ -275,6 +286,7 @@ export async function createManualMovement(
     departmentId?: string | null;
     companyId?: string | null;
     note?: string | null;
+    original?: { currency: string; amountCents: number; rate: string } | null;
   },
 ) {
   await assertRefs(tenantId, input);
@@ -291,6 +303,9 @@ export async function createManualMovement(
       categoryId: input.direction === 'debit' ? (input.categoryId ?? null) : null,
       departmentId: input.departmentId ?? null,
       companyId: input.companyId ?? null,
+      ...(input.original
+        ? { originalCurrency: input.original.currency, originalAmountEnc: encryptAmountCents(input.original.amountCents), exchangeRate: input.original.rate }
+        : {}),
       source: 'manual',
       noteEnc: input.note ? encryptExpenseData(input.note) : null,
       createdById: userId,

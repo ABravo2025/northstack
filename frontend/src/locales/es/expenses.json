@@ -167,7 +167,10 @@
     "save": "Agregar",
     "saving": "Guardando…",
     "cancel": "Cancelar",
-    "created": "Gasto agregado."
+    "created": "Gasto agregado.",
+    "currency": "Moneda",
+    "rate": "Tipo de cambio",
+    "rateHint": "Se guarda en {{currency}} al tipo de cambio que pongas, junto con el monto original."
   },
   "fixed": {
     "columns": {
@@ -284,7 +287,8 @@
       "debit": "Débito",
       "credit": "Crédito",
       "type": "Tipo (D / C)",
-      "installment": "Cuotas"
+      "installment": "Cuotas",
+      "usd": "Importe en dólares"
     },
     "optional": "opcional",
     "noColumn": "— No está en el archivo —",
@@ -359,7 +363,9 @@
     "doneConfirmed_one": "{{count}} cobro automático confirmado",
     "doneConfirmed_other": "{{count}} cobros automáticos confirmados",
     "doneReconciled_one": "{{count}} gasto fijo conciliado",
-    "doneReconciled_other": "{{count}} gastos fijos conciliados"
+    "doneReconciled_other": "{{count}} gastos fijos conciliados",
+    "usdRate": "Tipo de cambio del resumen",
+    "usdRateHint": "Las líneas que solo tienen importe en dólares se pasan a pesos con este tipo de cambio; se guarda el original."
   },
   "dashboard": {
     "loading": "Cargando…",
@@ -419,5 +425,12 @@
     "budgetsBody": "Opcional. En el Resumen avisa al llegar al 80 % y marca en rojo al pasar el 100 %. Se guarda cifrado.",
     "noBudget": "Sin presupuesto",
     "budgetSaved": "Presupuesto guardado"
+  },
+  "receipt": {
+    "attach": "Adjuntar comprobante",
+    "open": "Ver comprobante",
+    "remove": "Quitar comprobante",
+    "saved": "Comprobante guardado (cifrado)",
+    "tooLarge": "El archivo pesa más de 1 MB."
   }
 }

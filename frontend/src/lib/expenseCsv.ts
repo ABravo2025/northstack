@@ -6,7 +6,7 @@ export type NumberFormat = 'ar' | 'us';
 export type DateFormat = 'dmy' | 'mdy' | 'ymd';
 // What the "−" means in this file — or that it has separate Debit/Credit columns, or a D/C column.
 export type SignConvention = 'neg_debit' | 'neg_credit' | 'cols' | 'type_col';
-export type ColumnKey = 'date' | 'description' | 'amount' | 'debit' | 'credit' | 'type' | 'installment';
+export type ColumnKey = 'date' | 'description' | 'amount' | 'debit' | 'credit' | 'type' | 'installment' | 'usd';
 export type ColumnMap = Record<ColumnKey, number>; // -1 = not in the file
 
 export const CONVENTIONS: SignConvention[] = ['neg_debit', 'neg_credit', 'cols', 'type_col'];
@@ -108,11 +108,13 @@ export function guessColumns(headers: string[]): ColumnMap {
   return {
     date: find(/fecha|date/i),
     description: find(/desc|concepto|detalle|comercio|movimiento|establecimiento|merchant|payee/i),
-    amount: find(/importe|monto|amount|valor/i, /saldo|balance/i),
+    amount: find(/importe|monto|amount|valor/i, /saldo|balance|u\$s|usd|d[oó]lar/i),
     debit: find(/d[eé]bito|debe|debit|withdraw/i),
     credit: find(/cr[eé]dito|haber|credit|deposit/i),
     type: find(/^tipo$|^type$|d\/c/i),
     installment: find(/cuota|installment/i),
+    // Cruces D4: a card statement's dollar column ("Importe U$S").
+    usd: find(/u\$s|usd|d[oó]lar/i, /saldo|balance/i),
   };
 }
 
@@ -171,6 +173,8 @@ export interface NormalizedRow {
   amountCents: number | null; // positive
   direction: 'debit' | 'credit';
   installment: string | null;
+  // A charge only in dollars, converted at the statement's rate: the original amount and the rate.
+  original: { currency: 'USD'; amountCents: number; rate: string } | null;
 }
 
 // One CSV row → positive amount + direction under the chosen convention. `flipped` is the
@@ -178,7 +182,7 @@ export interface NormalizedRow {
 export function normalizeRow(
   row: string[],
   map: ColumnMap,
-  options: { numberFormat: NumberFormat; dateFormat: DateFormat; convention: SignConvention },
+  options: { numberFormat: NumberFormat; dateFormat: DateFormat; convention: SignConvention; usdRate?: number | null },
   flipped = false,
 ): NormalizedRow {
   const cell = (i: number) => (i >= 0 ? row[i] : undefined);
@@ -202,6 +206,17 @@ export function normalizeRow(
       else direction = n < 0 ? 'credit' : 'debit';
     }
   }
+  // A dollar-only line (no amount in the local column) is converted at the statement's rate.
+  let original: NormalizedRow['original'] = null;
+  if (!amountCents && options.usdRate && options.usdRate > 0 && map.usd >= 0) {
+    const usd = parseSignedCents(cell(map.usd), options.numberFormat);
+    if (usd) {
+      amountCents = Math.round(Math.abs(usd) * options.usdRate);
+      original = { currency: 'USD', amountCents: Math.abs(usd), rate: String(options.usdRate) };
+      if (options.convention === 'neg_debit') direction = usd < 0 ? 'debit' : 'credit';
+      else if (options.convention === 'neg_credit') direction = usd < 0 ? 'credit' : 'debit';
+    }
+  }
   if (flipped) direction = direction === 'debit' ? 'credit' : 'debit';
   const installment = cell(map.installment)?.match(/(\d{1,2})\s*(?:\/|de|of)\s*(\d{1,2})/i);
   return {
@@ -210,5 +225,6 @@ export function normalizeRow(
     amountCents,
     direction,
     installment: installment ? `${installment[1]}/${installment[2]}` : null,
+    original,
   };
 }

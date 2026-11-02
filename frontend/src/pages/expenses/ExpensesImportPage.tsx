@@ -75,6 +75,8 @@ function ImportBody({ token, meta, reloadMeta }: { token: string; meta: Expenses
   const [parsed, setParsed] = useState<Parsed | null>(null);
   const [map, setMap] = useState<ColumnMap | null>(null);
   const [numberFormat, setNumberFormat] = useState<NumberFormat>('ar');
+  // Cruces D4: the statement's exchange rate for dollar-only lines.
+  const [usdRate, setUsdRate] = useState('');
   const [dateFormat, setDateFormat] = useState<DateFormat>('dmy');
   const [convention, setConvention] = useState<SignConvention>('neg_debit');
   const [detection, setDetection] = useState<{ reason: DetectionReason; examples: string[] } | null>(null);
@@ -131,7 +133,9 @@ function ImportBody({ token, meta, reloadMeta }: { token: string; meta: Expenses
   const normalized = useMemo<ExpenseImportRowInput[]>(() => {
     if (!parsed || !map) return [];
     return parsed.rows.map((r, i) => {
-      const n = normalizeRow(r, map, { numberFormat, dateFormat, convention }, flipped.has(i));
+      // "1.047,19" (AR) or "1047.19": a comma means the AR format.
+      const rate = usdRate.includes(',') ? Number(usdRate.replace(/\./g, '').replace(',', '.')) : Number(usdRate);
+      const n = normalizeRow(r, map, { numberFormat, dateFormat, convention, usdRate: Number.isFinite(rate) && rate > 0 ? rate : null }, flipped.has(i));
       return {
         date: n.date ?? '',
         description: n.description,
@@ -139,9 +143,10 @@ function ImportBody({ token, meta, reloadMeta }: { token: string; meta: Expenses
         direction: n.direction,
         installment: n.installment,
         forceImport: forced.has(i),
+        ...(n.original ? { originalCurrency: n.original.currency, originalAmountCents: n.original.amountCents, exchangeRate: n.original.rate } : {}),
       };
     });
-  }, [parsed, map, numberFormat, dateFormat, convention, flipped, forced]);
+  }, [parsed, map, numberFormat, dateFormat, convention, flipped, forced, usdRate]);
 
   useEffect(() => {
     if (step < 2 || !accountId || normalized.length === 0) return;
@@ -225,13 +230,14 @@ function ImportBody({ token, meta, reloadMeta }: { token: string; meta: Expenses
 
   const columnFields: { key: ColumnKey; optional?: boolean }[] =
     convention === 'cols'
-      ? [{ key: 'date' }, { key: 'description' }, { key: 'debit' }, { key: 'credit' }, { key: 'installment', optional: true }]
+      ? [{ key: 'date' }, { key: 'description' }, { key: 'debit' }, { key: 'credit' }, { key: 'installment', optional: true }, { key: 'usd', optional: true }]
       : [
           { key: 'date' },
           { key: 'description' },
           { key: 'amount' },
           ...(convention === 'type_col' ? [{ key: 'type' as const }] : []),
           { key: 'installment', optional: true },
+          { key: 'usd', optional: true },
         ];
   const categories = new Map(meta.categories.map((c) => [c.id, c]));
 
@@ -325,6 +331,15 @@ function ImportBody({ token, meta, reloadMeta }: { token: string; meta: Expenses
               </select>
             </label>
           </div>
+          {map.usd >= 0 && (
+            <div className="ex-filters">
+              <label className="ex-field">
+                {t('import.usdRate')}
+                <input inputMode="decimal" className="w-36" value={usdRate} placeholder="1.047,19" onChange={(e) => setUsdRate(e.target.value)} />
+              </label>
+              <span className="ex-hint mb-2">{t('import.usdRateHint')}</span>
+            </div>
+          )}
           <div className="ex-raw">
             <span className="ex-muted text-xs font-semibold">{t('import.rawRows')}</span>
             {[parsed.headers, ...parsed.rows.slice(0, 3)].map((r, i) => (

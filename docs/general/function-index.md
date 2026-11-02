@@ -891,6 +891,47 @@ Catálogo de `PlatformStatusDefinition` (plataforma, no por tenant) — `require
 
 ---
 
+### Clientes / Gastos / Formularios y encuestas (`docs/general/spec-clientes-gastos-formularios.md`, 2026-10-30 → 2026-11-02, rama `feat/crm-gastos-forms`, solo staging hasta la promoción)
+
+#### `src/lib/expenseEncryption.ts` (Gastos A1)
+- **encryptExpenseData / decryptExpenseData**, **encryptAmountCents / decryptAmountCents** — AES-256-GCM con key propia (`EXPENSES_DATA_ENCRYPTION_KEY`). Todo `*Enc` de los modelos `Expense*`/`FixedExpense` (montos, descripciones, notas, nombres, presupuestos, reglas, comprobantes).
+- **expenseAmountHash(accountId, cents)** — HMAC para detectar duplicados sin descifrar. **isExpenseEncryptionConfigured()** — sin key, Gastos responde "no configurado".
+
+#### `src/lib/formsEncryption.ts` (Formularios B1)
+- **encryptAnswers / decryptAnswers** (+ **encryptFormData / decryptFormData**) — key propia `FORMS_DATA_ENCRYPTION_KEY`, para `FormResponse.answersEnc`.
+- **newInviteToken() / hashInviteToken(token)** — links personales: solo se guarda el hash. `quoteService.hashQuoteToken` usa el mismo patrón.
+
+#### `src/modules/expenses/`
+- `expenseLogic.ts` (puro): **periodOf / periodBounds / previousPeriod**, **chargeDate(period, day)**, **fixedStatus**, **rulePatternFrom / ruleMatches** (categorías aprendidas), **isInternalTransfer**, **withinTolerance**, **normalizeInstallment** ("03/12"), **parseAmountToCents**.
+- `expenseService.ts`: CRUD de cuentas, categorías, movimientos (**createManualMovement** acepta `original` en otra moneda) y fijos; **bookDueFixedExpenses(today)** (cron 13:00 UTC + perezoso al abrir Gastos, idempotente); **getSummary**; **presentMovement**; `ExpenseError(message, status, code?)`.
+- `expenseImportService.ts`: **sanitizeImportRow**, **planImport(tenantId, accountId, rows)** (duplicados, internas, confirma estimados, concilia manuales, reglas) y **commitImport** — los dos endpoints usan el mismo plan.
+- `expenseDashboardService.ts`: **getExpensesDashboard(tenantId, {from,to,departmentId})**.
+- `insightsService.ts`: **budgetStatus**, **setCategoryBudget**, **detectSubscriptions** (3+ meses, ±15 %), **getInsights**.
+- `cashflowService.ts`: **weekBuckets** (puro) / **projectCashflow(tenantId, today, openingCents)** — 13 semanas.
+- `receiptService.ts`: **saveReceipt / getReceipt / deleteReceipt**, **sniffMime(bytes)** (PDF/JPG/PNG/WEBP por los bytes, 1 MB).
+
+#### `src/modules/forms/`
+- `formDefinitions.ts` (puro): `MODULE_ACTIONS`, `PUBLIC_ACTIONS`/`PERSONAL_ACTIONS`, **actionsFor(kind, module)**, **validateDefinition**, **sanitizeQuestions**, **normalizeAnswers**, **scoreOf**, **mappedValues** (pregunta → campo, incl. `cf:<id>`).
+- `formService.ts`: CRUD (**listForms / getForm / createForm / updateForm / deleteForm**), **getFormsMeta**, **sanitizeDomains**, `FormError`.
+- `formResponseService.ts`: **submitResponse(form, answers, ctx)** — el único camino de escritura (link público, link personal y embed); corre la acción del módulo; encuesta anónima = sin respondente ni link y hora al día. **listResponses / getResponse** (ocultan encuestas anónimas bajo el umbral vía **hiddenAnonymousFormIds**). **matchOrCreateCompanyForContact**.
+- `formInviteService.ts`: **sendInvites**, **listCandidates**, **listInvites**, **findInvite / submitInvite** (`/f/p/<token>`), **runSurveyTriggers(today)** (cron 14:00 UTC), regla de 60 días `RESEND_GAP_DAYS`.
+- `formDashboardService.ts`: **npsOf(scores)**, **getFormsDashboard** (eNPS con umbral + regla de la diferencia).
+- `publicFormPage.ts`: render del lado del servidor — **renderFormPage / renderNotFoundPage / renderNoticePage**, **pageCsp(nonce, allowedDomains)** / **frameAncestors**, **renderStamp / checkStamp** (anti-spam HMAC), **escapeHtml**, **pickLang**. `embedScript.ts`: `EMBED_SCRIPT` (`/f/embed.js`, 3 estilos).
+
+#### `src/modules/crm/` (fase C y cruces)
+- `stageRules.ts` (puro): **sanitizeChecklist / sanitizeAutomations**, **readChecklist / readAutomations / readChecklistState**, **isForwardMove**, **missingRequired**, **buildTemplate(key, lang)** (Nuevo negocio / Expansión / Renovaciones).
+- `stageAutomationService.ts`: **assertChecklistAllowsMove** (409 `checklist_incomplete`; lo llama `updateOpportunity`, que tiene un 5.º argumento solo-servidor `{ skipChecklist }`), **setChecklistItem**, **runEnterAutomations**.
+- `leadLogic.ts` (puro): `CADENCE_DAYS`, **leadScore**, **nextTouchAt**, **canConvert**, **leadStatusFor**. `leadService.ts`: **listLeads / getLead / createLead / updateLead / addTouch / disqualifyLead / reopenLead / convertLead**.
+- `handoffService.ts`: **performHandoff(tenant, actor, opportunityId, input)**.
+- `productService.ts`: catálogo (**listProducts / createProduct / updateProduct**) y lo contratado (**getCompanyProducts / addCompanyProduct / updateCompanyProduct**), **monthlyCents(line)**.
+- `company360Service.ts`: **getCompanyTimeline**, **getCompanyOnboarding**.
+- `healthLogic.ts` (puro): **healthScore(input)** y sus 5 partes, `HEALTH_WEIGHTS`, **suggestedNextCheckIn**. `healthService.ts`: **computeHealth(tenantId, companyIds)**, **getCompanyHealth**, **addCheckIn**, **setTicketCounter(fn)** (lo registra `ticketService` al importarse).
+- `ticketService.ts`: **createTicket / listTickets / getTicket / updateTicket / addComment**, **slaDue / slaState**, `SLA_HOURS`.
+- `signalService.ts`: **getSignals**, **createSignalOpportunity**.
+- `clientsDashboardService.ts`: **getClientsDashboard**, **getSalesExtras**.
+- `profitabilityService.ts`: **getProfitability** (cada parte según permiso), **hourlyCostCents(comp)**.
+- `quoteService.ts`: **listQuotes / createQuote / updateQuote / sendQuote**, **findQuoteByToken / respondToQuote** (aceptar → primera etapa Ganada sin checklist), **renderQuotePdf**, **quoteTotals**. `quotePage.ts`: **renderQuotePage / renderQuoteNotFound**, **quoteCsp**.
+
 ## Frontend — `frontend/src/`
 
 ### `frontend/src/lib/currencies.ts`
@@ -1150,3 +1191,10 @@ Página nueva bajo Overview en el nav (`Sidebar.tsx`) — toda Task donde el usu
 - **components/tasks/TaskHubBoard** / **TaskHubCard** — vista Kanban, reusa el `KanbanBoard<T>` genérico de `entity-views/` (mismo que Opportunities/Companies) con columnas sintéticas por fecha (`lib/taskHubDates.ts`'s `bucketForTask`) — Task no tiene un campo de estado propio. Arrastrar a una columna llama `resolveBoardMove(bucket)`: fechas por defecto documentadas ahí, dropear en "Overdue" se rechaza (no se puede forzar manualmente).
 - **components/tasks/NewTaskModal** / **TaskDetailModal** — alta (con el picker de entidad) y detalle/edición (meta de solo lectura Created/Due/Completed/Meet + el mismo `TaskForm`), ambos sobre `Modal.tsx`.
 - **lib/taskHubDates.ts** — `formatHubDate`/`isOverdue`/`bucketForTask`/`resolveBoardMove`. `toLocalCalendarDate` (interna) normaliza un `dueDate` date-only (medianoche UTC) a fecha local antes de comparar/formatear — sin esto, una fecha date-only se muestra/computa un día antes para cualquier timezone al oeste de UTC (mismo bug que `OverviewPage.tsx`'s `taskDueDateKey` ya resuelve para el calendario).
+
+### Clientes / Gastos / Formularios y encuestas (`spec-clientes-gastos-formularios.md`, 2026-11, solo staging hasta la promoción)
+- `frontend/src/lib/expenseCsv.ts` (puro, testeado desde `tests/expenseCsv.test.ts`): **parseCsv**, **parseSignedCents**, **parseCsvDate**, **guessColumns** (incl. columna U$S), **guessDateFormat / guessNumberFormat**, **detectConvention**, **normalizeRow** (con `usdRate`). El CSV nunca sale del navegador.
+- `frontend/src/api/expenses.ts`, `forms.ts`, `leads.ts`, `products.ts`, `clientTickets.ts`, `quotes.ts` — clientes de API de cada módulo, mismo patrón `call<T>(token, path, opts)` que el resto.
+- `frontend/src/components/crm/StageChecklist.tsx`, `HandoffPanel.tsx`, `QuotesPanel.tsx` — paneles de la oportunidad. `components/crm/company360/*Tab.tsx` — pestañas de la ficha (se pasan como `extraTabs` a `CompanyDetailModal`). `components/settings/StageRulesModal.tsx` — reglas por etapa.
+- `frontend/src/components/layout/ExpensesSidebar.tsx`, `FormsSidebar.tsx` — sidebars propios de cada área (mismo patrón que Settings).
+- `frontend/src/pages/dashboards/dashboardFilters.tsx` — período + departamento compartidos por los dashboards nuevos.

@@ -152,14 +152,51 @@ modelo `Notification` (ver Payments arriba, todavía en staging).
   Cada tarea tiene un chat con @menciones (notificación in-app) y Meet con email a invitar.
   Spec: `docs/general/spec-projects.md`.
 
-## Public Forms — captura externa sin login — en producción
+## Clientes — ciclo de vida del cliente — solo en `staging` (2026-11-02, Growth)
 
-- Builder drag-and-drop con preview en vivo, un form por módulo (Employee, Contact) — pensado para
-  intake de self-service (ej. alta de un nuevo empleado, formulario de contacto de ventas).
-- Anti-spam: Cloudflare Turnstile (captcha) + honeypot.
-- Confirmación configurable: mensaje de agradecimiento personalizable + notificación por email al
-  owner del tenant en cada submission nueva.
-- El submit de un Contact puede además asociarlo a un Pipeline de "Leads" automáticamente.
+- **Leads** (`/leads`, Ventas): bandeja propia separada de las pipelines; cadencia de 5 toques,
+  calificación de 4 preguntas, score 0-100, **Convertir** crea empresa + contacto + oportunidad.
+- **Pipelines con propósito** (Nuevo negocio / Expansión / Renovaciones / otro, con plantillas) —
+  siguen 100 % configurables; por etapa, checklist para avanzar (solo bloquea avanzar) y
+  automatizaciones al entrar (tarea, encuesta).
+- **Presupuestos** desde el catálogo con link privado `/f/q/<token>`: el cliente acepta con su nombre
+  (se guarda nombre, hora e IP) → la oportunidad pasa a Ganada. **Traspaso** al responsable de cuenta
+  en la ganada (proyecto de onboarding, kickoff, mail de bienvenida).
+- **Ficha 360** (pestañas de la empresa): Productos (catálogo en Configuración → Productos, MRR),
+  Línea de tiempo, Onboarding, **Salud** (score 0-100 en 5 partes + check-ins), **Tickets** con SLA
+  (`/tickets`), **Rentabilidad** (ingresos − horas × costo − gastos asignados, cada parte por permiso).
+- **Expansión y renovaciones** (`/signals`): señales calculadas al vuelo, un clic crea la oportunidad.
+- Dashboards → **Clientes** nuevo y una sección nueva en Dashboards → Ventas.
+- Spec: `docs/general/spec-clientes-gastos-formularios.md` (fase C + D1/D3).
+
+## Gastos — gastos de la empresa, cifrados — solo en `staging` (2026-11-02, Growth)
+
+- Cuentas (banco, tarjeta, efectivo), categorías y **gastos fijos** que se registran solos el día del
+  cobro (cron 13:00 UTC); la importación los confirma.
+- **Importación CSV** en el navegador (el archivo nunca se sube): columnas y signo detectados,
+  duplicados, transferencias internas, cuotas, reglas de categoría aprendidas, columna en dólares con
+  el tipo de cambio del resumen.
+- Movimientos con cliente asignado (rentabilidad), **comprobante** adjunto cifrado (1 MB),
+  presupuestos por categoría (80/100 %), detección de suscripciones, aviso de aumento de un fijo,
+  **proyección de caja** a 13 semanas.
+- Montos, descripciones, notas, nombres, presupuestos, reglas y comprobantes cifrados con
+  `EXPENSES_DATA_ENCRYPTION_KEY`. Permiso "Gestionar gastos". Dashboards → Gastos.
+- Spec: fase A + D2/D4 de `spec-clientes-gastos-formularios.md`.
+
+## Formularios y encuestas — solo en `staging` (2026-11-02, Growth) — reemplaza a Public Forms
+
+- Área propia `/forms`. Cada formulario o encuesta se conecta a un módulo (Leads, Clientes,
+  Empleados, Soporte, Proyectos o ninguno) con una acción y mapeo pregunta → campo (incl. campos
+  personalizados).
+- **Página pública** `/f/<empresa>/<form>` renderizada en el servidor con CSP propia + `embed.js`
+  (en la página / botón flotante / ventana), dominios permitidos, UTM → origen del lead, anti-spam
+  honeypot + sello HMAC + límite por IP.
+- **Links personales** `/f/p/<token>` (solo el hash, 30 días, una respuesta) por mail, a mano o con
+  disparadores automáticos (cron 14:00 UTC), regla de 60 días.
+- Encuestas NPS/CSAT/eNPS; las de empleados anónimas por defecto (sin respondente, hora al día,
+  umbral mínimo 3 + regla de la diferencia). Dashboards → Encuestas.
+- Respuestas cifradas con `FORMS_DATA_ENCRYPTION_KEY`. La pantalla vieja de Configuración →
+  Formularios públicos, `/apply` y sus endpoints se **eliminaron** (B7).
 
 ## Personalización por tenant — en producción
 

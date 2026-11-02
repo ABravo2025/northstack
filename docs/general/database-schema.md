@@ -1618,6 +1618,57 @@ Notas:
   Enforcement real desde la Fase C (`fieldVisibilityService.ts`), gateado siempre por el permiso de
   módulo de la entidad primero (ver Fase C arriba).
 
+## 15. Clientes, Gastos y Formularios y encuestas (2026-11-02, solo `staging`)
+
+Spec: `docs/general/spec-clientes-gastos-formularios.md`. El SQL de cada unidad para producción está
+en `docs/general/sql-*-2026-11-02.sql` (las tablas `Expense*` de A1 no se guardaron como archivo:
+regenerarlas con `prisma migrate diff` al promover).
+
+```mermaid
+erDiagram
+    TENANT ||--o{ EXPENSE_ACCOUNT : "has"
+    EXPENSE_ACCOUNT ||--o{ EXPENSE_MOVEMENT : "has"
+    EXPENSE_ACCOUNT ||--o{ FIXED_EXPENSE : "charged to"
+    FIXED_EXPENSE ||--o{ EXPENSE_MOVEMENT : "books"
+    EXPENSE_CATEGORY ||--o{ EXPENSE_MOVEMENT : "classifies"
+    EXPENSE_CATEGORY ||--o{ EXPENSE_CATEGORY_RULE : "learned from"
+    EXPENSE_MOVEMENT ||--o| EXPENSE_RECEIPT : "may have"
+    COMPANY ||--o{ EXPENSE_MOVEMENT : "assigned to (profitability)"
+    FORM ||--o{ FORM_RESPONSE : "receives"
+    FORM ||--o{ FORM_INVITE : "sent as"
+    FORM_INVITE |o--o| FORM_RESPONSE : "answered by (never for anonymous)"
+    LEAD ||--o{ LEAD_TOUCH : "worked by"
+    COMPANY ||--o{ COMPANY_PRODUCT : "contracts"
+    PRODUCT ||--o{ COMPANY_PRODUCT : "sold as"
+    COMPANY ||--o{ COMPANY_CHECK_IN : "has"
+    COMPANY ||--o{ CLIENT_TICKET : "raises"
+    CLIENT_TICKET ||--o{ CLIENT_TICKET_COMMENT : "has"
+    OPPORTUNITY ||--o{ QUOTE : "has"
+```
+
+Notas:
+- **Gastos**: todo campo `*Enc` (montos, descripciones, notas, nombres de cuenta y de fijo,
+  `ExpenseCategory.budgetEnc`, `ExpenseCategoryRule.patternEnc`, `ExpenseMovement.originalAmountEnc`,
+  `ExpenseReceipt.nameEnc/dataEnc`) va cifrado con `EXPENSES_DATA_ENCRYPTION_KEY`;
+  `ExpenseMovement.amountHash` es un HMAC para duplicados. Montos siempre positivos + `direction`.
+  `ExpenseReceipt.movementId` es único y `onDelete: Cascade`.
+- **Form** es la tabla `PublicForm` del grupo 4 **evolucionada en el lugar** (B1): `kind`
+  (form/survey), `module`, `action`, `actionConfig`, `fields` (v2), `status`, `allowedDomains`,
+  `afterSubmit`, `embedSettings`, `surveySettings`; `entityType` pasó a opcional. Los campos viejos
+  (`fieldsConfig`, `accessMode`, `isActive`) quedan sin uso desde B7.
+- **FormResponse.answersEnc** con `FORMS_DATA_ENCRYPTION_KEY`; `score` en claro para dashboards.
+  Encuesta anónima: `respondentId`/`linkedEntity*` nulos, `createdAt` al día, solo `departmentId`.
+  **FormInvite** guarda `tokenHash`, nunca el token; en anónimas no guarda `responseId` y
+  `respondedAt` va al día.
+- **Pipeline.purpose**, **PipelineStageDefinition.exitChecklist / enterAutomations** (JSON) y
+  **Opportunity.checklistState / handoffAt / handoffProjectId** (el traspaso usa el `Company.accountOwnerId` que ya existía).
+- **Lead** es un modelo propio (no un Contact): `qualification` JSON, `score`, `touchCount`,
+  `nextTouchAt`, UTM y los ids de lo convertido.
+- **Quote**: `lines` JSON, totales en centavos, `tokenHash`, `acceptedName/acceptedIp/acceptedAt`.
+- **ClientTicket** es nuevo y distinto del `Ticket` de soporte de Northstack; `number` por empresa,
+  vencimientos de SLA calculados al crear o al cambiar la prioridad.
+- El health score y las señales de upsell **no se guardan**: se calculan al vuelo.
+
 ## Enums
 
 | Enum | Valores | Usado en |

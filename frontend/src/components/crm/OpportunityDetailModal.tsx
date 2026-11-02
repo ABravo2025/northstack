@@ -11,6 +11,7 @@ import FieldCatalogMenu from '../entity-views/FieldCatalogMenu';
 import { PlusIcon, XIcon } from '../common/Icons';
 import StageChecklist, { checklistErrorMessage } from './StageChecklist';
 import HandoffPanel from './HandoffPanel';
+import QuotesPanel from './QuotesPanel';
 import { usePermissions } from '../../contexts/PermissionsContext';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
@@ -565,6 +566,7 @@ export default function OpportunityDetailModal({
           </div>
         )}
         <StageChecklist token={token} opportunity={opportunity} stage={currentStage} onSaved={(patch) => onSaved({ ...opportunity, ...patch })} />
+        {permissions.features.clients && <QuotesPanel token={token} opportunity={opportunity} canManage={permissions.has('manage_opportunity')} />}
         {currentStage?.outcome === 'won' && permissions.features.clients && permissions.has('manage_opportunity') && (
           <HandoffPanel token={token} opportunity={opportunity} onDone={(patch) => onSaved({ ...opportunity, ...patch })} />
         )}

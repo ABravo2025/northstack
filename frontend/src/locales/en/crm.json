@@ -1012,5 +1012,41 @@
     "tableTitle": "Profitability per client",
     "tableHint": "Revenue estimated from each client's products; each client's own view uses Stripe payments when linked. Least profitable first.",
     "client": "Client"
+  },
+  "quotes": {
+    "title": "Quotes",
+    "new": "New quote",
+    "empty": "No quotes for this opportunity yet.",
+    "status": {
+      "draft": "Draft",
+      "sent": "Sent",
+      "accepted": "Accepted",
+      "declined": "Declined"
+    },
+    "acceptedBy": "Accepted by {{name}}",
+    "validUntil": "Valid until {{date}}",
+    "edit": "Edit",
+    "send": "Send",
+    "newLink": "New link",
+    "linkHint": "Send this link to the client: they can read the quote, download the PDF and accept it. Copy it now: for security it isn't shown again (you can make a new one).",
+    "copy": "Copy",
+    "copied": "Copied",
+    "copyFailed": "Couldn't copy. Select it and copy it by hand.",
+    "editTitle": "Quote #{{number}}",
+    "cancel": "Cancel",
+    "saveDraft": "Save draft",
+    "saved": "Quote saved",
+    "item": "Item",
+    "qty": "Qty",
+    "price": "Price ({{currency}})",
+    "remove": "Remove",
+    "addProduct": "+ Add a catalog product",
+    "freeLine": "Free line",
+    "discount": "Discount %",
+    "validDays": "Valid (days)",
+    "total": "Total",
+    "notes": "Notes (terms, payment…)",
+    "howItWorks": "It's saved as a draft. Sending freezes it and makes the link: when the client accepts, the deal moves to Won and you're notified.",
+    "fileName": "quote"
   }
 }

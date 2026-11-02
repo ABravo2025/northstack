@@ -1012,5 +1012,41 @@
     "tableTitle": "Rentabilidad por cliente",
     "tableHint": "Ingresos estimados con los productos de cada cliente; la ficha de cada uno usa los cobros de Stripe si está vinculado. Primero los menos rentables.",
     "client": "Cliente"
+  },
+  "quotes": {
+    "title": "Presupuestos",
+    "new": "Nuevo presupuesto",
+    "empty": "Todavía no hay presupuestos para esta oportunidad.",
+    "status": {
+      "draft": "Borrador",
+      "sent": "Enviado",
+      "accepted": "Aceptado",
+      "declined": "Rechazado"
+    },
+    "acceptedBy": "Aceptado por {{name}}",
+    "validUntil": "Válido hasta {{date}}",
+    "edit": "Editar",
+    "send": "Enviar",
+    "newLink": "Nuevo link",
+    "linkHint": "Mandale este link al cliente: puede ver el presupuesto, bajar el PDF y aceptarlo. Copialo ahora: por seguridad no se vuelve a mostrar (podés generar uno nuevo).",
+    "copy": "Copiar",
+    "copied": "Copiado",
+    "copyFailed": "No se pudo copiar. Seleccionalo y copialo a mano.",
+    "editTitle": "Presupuesto #{{number}}",
+    "cancel": "Cancelar",
+    "saveDraft": "Guardar borrador",
+    "saved": "Presupuesto guardado",
+    "item": "Detalle",
+    "qty": "Cant.",
+    "price": "Precio ({{currency}})",
+    "remove": "Quitar",
+    "addProduct": "+ Agregar un producto del catálogo",
+    "freeLine": "Línea libre",
+    "discount": "Descuento %",
+    "validDays": "Válido (días)",
+    "total": "Total",
+    "notes": "Notas (condiciones, forma de pago…)",
+    "howItWorks": "Se guarda como borrador. Al enviarlo se congela y se genera el link: cuando el cliente lo acepta, la oportunidad pasa a Ganada y se te avisa.",
+    "fileName": "presupuesto"
   }
 }

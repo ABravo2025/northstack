@@ -47,6 +47,7 @@ import { formsPublicRouter } from './routes/formsPublic.js';
 import { leadsRouter } from './routes/leads.js';
 import { productsRouter } from './routes/products.js';
 import { clientTicketsRouter } from './routes/clientTickets.js';
+import { quotesRouter } from './routes/quotes.js';
 import { tenantMetricsRouter } from './routes/tenantMetrics.js';
 import { activityRouter } from './routes/activity.js';
 import { rolesRouter } from './routes/roles.js';
@@ -97,7 +98,8 @@ app.use(
       req.path.startsWith('/.well-known/') || ['/api/oauth/register', '/api/oauth/token', '/api/oauth/revoke'].includes(req.path);
     // Form submissions (Formularios y encuestas) come from their own page on this same origin, so
     // they're kept out of the open carve-out: another site can't read their responses.
-    const isFormSubmit = req.path.startsWith('/api/public/forms/') || req.path.startsWith('/api/public/invites/');
+    const isFormSubmit =
+      req.path.startsWith('/api/public/forms/') || req.path.startsWith('/api/public/invites/') || req.path.startsWith('/api/public/quotes/');
     if ((req.path.startsWith('/api/public/') && !isFormSubmit) || req.path === '/api/plans/prices' || isPublicOAuth) {
       return callback(null, { origin: true });
     }
@@ -152,6 +154,8 @@ app.use(companiesRouter);
 app.use(contactsRouter);
 app.use(pipelinesRouter);
 app.use(opportunitiesRouter);
+// Before formsPublicRouter: /f/q/<token> has the same shape as /f/<company>/<form>.
+app.use(quotesRouter);
 app.use(formsPublicRouter);
 app.use(publicRouter);
 app.use(feedbackRouter);

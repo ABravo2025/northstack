@@ -339,6 +339,14 @@ enum ClientTicketStatus {
   closed
 }
 
+// Cruces D3: where a quote stands.
+enum QuoteStatus {
+  draft
+  sent
+  accepted
+  declined
+}
+
 enum PipelinePurpose {
   new_business
   expansion
@@ -489,6 +497,7 @@ model Tenant {
   companyCheckIns           CompanyCheckIn[]
   clientTickets             ClientTicket[]
   clientTicketComments      ClientTicketComment[]
+  quotes                    Quote[]
   leadTouches               LeadTouch[]
   formInvites               FormInvite[]
   expenseAccounts           ExpenseAccount[]
@@ -1199,6 +1208,7 @@ model Opportunity {
   // template, kickoff, welcome email). Null until it's done.
   handoffAt          DateTime?
   handoffProjectId   String?
+  quotes             Quote[]
   checklistState     Json?
   stageHistory       OpportunityStageHistory[]
 
@@ -3831,4 +3841,39 @@ model ClientTicketComment {
   createdAt DateTime     @default(now())
 
   @@index([tenantId, ticketId])
+}
+
+// Cruces D3 (spec-clientes-gastos-formularios.md): a quote for an opportunity, built from the
+// product catalog. Sent as a PDF and an online link; when the client accepts it, the deal moves to
+// Won. Lines are a snapshot (name, price) so later catalog changes don't rewrite a sent quote.
+model Quote {
+  id            String      @id @default(uuid())
+  tenantId      String
+  tenant        Tenant      @relation(fields: [tenantId], references: [id])
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id])
+  number        Int
+  status        QuoteStatus @default(draft)
+  currency      String
+  // [{ productId?, name, description?, quantity, unitPriceCents, billing }]
+  lines         Json
+  discountPct   Int         @default(0)
+  subtotalCents Int
+  totalCents    Int
+  notes         String?
+  validUntil    DateTime    @db.Date
+  // The online link: only its hash is stored, the token goes in the link once.
+  tokenHash     String?     @unique
+  sentAt        DateTime?
+  acceptedAt    DateTime?
+  acceptedName  String?
+  acceptedIp    String?
+  declinedAt    DateTime?
+  declineReason String?
+  createdById   String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @default(now()) @updatedAt
+
+  @@unique([tenantId, number])
+  @@index([tenantId, opportunityId])
 }

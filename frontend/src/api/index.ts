@@ -39,6 +39,7 @@ import { formsApi } from './forms.js';
 import { leadsApi } from './leads.js';
 import { productsApi } from './products.js';
 import { clientTicketsApi } from './clientTickets.js';
+import { quotesApi } from './quotes.js';
 
 export { ApiError, API_BASE_URL } from './http.js';
 export * from './types.js';
@@ -46,6 +47,7 @@ export type * from './forms.js';
 export type * from './leads.js';
 export type * from './products.js';
 export type * from './clientTickets.js';
+export type * from './quotes.js';
 
 export const api = {
   ...authApi,
@@ -88,5 +90,6 @@ export const api = {
   ...leadsApi,
   ...productsApi,
   ...clientTicketsApi,
+  ...quotesApi,
   ...projectsApi,
 };

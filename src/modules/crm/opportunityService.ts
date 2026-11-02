@@ -244,6 +244,9 @@ export async function updateOpportunity(
   tenantId: string,
   input: UpdateOpportunityInput,
   client: ExtendedPrismaClient = prisma,
+  // Server-only (never from a request body): the client accepting a quote wins the deal whatever
+  // the stage checklist says (Cruces D3).
+  options: { skipChecklist?: boolean } = {},
 ): Promise<Opportunity> {
   const existing = await client.opportunity.findUniqueOrThrow({ where: { id } });
 
@@ -300,7 +303,7 @@ export async function updateOpportunity(
     }
   } else if (input.stageId !== undefined) {
     // Clientes C1: a forward move needs the current stage's required checklist items ticked.
-    await assertChecklistAllowsMove(existing, input.stageId);
+    if (!options.skipChecklist) await assertChecklistAllowsMove(existing, input.stageId);
     data.stageId = input.stageId;
     resolvedStageId = input.stageId;
   }

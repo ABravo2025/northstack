@@ -402,5 +402,22 @@
     "howItWorks": "Active fixed expenses on their charge day, the remaining installments of purchases in installments, and your clients' recurring product revenue on its day (with the Clients module). Company currency only.",
     "otherCurrency_one": "{{count}} product in another currency was left out.",
     "otherCurrency_other": "{{count}} products in another currency were left out."
+  },
+  "insights": {
+    "budgets": "This month's budget",
+    "suggestions": "Suggestions",
+    "subscription": "Is \"{{name}}\" a subscription?",
+    "subscriptionDetail": "{{amount}} around day {{day}}, {{months}} months in a row on {{account}}",
+    "addFixed": "Add as fixed",
+    "dismiss": "No",
+    "fixedCreated": "\"{{name}}\" is now a fixed expense",
+    "increased": "\"{{name}}\" went up {{pct}}%",
+    "increasedDetail": "The fixed expense says {{expected}}; the last charge was {{actual}}",
+    "updateAmount": "Update amount",
+    "amountUpdated": "\"{{name}}\" amount updated",
+    "budgetsTitle": "Monthly budget per category",
+    "budgetsBody": "Optional. The Summary warns at 80% and turns red past 100%. Stored encrypted.",
+    "noBudget": "No budget",
+    "budgetSaved": "Budget saved"
   }
 }

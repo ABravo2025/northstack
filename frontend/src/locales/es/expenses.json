@@ -402,5 +402,22 @@
     "howItWorks": "Gastos fijos activos en su día de cobro, las cuotas que faltan de compras en cuotas, y el ingreso recurrente de los productos de tus clientes en su día (con el módulo de Clientes). Solo en la moneda de la empresa.",
     "otherCurrency_one": "{{count}} producto en otra moneda quedó afuera.",
     "otherCurrency_other": "{{count}} productos en otra moneda quedaron afuera."
+  },
+  "insights": {
+    "budgets": "Presupuesto del mes",
+    "suggestions": "Sugerencias",
+    "subscription": "¿\"{{name}}\" es una suscripción?",
+    "subscriptionDetail": "{{amount}} cerca del día {{day}}, {{months}} meses seguidos en {{account}}",
+    "addFixed": "Cargar como fijo",
+    "dismiss": "No",
+    "fixedCreated": "\"{{name}}\" quedó como gasto fijo",
+    "increased": "\"{{name}}\" subió {{pct}} %",
+    "increasedDetail": "El fijo dice {{expected}}; el último cobro fue {{actual}}",
+    "updateAmount": "Actualizar monto",
+    "amountUpdated": "Monto de \"{{name}}\" actualizado",
+    "budgetsTitle": "Presupuesto mensual por categoría",
+    "budgetsBody": "Opcional. En el Resumen avisa al llegar al 80 % y marca en rojo al pasar el 100 %. Se guarda cifrado.",
+    "noBudget": "Sin presupuesto",
+    "budgetSaved": "Presupuesto guardado"
   }
 }

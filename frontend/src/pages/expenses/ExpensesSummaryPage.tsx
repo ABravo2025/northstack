@@ -4,6 +4,7 @@ import { api, type ExpensesMeta, type ExpensesSummary, type FixedExpense } from 
 import { useToast } from '../../components/common/ToastProvider';
 import TableSkeleton from '../../components/common/TableSkeleton';
 import { formatNumber } from '../../lib/currencies';
+import ExpensesInsights from './ExpensesInsights';
 import { ExpensesPage, MonthStepper, categoryLabel, currentPeriod, monthName, shortDate, useMoney } from './expensesShared';
 
 // Gastos → Resumen (A5): the month in four numbers, what's still due, and spending by category.
@@ -139,6 +140,8 @@ function SummaryBody({ token, meta }: { token: string; meta: ExpensesMeta }) {
           )}
         </section>
       </div>
+
+      <ExpensesInsights token={token} meta={meta} period={period} onChanged={load} />
 
       <section className="card ex-info">
         <div>

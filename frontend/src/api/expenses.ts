@@ -12,6 +12,7 @@ import type {
   ExpenseMovement,
   ExpensesDashboard,
   CashflowProjection,
+  ExpenseInsights,
   ExpensesMeta,
   ExpensesSummary,
   FixedExpense,
@@ -125,4 +126,9 @@ export const expensesApi = {
   // Cruces D2: the next 13 weeks of cash. The opening balance is sent, never stored.
   getCashflow: (token: string, opening?: string) =>
     call<CashflowProjection>(token, `/api/expenses/cashflow${opening ? `?opening=${encodeURIComponent(opening)}` : ''}`),
+
+  // Cruces D4: budgets, subscription suggestions, fixed-expense increases.
+  getExpenseInsights: (token: string, period: string) => call<ExpenseInsights>(token, `/api/expenses/insights?period=${period}`),
+  setExpenseCategoryBudget: (token: string, categoryId: string, budget: string | null) =>
+    call<void>(token, `/api/expenses/categories/${categoryId}/budget`, { method: 'PUT', body: { budget } }),
 };

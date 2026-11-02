@@ -3581,6 +3581,8 @@ model ExpenseCategory {
   // translate them; user-created ones have none and are shown as typed.
   name          String
   systemKey     String?
+  // Cruces D4: monthly budget in cents, encrypted like every amount. Null = no budget.
+  budgetEnc     String?
   order         Int                   @default(0)
   isActive      Boolean               @default(true)
   createdAt     DateTime              @default(now())

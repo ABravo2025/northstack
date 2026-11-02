@@ -2069,6 +2069,15 @@ export interface ExpenseCategory {
   systemKey: string | null;
   order: number;
   isActive: boolean;
+  // Cruces D4: monthly budget (cents), null = none.
+  budgetCents?: number | null;
+}
+
+export interface ExpenseInsights {
+  period: string;
+  budgets: { categoryId: string; budgetCents: number; spentCents: number; pct: number; status: 'ok' | 'warn' | 'over' }[];
+  subscriptions: { key: string; accountId: string; name: string; amountCents: number; dayOfMonth: number; months: number; categoryId: string | null }[];
+  increases: { fixedExpenseId: string; name: string; expectedCents: number; actualCents: number; pct: number; date: string }[];
 }
 
 export interface ExpensesMeta {

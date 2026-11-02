@@ -32,6 +32,7 @@ import {
 import { commitImport, planImport, sanitizeImportProfile } from '../modules/expenses/expenseImportService.js';
 import { getExpensesDashboard } from '../modules/expenses/expenseDashboardService.js';
 import { projectCashflow } from '../modules/expenses/cashflowService.js';
+import { getInsights, setCategoryBudget } from '../modules/expenses/insightsService.js';
 
 // Gastos / Expenses (spec-clientes-gastos-formularios.md, A2). Owner-only by default
 // (manage_expenses), Growth-only, and 503 until EXPENSES_DATA_ENCRYPTION_KEY is set.
@@ -367,3 +368,25 @@ function parseSignedAmount(input: string): number | null {
   if (cents === null) return /^-?0+([.,]0+)?$/.test(input.trim()) ? 0 : null;
   return negative ? -cents : cents;
 }
+
+// --- Cruces D4: budgets per category, subscription suggestions, fixed-expense increases ---
+expensesRouter.get('/api/expenses/insights', async (req, res) => {
+  const user = await guard(req, res);
+  if (!user) return;
+  const period = isPeriod(req.query.period) ? req.query.period : periodOf(todayUtc());
+  return res.json(await getInsights(user.tenantId!, period, todayUtc()));
+});
+
+expensesRouter.put('/api/expenses/categories/:id/budget', async (req, res) => {
+  const user = await guard(req, res);
+  if (!user) return;
+  const raw = req.body?.budget;
+  const cents = raw === null || raw === '' || raw === undefined ? null : parseAmountToCents(raw);
+  if (raw !== null && raw !== '' && raw !== undefined && cents === null) return res.status(400).json({ error: 'Enter an amount greater than zero' });
+  try {
+    await setCategoryBudget(user.tenantId!, req.params.id, cents);
+    return res.status(204).end();
+  } catch (error) {
+    return fail(res, error);
+  }
+});

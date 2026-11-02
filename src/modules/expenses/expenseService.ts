@@ -70,11 +70,13 @@ export async function ensureDefaultCategories(tenantId: string) {
 
 export async function listCategories(tenantId: string) {
   await ensureDefaultCategories(tenantId);
-  return prisma.expenseCategory.findMany({
+  const rows = await prisma.expenseCategory.findMany({
     where: { tenantId },
     orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
-    select: { id: true, name: true, systemKey: true, order: true, isActive: true },
+    select: { id: true, name: true, systemKey: true, order: true, isActive: true, budgetEnc: true },
   });
+  // Cruces D4: the monthly budget, decrypted for the screens.
+  return rows.map(({ budgetEnc, ...c }) => ({ ...c, budgetCents: budgetEnc ? decryptAmountCents(budgetEnc) : null }));
 }
 
 export async function createCategory(tenantId: string, name: string) {

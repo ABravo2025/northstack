@@ -124,6 +124,8 @@ function AccountsBody({ token, meta, reloadMeta }: { token: string; meta: Expens
         )}
       </section>
 
+      <BudgetsCard token={token} meta={meta} reloadMeta={reloadMeta} />
+
       {editing && (
         <AccountModal
           token={token}
@@ -232,5 +234,51 @@ function AccountModal({
         )}
       </form>
     </Modal>
+  );
+}
+
+// Cruces D4: a monthly budget per category — the Resumen warns at 80% and flags 100%.
+function BudgetsCard({ token, meta, reloadMeta }: { token: string; meta: ExpensesMeta; reloadMeta: () => void }) {
+  const { t } = useTranslation('expenses');
+  const toast = useToast();
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const active = meta.categories.filter((c) => c.isActive);
+
+  const save = async (categoryId: string, value: string, current: string) => {
+    if (value === current) return;
+    try {
+      await api.setExpenseCategoryBudget(token, categoryId, value.trim() || null);
+      toast.success(t('insights.budgetSaved'));
+      reloadMeta();
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  };
+
+  return (
+    <section className="card ex-card">
+      <div>
+        <h3 className="card-title m-0">{t('insights.budgetsTitle')}</h3>
+        <p className="ex-muted m-0 mt-1 text-sm">{t('insights.budgetsBody')}</p>
+      </div>
+      <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 260px), 1fr))' }}>
+        {active.map((c) => {
+          const current = c.budgetCents ? String(c.budgetCents / 100) : '';
+          const value = drafts[c.id] ?? current;
+          return (
+            <label key={c.id} className="ex-field">
+              {categoryLabel(t, c)}
+              <input
+                inputMode="decimal"
+                value={value}
+                placeholder={t('insights.noBudget')}
+                onChange={(e) => setDrafts({ ...drafts, [c.id]: e.target.value })}
+                onBlur={(e) => save(c.id, e.target.value, current)}
+              />
+            </label>
+          );
+        })}
+      </div>
+    </section>
   );
 }

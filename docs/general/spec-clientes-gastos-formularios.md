@@ -140,7 +140,8 @@ Inicio y fin reales se registran al cerrar cada unidad.
 - [ ] A8 Cierre Gastos
 - [x] B1 Schema — 2026-11-02 ≈09:45 → 09:55 (Form + kind/module/action/fields v2/status/allowedDomains/afterSubmit/embedSettings/surveySettings, entityType opcional; FormResponse cifrada con `FORMS_DATA_ENCRYPTION_KEY`; FormInvite con hash del token; flag `formsEnabled` Growth + override Admin; los forms existentes migran a module/action según su entityType. Aplicado a la DB de staging con migrate diff + db execute; **en producción hay que correr el mismo SQL al promover**. Gestión con el permiso existente `manage_custom_fields`, el mismo que usan hoy los formularios públicos)
 - [x] B2 Backend builder + acciones — 2026-11-02 ≈09:58 → 10:15 (`/api/forms` CRUD + meta + respuestas; acciones crear lead (+oportunidad, UTM → origen), actualizar contacto, agregar contacto a su empresa, actualizar legajo, guardar en legajo, crear tarea de proyecto, solo guardar; ticket espera C7; mapeo validado contra el tenant; columna nueva `actionConfig` → `docs/general/sql-forms-b2-2026-11-02.sql`)
-- [ ] B3 … B7 Formularios y encuestas
+- [x] B5 Frontend — 2026-11-02 ≈10:20 → 10:45 (se adelantó a B3/B4 para verlo en vivo; área propia `/forms` con sidebar Todos / Respuestas; lista con filtros tipo + módulo; editor con módulo, acción, pipeline / proyecto+responsable, encuesta (métrica, disparador, health, anónima), preguntas con "va a" y vista previa; Respuestas con KPI NPS/CSAT y modal con preguntas, a qué campo se copió y botón al registro; EN/ES. La tarjeta de link/embed y el envío personal se completan con B3/B4)
+- [ ] B3 Página pública + embed.js · B4 Links personales · B6 Dashboard · B7 Cierre
 - [ ] C1 … C10 Clientes
 - [ ] D1 … D4 Cruces
 

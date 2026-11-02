@@ -23,6 +23,8 @@ import authEn from '../locales/en/auth.json';
 import authEs from '../locales/es/auth.json';
 import expensesEn from '../locales/en/expenses.json';
 import expensesEs from '../locales/es/expenses.json';
+import formsEn from '../locales/en/forms.json';
+import formsEs from '../locales/es/forms.json';
 
 // docs/general/spec-i18n.md — only these two for now; the detector/fallback chain below doesn't
 // need to change to add a third later.
@@ -46,6 +48,7 @@ i18n
         projects: projectsEn,
         auth: authEn,
         expenses: expensesEn,
+        forms: formsEn,
       },
       es: {
         common: commonEs,
@@ -59,6 +62,7 @@ i18n
         projects: projectsEs,
         auth: authEs,
         expenses: expensesEs,
+        forms: formsEs,
       },
     },
     supportedLngs: SUPPORTED_LOCALES,

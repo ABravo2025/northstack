@@ -20,7 +20,7 @@ import {
   TargetIcon,
   TaskCircleIcon,
   UserCircleIcon,
-  XIcon, ReceiptIcon } from '../common/Icons';
+  XIcon, ReceiptIcon, ClipboardIcon } from '../common/Icons';
 
 interface SidebarProps {
   mobileOpen: boolean;
@@ -49,6 +49,8 @@ export default function Sidebar({ mobileOpen, onMobileClose, tenant }: SidebarPr
   const canSeePayments = permissions.has('manage_payments');
   // Gastos (spec-clientes-gastos-formularios.md): its own Finance group, Growth-only, owner-only by default.
   const canSeeExpenses = permissions.features.expenses && permissions.has('manage_expenses');
+  // Formularios y encuestas: same permission the public forms already used, plus the Growth plan.
+  const canSeeForms = !!permissions.features.forms && permissions.has('manage_custom_fields');
   const showSalesGroup = canSeeCompany || canSeeContact || canSeeOpportunity || canSeePayments;
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -150,6 +152,15 @@ export default function Sidebar({ mobileOpen, onMobileClose, tenant }: SidebarPr
                 {label(t('sidebar.payments'))}
               </NavLink>
             )}
+          </div>
+        )}
+
+        {canSeeForms && (
+          <div className="sidebar-divider">
+            <NavLink to="/forms" className={linkClass} title={t('sidebar.forms')} onClick={onMobileClose}>
+              <ClipboardIcon className="h-4 w-4 shrink-0" />
+              {label(t('sidebar.forms'))}
+            </NavLink>
           </div>
         )}
 

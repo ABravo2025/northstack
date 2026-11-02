@@ -37,9 +37,11 @@ import { rolesApi } from './roles.js';
 import { shiftsApi } from './shifts.js';
 import { projectsApi } from './projects.js';
 import { expensesApi } from './expenses.js';
+import { formsApi } from './forms.js';
 
 export { ApiError, API_BASE_URL } from './http.js';
 export * from './types.js';
+export type * from './forms.js';
 
 export const api = {
   ...authApi,
@@ -80,5 +82,6 @@ export const api = {
   ...rolesApi,
   ...shiftsApi,
   ...expensesApi,
+  ...formsApi,
   ...projectsApi,
 };

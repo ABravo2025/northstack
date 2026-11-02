@@ -508,3 +508,33 @@ export function ReceiptIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+// Formularios y encuestas (2026-11-02): a clipboard with lines.
+export function ClipboardIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M9 4h6v3H9z" />
+      <path d="M9 5H6v16h12V5h-3" />
+      <path d="M9 11h6" />
+      <path d="M9 15h4" />
+    </svg>
+  );
+}
+
+export function ArrowUpIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M12 19V5" />
+      <path d="m6 11 6-6 6 6" />
+    </svg>
+  );
+}
+
+export function ArrowDownIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M12 5v14" />
+      <path d="m6 13 6 6 6-6" />
+    </svg>
+  );
+}

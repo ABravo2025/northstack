@@ -76,6 +76,9 @@ import ExpensesMovementsPage from './pages/expenses/ExpensesMovementsPage';
 import ExpensesFixedPage from './pages/expenses/ExpensesFixedPage';
 import ExpensesAccountsPage from './pages/expenses/ExpensesAccountsPage';
 import ExpensesImportPage from './pages/expenses/ExpensesImportPage';
+import FormsListPage from './pages/forms/FormsListPage';
+import FormEditorPage from './pages/forms/FormEditorPage';
+import FormResponsesPage from './pages/forms/FormResponsesPage';
 import PayrollPage from './pages/PayrollPage';
 import PayrollRunDetailPage from './pages/PayrollRunDetailPage';
 import AppLayout from './layouts/AppLayout';
@@ -477,6 +480,11 @@ export default function App() {
         <Route path="/expenses/fixed" element={featureOnly('expenses', <ExpensesFixedPage token={token ?? ''} />, '/')} />
         <Route path="/expenses/accounts" element={featureOnly('expenses', <ExpensesAccountsPage token={token ?? ''} />, '/')} />
         <Route path="/expenses/import" element={featureOnly('expenses', <ExpensesImportPage token={token ?? ''} />, '/')} />
+        {/* Formularios y encuestas (spec-clientes-gastos-formularios.md, Fase B): its own area under /forms. */}
+        <Route path="/forms" element={featureOnly('forms', <FormsListPage token={token ?? ''} />, '/')} />
+        <Route path="/forms/new" element={featureOnly('forms', <FormEditorPage token={token ?? ''} />, '/')} />
+        <Route path="/forms/responses" element={featureOnly('forms', <FormResponsesPage token={token ?? ''} />, '/')} />
+        <Route path="/forms/:id" element={featureOnly('forms', <FormEditorPage token={token ?? ''} />, '/')} />
         <Route path="/referrals" element={<ReferralsPage token={token ?? ''} />} />
         <Route path="/profile" element={<Navigate to="/settings/profile" replace />} />
         <Route path="/company" element={<Navigate to="/settings/company" replace />} />

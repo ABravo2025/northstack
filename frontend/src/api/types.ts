@@ -480,7 +480,22 @@ export interface PipelineStage {
   // entering this stage never notifies its owner. Defaults true.
   notifyOwnerOnEnter: boolean;
   isActive: boolean;
+  // Clientes C1: optional exit checklist and entry automations.
+  exitChecklist?: StageChecklistItem[] | null;
+  enterAutomations?: StageAutomation[] | null;
 }
+
+export interface StageChecklistItem {
+  id: string;
+  label: string;
+  required: boolean;
+}
+
+export type StageAutomation =
+  | { id: string; type: 'create_task'; title: string; dueInDays: number }
+  | { id: string; type: 'send_survey'; formId: string };
+
+export type PipelinePurpose = 'new_business' | 'expansion' | 'renewal' | 'other';
 
 export type PipelineAssignmentMode = 'round_robin' | 'account_owner';
 
@@ -503,6 +518,8 @@ export interface Pipeline {
   // Days an open Opportunity can sit in one stage before the stalled-deal
   // reminder cron notifies its owner. null = reminders off for this Pipeline.
   stalledThresholdDays: number | null;
+  // Clientes C1: what the pipeline is for (dashboards count deals by it).
+  purpose?: PipelinePurpose;
 }
 
 export interface PipelineAssignmentUser {
@@ -551,6 +568,8 @@ export interface Opportunity {
   createdAt: string;
   contactLinks?: OpportunityContactLink[];
   stageHistory?: { id: string; stageId: string; enteredAt: string }[];
+  // Clientes C1: ticked exit-checklist items per stage.
+  checklistState?: Record<string, string[]> | null;
 }
 
 export type TaskEntityType = 'employee' | 'company' | 'contact' | 'opportunity' | 'project';

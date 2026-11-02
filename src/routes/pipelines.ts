@@ -1,6 +1,7 @@
 import { canManageCustomFields } from '../modules/auth/permissionService.js';
 import {
   createPipeline,
+  createPipelineFromTemplate,
   createPipelineStage,
   findPipelineById,
   findPipelineStageById,
@@ -18,6 +19,7 @@ import { findUserById } from '../modules/tenant/tenantService.js';
 import { getPlanLimits } from '../modules/tenant/planLimits.js';
 import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
+import { TEMPLATE_KEYS, sanitizeAutomations, sanitizeChecklist, type StageAutomation, type TemplateKey } from '../modules/crm/stageRules.js';
 import prisma from '../lib/prisma.js';
 
 const VALID_OUTCOMES = ['open', 'won', 'lost'];
@@ -40,6 +42,27 @@ function isValidAssignmentMode(value: unknown): boolean {
 }
 
 export const pipelinesRouter = createAsyncRouter();
+
+// Clientes C1.
+const PURPOSES = ['new_business', 'expansion', 'renewal', 'other'];
+
+// A "send survey" automation must point at a published survey of this tenant for Clients or Leads
+// (its recipients are the deal's contacts).
+async function invalidSurveyAutomation(tenantId: string, automations: StageAutomation[]): Promise<boolean> {
+  const ids = automations.filter((a) => a.type === 'send_survey').map((a) => (a as { formId: string }).formId);
+  if (!ids.length) return false;
+  const forms = await prisma.form.findMany({ where: { tenantId, id: { in: ids }, kind: 'survey', module: { in: ['clients', 'leads'] } }, select: { id: true } });
+  return forms.length !== new Set(ids).size;
+}
+
+async function stageRulesFromBody(tenantId: string, body: Record<string, unknown>) {
+  const exitChecklist = body.exitChecklist !== undefined ? sanitizeChecklist(body.exitChecklist) : undefined;
+  const enterAutomations = body.enterAutomations !== undefined ? sanitizeAutomations(body.enterAutomations) : undefined;
+  if (exitChecklist === null) return { error: 'exitChecklist must be a list of { label, required }' };
+  if (enterAutomations === null) return { error: 'enterAutomations must be a list of create_task / send_survey items' };
+  if (enterAutomations && (await invalidSurveyAutomation(tenantId, enterAutomations))) return { error: 'Survey not found' };
+  return { exitChecklist, enterAutomations };
+}
 
 // Read is open to any authenticated tenant member (same as status-definitions/
 // field-catalog) — pipelines are reference data needed to render Opportunity
@@ -88,6 +111,10 @@ pipelinesRouter.post('/api/pipelines', async (req, res) => {
     return res.status(400).json({ error: 'stalledThresholdDays must be a positive integer or null' });
   }
 
+  if (req.body.purpose !== undefined && !PURPOSES.includes(req.body.purpose)) {
+    return res.status(400).json({ error: "purpose must be 'new_business', 'expansion', 'renewal' or 'other'" });
+  }
+
   const maxPipelines = getPlanLimits(user.tenant).maxPipelines;
   if (maxPipelines !== null) {
     const existingCount = await prisma.pipeline.count({ where: { tenantId: user.tenantId!, isActive: true } });
@@ -106,6 +133,7 @@ pipelinesRouter.post('/api/pipelines', async (req, res) => {
     createdById: user.id,
     assignmentMode: req.body.assignmentMode,
     stalledThresholdDays: req.body.stalledThresholdDays,
+    purpose: req.body.purpose,
   });
   return res.status(201).json(pipeline);
 });
@@ -138,6 +166,10 @@ pipelinesRouter.patch('/api/pipelines/:pipelineId', async (req, res) => {
     return res.status(400).json({ error: 'stalledThresholdDays must be a positive integer or null' });
   }
 
+  if (req.body.purpose !== undefined && !PURPOSES.includes(req.body.purpose)) {
+    return res.status(400).json({ error: "purpose must be 'new_business', 'expansion', 'renewal' or 'other'" });
+  }
+
   // `type` is immutable after creation (docs/tareas/specredisenosalesv2.md
   // §3.1) — silently ignored here rather than erroring, since the frontend
   // no longer sends it and a stray value shouldn't break unrelated updates.
@@ -147,6 +179,7 @@ pipelinesRouter.patch('/api/pipelines/:pipelineId', async (req, res) => {
     isActive: req.body.isActive,
     assignmentMode: req.body.assignmentMode,
     stalledThresholdDays: req.body.stalledThresholdDays,
+    purpose: req.body.purpose,
     updatedById: user.id,
   });
 
@@ -155,6 +188,38 @@ pipelinesRouter.patch('/api/pipelines/:pipelineId', async (req, res) => {
   }
 
   return res.json(result.pipeline);
+});
+
+// Clientes C1: a new pipeline from a template (Nuevo negocio / Expansión / Renovaciones), in the
+// company's language. Same permission and plan limit as creating one by hand.
+pipelinesRouter.post('/api/pipelines/from-template', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canManageCustomFields(user.roleContext)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const key = req.body.template as TemplateKey;
+  if (!TEMPLATE_KEYS.includes(key)) {
+    return res.status(400).json({ error: "template must be 'new_business', 'expansion' or 'renewal'" });
+  }
+
+  const maxPipelines = getPlanLimits(user.tenant).maxPipelines;
+  if (maxPipelines !== null) {
+    const existingCount = await prisma.pipeline.count({ where: { tenantId: user.tenantId!, isActive: true } });
+    if (existingCount >= maxPipelines) {
+      return res.status(400).json({
+        error: `Starter plan allows up to ${maxPipelines} pipelines. Upgrade to Growth for unlimited pipelines.`,
+      });
+    }
+  }
+
+  const lang = req.body.language === 'en' ? 'en' : 'es';
+  const pipeline = await createPipelineFromTemplate(user.tenantId!, user.id, key, lang);
+  return res.status(201).json(pipeline);
 });
 
 pipelinesRouter.post('/api/pipelines/:pipelineId/stages', async (req, res) => {
@@ -189,6 +254,11 @@ pipelinesRouter.post('/api/pipelines/:pipelineId/stages', async (req, res) => {
     return res.status(400).json({ error: 'notifyOwnerOnEnter must be a boolean' });
   }
 
+  const rules = await stageRulesFromBody(user.tenantId!, req.body);
+  if ('error' in rules) {
+    return res.status(400).json({ error: rules.error });
+  }
+
   const stage = await createPipelineStage(
     {
       tenantId: user.tenantId!,
@@ -199,6 +269,8 @@ pipelinesRouter.post('/api/pipelines/:pipelineId/stages', async (req, res) => {
       outcome: req.body.outcome,
       probability: req.body.probability,
       notifyOwnerOnEnter: req.body.notifyOwnerOnEnter,
+      exitChecklist: rules.exitChecklist,
+      enterAutomations: rules.enterAutomations,
     },
     user.id,
   );
@@ -238,10 +310,17 @@ pipelinesRouter.patch('/api/pipelines/:pipelineId/stages/:stageId', async (req, 
     return res.status(400).json({ error: 'notifyOwnerOnEnter must be a boolean' });
   }
 
+  const rules = await stageRulesFromBody(user.tenantId!, req.body);
+  if ('error' in rules) {
+    return res.status(400).json({ error: rules.error });
+  }
+
   const result = await updatePipelineStage(
     req.params.stageId,
     user.tenantId!,
     {
+      exitChecklist: rules.exitChecklist,
+      enterAutomations: rules.enterAutomations,
       name: typeof req.body.name === 'string' ? req.body.name.trim() : undefined,
       color: req.body.color,
       order: req.body.order,

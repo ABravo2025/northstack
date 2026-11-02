@@ -9,6 +9,7 @@ import Field from '../common/Field';
 import OverviewActionsMenu from '../common/OverviewActionsMenu';
 import FieldCatalogMenu from '../entity-views/FieldCatalogMenu';
 import { PlusIcon, XIcon } from '../common/Icons';
+import StageChecklist, { checklistErrorMessage } from './StageChecklist';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
 interface OpportunityDetailModalProps {
@@ -187,7 +188,7 @@ export default function OpportunityDetailModal({
       // Backend rejects a move into a `lost` stage with no lossReasonId yet —
       // the field appears right below (now that the stage is 'lost') for the
       // user to fill in as the very next step, no separate Save action needed.
-      toast.error((error as Error).message || t('opportunityDetail.toasts.stageUpdateFailed'));
+      toast.error(checklistErrorMessage(t, error) ?? ((error as Error).message || t('opportunityDetail.toasts.stageUpdateFailed')));
     }
   };
 
@@ -560,6 +561,7 @@ export default function OpportunityDetailModal({
             )}
           </div>
         )}
+        <StageChecklist token={token} opportunity={opportunity} stage={currentStage} onSaved={(patch) => onSaved({ ...opportunity, ...patch })} />
 
         {isMobile ? (
           <div className="overview-panel-mobile-body">

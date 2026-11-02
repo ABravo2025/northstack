@@ -1111,5 +1111,51 @@
     },
     "always": "Emails about your account (password, invitations, billing and legal updates) always arrive.",
     "failed": "Couldn't save: {{message}}"
+  },
+  "pipelineRules": {
+    "column": "Rules",
+    "buttonEmpty": "+ Rules",
+    "buttonCount_one": "{{count}} rule",
+    "buttonCount_other": "{{count}} rules",
+    "buttonTitle": "Checklist to move forward and automations when entering this stage",
+    "title": "Rules for the \"{{stage}}\" stage",
+    "checklistTitle": "Checklist to move forward",
+    "checklistHelp": "What has to be done before the deal moves to a later stage or to Won. Moving back or marking it lost is never blocked.",
+    "checklistClosedHelp": "On a closing stage the checklist doesn't block anything: it works as a guide.",
+    "itemPlaceholder": "E.g.: Proposal sent",
+    "required": "Required",
+    "remove": "Remove",
+    "addItem": "Add item",
+    "automationsTitle": "When entering this stage",
+    "automationsHelp": "They run on their own every time a deal enters this stage.",
+    "createTask": "Create task",
+    "taskPlaceholder": "E.g.: Send the proposal",
+    "dueIn": "due in",
+    "days": "days",
+    "sendSurvey": "Send survey",
+    "chooseSurvey": "Choose a survey",
+    "addTask": "Create a task",
+    "addSurvey": "Send a survey",
+    "taskOwnerNote": "The task is assigned to the deal's owner. The survey goes to the deal's contacts, following the 60-day rule.",
+    "save": "Save",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "saved": "Rules saved",
+    "purpose": "What it's for",
+    "purposeHelp": "Tells the Sales and Clients dashboards where to count each deal.",
+    "purposes": {
+      "new_business": "New business",
+      "expansion": "Expansion",
+      "renewal": "Renewals",
+      "other": "Other"
+    },
+    "templatesTitle": "Start from a template",
+    "templatesHelp": "Creates a pipeline with stages, checklists and suggested tasks. You can edit or delete it afterwards like any other.",
+    "templates": {
+      "new_business": "+ New business",
+      "expansion": "+ Expansion",
+      "renewal": "+ Renewals"
+    },
+    "templateCreated": "Pipeline \"{{name}}\" created"
   }
 }

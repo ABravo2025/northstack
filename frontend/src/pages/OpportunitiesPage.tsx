@@ -15,6 +15,7 @@ import { getInitials } from '../components/common/Avatar';
 import { KanbanAddCard } from '../components/common/TableBody';
 import { useAutoCreateGuard } from '../hooks/useAutoCreateGuard';
 import { usePermissions } from '../contexts/PermissionsContext';
+import { checklistErrorMessage } from '../components/crm/StageChecklist';
 import { usePrimaryAction } from '../contexts/PrimaryActionContext';
 
 // A deal that hasn't moved stage in this many days shows its age in red (.kc-age.late).
@@ -488,7 +489,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
         setViewingId(opp.id);
       }
     } catch (error) {
-      toast.error(t('opportunities.toasts.moveFailed', { error: (error as Error).message }));
+      toast.error(checklistErrorMessage(t, error) ?? t('opportunities.toasts.moveFailed', { error: (error as Error).message }));
     }
   };
 

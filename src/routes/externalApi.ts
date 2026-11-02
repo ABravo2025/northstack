@@ -78,6 +78,7 @@ import {
 import { findEmployeeByUserId, resolveVisibleEmployeeIds } from '../modules/hr/employeeService.js';
 import { redactEntityFields, redactEntityListFields } from '../modules/auth/fieldVisibilityService.js';
 import { canInviteUsers, canManageCustomFields, canManageUsers } from '../modules/auth/permissionService.js';
+import { OpportunityChecklistError } from '../modules/crm/stageAutomationService.js';
 import { serializeRoleContext } from '../modules/auth/roleService.js';
 
 // Private API (spec-private-api-webhooks.md, Units 2-3) — endpoints under /api/external/v1/*.
@@ -965,12 +966,20 @@ externalApiRouter.patch('/api/external/v1/crm/opportunities/:id', async (req, re
   );
   if (refError) return badRequest(req, res, apiKey, refError.error);
 
-  const updated = await updateOpportunity(
-    req.params.id,
-    apiKey.tenantId,
-    { ...body, ownerId, changedByUserId: apiKey.createdByUserId },
-    prismaExternal,
-  );
+  let updated;
+  try {
+    updated = await updateOpportunity(
+      req.params.id,
+      apiKey.tenantId,
+      { ...body, ownerId, changedByUserId: apiKey.createdByUserId },
+      prismaExternal,
+    );
+  } catch (error) {
+    if (error instanceof OpportunityChecklistError) {
+      return respond(req, res, apiKey, 409, { error: error.message, code: 'checklist_incomplete', missing: error.missing });
+    }
+    throw error;
+  }
   return respond(req, res, apiKey, 200, redact(apiKey, 'opportunity', updated));
 });
 

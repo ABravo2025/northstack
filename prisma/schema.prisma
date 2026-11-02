@@ -298,6 +298,15 @@ enum PipelineType {
   account
 }
 
+// Clientes (spec-clientes-gastos-formularios.md, C1): what a Pipeline is for, so dashboards know
+// where to count each deal. Independent of the name and fully editable.
+enum PipelinePurpose {
+  new_business
+  expansion
+  renewal
+  other
+}
+
 // How Opportunity.ownerId gets auto-filled on this Pipeline, when the
 // creator/mover leaves it blank (docs/tareas/specredisenosalesv2.md §3.8).
 // null = no auto-assignment, ownerId is required as before. `round_robin`
@@ -1013,6 +1022,8 @@ model Pipeline {
   // Days an open Opportunity can sit in the same stage before the stalled-
   // deal reminder cron notifies its owner. null = reminder off for this Pipeline.
   stalledThresholdDays Int?
+  // Clientes C1: what this Pipeline is for (new business / expansion / renewal / other).
+  purpose              PipelinePurpose           @default(new_business)
   // Round-robin rotation cursor — the last User assigned via this Pipeline's
   // rotation, so the next assignment continues from there instead of always
   // starting over. Written via a raw SQL statement (pipelineAssignmentService.ts),
@@ -1076,6 +1087,12 @@ model PipelineStageDefinition {
   // existing behavior (notify on every stage change) is unchanged until a
   // tenant opts a specific stage out.
   notifyOwnerOnEnter Boolean                   @default(true)
+  // Clientes C1, both optional and editable. exitChecklist: [{ id, label, required }] — the required
+  // items must be ticked before a deal moves forward out of this stage. enterAutomations:
+  // [{ id, type: "create_task", title, dueInDays } | { id, type: "send_survey", formId }] — run when a
+  // deal enters this stage.
+  exitChecklist      Json?
+  enterAutomations   Json?
   isActive           Boolean                   @default(true)
   createdAt          DateTime                  @default(now())
   opportunities      Opportunity[]
@@ -1125,6 +1142,8 @@ model Opportunity {
   isActive           Boolean                   @default(true)
   createdAt          DateTime                  @default(now())
   contactLinks       OpportunityContact[]
+  // Clientes C1: ticked exit-checklist items per stage: { [stageId]: [itemId, …] }.
+  checklistState     Json?
   stageHistory       OpportunityStageHistory[]
 
   @@index([tenantId, pipelineId])

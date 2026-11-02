@@ -571,5 +571,13 @@
       "uncollectible": "Incobrable",
       "void": "Anulada"
     }
+  },
+  "stageChecklist": {
+    "title": "Para avanzar de etapa",
+    "left_one": "falta {{count}} obligatorio",
+    "left_other": "faltan {{count}} obligatorios",
+    "ready": "listo para avanzar",
+    "optional": "(opcional)",
+    "blocked": "Para avanzar, completá el checklist de esta etapa: {{items}}."
   }
 }

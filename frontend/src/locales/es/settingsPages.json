@@ -1116,5 +1116,51 @@
     },
     "always": "Los emails sobre tu cuenta (contraseña, invitaciones, facturación y novedades legales) siempre llegan.",
     "failed": "No se pudo guardar: {{message}}"
+  },
+  "pipelineRules": {
+    "column": "Reglas",
+    "buttonEmpty": "+ Reglas",
+    "buttonCount_one": "{{count}} regla",
+    "buttonCount_other": "{{count}} reglas",
+    "buttonTitle": "Checklist para avanzar y automatizaciones al entrar en esta etapa",
+    "title": "Reglas de la etapa \"{{stage}}\"",
+    "checklistTitle": "Checklist para avanzar",
+    "checklistHelp": "Lo que hay que completar antes de pasar la oportunidad a una etapa siguiente o a Ganada. Volver atrás o marcarla como perdida nunca se bloquea.",
+    "checklistClosedHelp": "En una etapa de cierre el checklist no bloquea nada: sirve como guía.",
+    "itemPlaceholder": "Ej.: Propuesta enviada",
+    "required": "Obligatorio",
+    "remove": "Quitar",
+    "addItem": "Agregar ítem",
+    "automationsTitle": "Al entrar en esta etapa",
+    "automationsHelp": "Se ejecutan solas cada vez que una oportunidad entra en esta etapa.",
+    "createTask": "Crear tarea",
+    "taskPlaceholder": "Ej.: Enviar la propuesta",
+    "dueIn": "vence en",
+    "days": "días",
+    "sendSurvey": "Enviar encuesta",
+    "chooseSurvey": "Elegí una encuesta",
+    "addTask": "Crear una tarea",
+    "addSurvey": "Enviar una encuesta",
+    "taskOwnerNote": "La tarea se asigna al responsable de la oportunidad. La encuesta va a los contactos de la oportunidad, respetando la regla de 60 días.",
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "cancel": "Cancelar",
+    "saved": "Reglas guardadas",
+    "purpose": "Para qué es",
+    "purposeHelp": "Le dice a los dashboards de Ventas y Clientes dónde contar cada oportunidad.",
+    "purposes": {
+      "new_business": "Nuevo negocio",
+      "expansion": "Expansión",
+      "renewal": "Renovaciones",
+      "other": "Otro"
+    },
+    "templatesTitle": "Empezar desde una plantilla",
+    "templatesHelp": "Crea una pipeline con etapas, checklist y tareas sugeridas. Después la podés editar o borrar como cualquier otra.",
+    "templates": {
+      "new_business": "+ Nuevo negocio",
+      "expansion": "+ Expansión",
+      "renewal": "+ Renovaciones"
+    },
+    "templateCreated": "Pipeline \"{{name}}\" creada"
   }
 }

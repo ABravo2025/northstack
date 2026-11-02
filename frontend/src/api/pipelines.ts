@@ -1,5 +1,5 @@
 import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
-import type { PipelineStage, Pipeline, PipelineAssignmentMode } from './types.js';
+import type { PipelineStage, Pipeline, PipelineAssignmentMode, PipelinePurpose, StageAutomation, StageChecklistItem } from './types.js';
 
 export const pipelinesApi = {
   // Pipelines (sales pipelines for Opportunities)
@@ -19,6 +19,7 @@ export const pipelinesApi = {
       order?: number;
       assignmentMode?: PipelineAssignmentMode | null;
       stalledThresholdDays?: number | null;
+      purpose?: PipelinePurpose;
     },
   ): Promise<Pipeline> => {
     const res = await apiFetch(`${API_BASE_URL}/api/pipelines`, {
@@ -41,6 +42,7 @@ export const pipelinesApi = {
       isActive?: boolean;
       assignmentMode?: PipelineAssignmentMode | null;
       stalledThresholdDays?: number | null;
+      purpose?: PipelinePurpose;
     },
   ): Promise<Pipeline> => {
     const res = await apiFetch(`${API_BASE_URL}/api/pipelines/${pipelineId}`, {
@@ -85,9 +87,37 @@ export const pipelinesApi = {
       probability?: number;
       isActive?: boolean;
       notifyOwnerOnEnter?: boolean;
+      exitChecklist?: StageChecklistItem[];
+      enterAutomations?: StageAutomation[];
     },
   ): Promise<PipelineStage> => {
     const res = await apiFetch(`${API_BASE_URL}/api/pipelines/${pipelineId}/stages/${stageId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  // Clientes C1: a new pipeline from a template, named in the company's language.
+  createPipelineFromTemplate: async (token: string, template: 'new_business' | 'expansion' | 'renewal', language: 'es' | 'en'): Promise<Pipeline> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/pipelines/from-template`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ template, language }),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  // Clientes C1: tick / untick an exit-checklist item of a stage on a deal.
+  setOpportunityChecklistItem: async (
+    token: string,
+    opportunityId: string,
+    data: { stageId: string; itemId: string; done: boolean },
+  ): Promise<{ checklistState: Record<string, string[]> }> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/opportunities/${opportunityId}/checklist`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(data),

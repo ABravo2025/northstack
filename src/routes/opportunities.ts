@@ -17,6 +17,7 @@ import { findFieldCatalogDefinitionById } from '../modules/hr/fieldCatalogServic
 import { findUserById } from '../modules/tenant/tenantService.js';
 import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
+import { OpportunityChecklistError, setChecklistItem } from '../modules/crm/stageAutomationService.js';
 import type { PipelineStageOutcome } from '@prisma/client';
 
 export const opportunitiesRouter = createAsyncRouter();
@@ -245,12 +246,43 @@ opportunitiesRouter.patch('/api/opportunities/:opportunityId', async (req, res) 
     return res.status(400).json(refError);
   }
 
-  const updated = await updateOpportunity(req.params.opportunityId, user.tenantId!, {
-    ...req.body,
-    changedByUserId: user.id,
-  });
+  let updated;
+  try {
+    updated = await updateOpportunity(req.params.opportunityId, user.tenantId!, {
+      ...req.body,
+      changedByUserId: user.id,
+    });
+  } catch (error) {
+    // Clientes C1: the stage's required checklist isn't done yet.
+    if (error instanceof OpportunityChecklistError) {
+      return res.status(409).json({ error: error.message, code: 'checklist_incomplete', missing: error.missing });
+    }
+    throw error;
+  }
   const full = await findOpportunityById(updated.id);
   return res.json(redactEntityFields(full!, 'opportunity', user.roleContext));
+});
+
+// Clientes C1: tick or untick one exit-checklist item of a stage on this deal.
+opportunitiesRouter.patch('/api/opportunities/:opportunityId/checklist', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canManageOpportunity(user.roleContext)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const { stageId, itemId, done } = req.body ?? {};
+  if (typeof stageId !== 'string' || typeof itemId !== 'string' || typeof done !== 'boolean') {
+    return res.status(400).json({ error: 'stageId, itemId and done are required' });
+  }
+  const updated = await setChecklistItem(user.tenantId!, req.params.opportunityId, stageId, itemId, done);
+  if (!updated) {
+    return res.status(404).json({ error: 'Checklist item not found' });
+  }
+  return res.json({ checklistState: updated.checklistState });
 });
 
 opportunitiesRouter.delete('/api/opportunities/:opportunityId', async (req, res) => {

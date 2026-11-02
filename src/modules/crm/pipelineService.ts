@@ -5,11 +5,13 @@ import { pipelineActivityFieldConfig, pipelineStageActivityFieldConfig } from '.
 import type {
   Pipeline,
   PipelineAssignmentMode,
+  PipelinePurpose,
   PipelineStageDefinition,
   PipelineStageOutcome,
   PipelineType,
   Prisma,
 } from '@prisma/client';
+import { buildTemplate, type ChecklistItem, type StageAutomation, type TemplateKey } from './stageRules.js';
 
 type PrismaTx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
@@ -72,6 +74,7 @@ export interface CreatePipelineInput {
   createdById: string;
   assignmentMode?: PipelineAssignmentMode | null;
   stalledThresholdDays?: number | null;
+  purpose?: PipelinePurpose;
 }
 
 // `type` deliberately excluded — immutable once a Pipeline is created (see
@@ -85,6 +88,7 @@ export interface UpdatePipelineInput {
   // null clears it (no auto-assignment / reminder off) — docs/tareas/specredisenosalesv2.md §3.8.
   assignmentMode?: PipelineAssignmentMode | null;
   stalledThresholdDays?: number | null;
+  purpose?: PipelinePurpose;
   // Always set by the route (every PATCH call comes from an authenticated
   // user) — not optional, unlike the fields above, since "who touched this
   // last" should never silently go stale on a real edit.
@@ -116,6 +120,7 @@ export async function createPipeline(input: CreatePipelineInput) {
       updatedById: input.createdById,
       assignmentMode: input.assignmentMode ?? null,
       stalledThresholdDays: input.stalledThresholdDays ?? null,
+      ...(input.purpose ? { purpose: input.purpose } : {}),
     },
     include: PIPELINE_INCLUDE,
   });
@@ -158,6 +163,7 @@ export async function updatePipeline(id: string, tenantId: string, input: Update
   if (input.isActive !== undefined) data.isActive = input.isActive;
   if (input.assignmentMode !== undefined) data.assignmentMode = input.assignmentMode;
   if (input.stalledThresholdDays !== undefined) data.stalledThresholdDays = input.stalledThresholdDays;
+  if (input.purpose !== undefined) data.purpose = input.purpose;
 
   const pipeline = await prisma.pipeline.update({ where: { id }, data, include: PIPELINE_INCLUDE });
 
@@ -187,6 +193,8 @@ export interface CreatePipelineStageInput {
   // Per-stage override of the stage-change notification/email
   // (docs/tareas/specredisenosalesv2.md §3.8). Defaults to true (notify).
   notifyOwnerOnEnter?: boolean;
+  exitChecklist?: ChecklistItem[];
+  enterAutomations?: StageAutomation[];
 }
 
 export interface UpdatePipelineStageInput {
@@ -197,6 +205,8 @@ export interface UpdatePipelineStageInput {
   probability?: number;
   isActive?: boolean;
   notifyOwnerOnEnter?: boolean;
+  exitChecklist?: ChecklistItem[];
+  enterAutomations?: StageAutomation[];
 }
 
 export interface PipelineStageResult {
@@ -232,6 +242,8 @@ export async function createPipelineStage(
       outcome,
       probability: resolveProbability(outcome, input.probability),
       notifyOwnerOnEnter: input.notifyOwnerOnEnter ?? true,
+      ...(input.exitChecklist ? { exitChecklist: input.exitChecklist as unknown as Prisma.InputJsonArray } : {}),
+      ...(input.enterAutomations ? { enterAutomations: input.enterAutomations as unknown as Prisma.InputJsonArray } : {}),
     },
   });
 
@@ -285,6 +297,8 @@ export async function updatePipelineStage(
     data.probability = resolveProbability(input.outcome ?? existing.outcome, input.probability);
   }
   if (input.notifyOwnerOnEnter !== undefined) data.notifyOwnerOnEnter = input.notifyOwnerOnEnter;
+  if (input.exitChecklist !== undefined) data.exitChecklist = input.exitChecklist as unknown as Prisma.InputJsonArray;
+  if (input.enterAutomations !== undefined) data.enterAutomations = input.enterAutomations as unknown as Prisma.InputJsonArray;
 
   const stage = await prisma.pipelineStageDefinition.update({ where: { id }, data });
 
@@ -301,4 +315,25 @@ export async function updatePipelineStage(
   });
 
   return { success: true, stage };
+}
+
+// Clientes C1: a new pipeline from one of the three templates (Nuevo negocio, Expansión,
+// Renovaciones), in the company's language, with its stages, checklists and entry tasks — all of it
+// editable or deletable afterwards like any other pipeline.
+export async function createPipelineFromTemplate(tenantId: string, userId: string, key: TemplateKey, lang: 'es' | 'en') {
+  const template = buildTemplate(key, lang);
+  const order = await prisma.pipeline.count({ where: { tenantId } });
+  const pipeline = await createPipeline({
+    tenantId,
+    name: template.name,
+    type: template.type,
+    order,
+    createdById: userId,
+    stalledThresholdDays: template.stalledThresholdDays,
+    purpose: template.purpose,
+  });
+  for (const stage of template.stages) {
+    await createPipelineStage({ tenantId, pipelineId: pipeline.id, ...stage }, userId);
+  }
+  return prisma.pipeline.findUniqueOrThrow({ where: { id: pipeline.id }, include: PIPELINE_INCLUDE });
 }

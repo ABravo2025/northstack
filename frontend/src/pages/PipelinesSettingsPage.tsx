@@ -7,6 +7,7 @@ import {
   type Pipeline,
   type PipelineAssignmentMode,
   type PipelineAssignmentUser,
+  type PipelinePurpose,
   type PipelineStage,
   type TenantUser,
 } from '../api';
@@ -21,6 +22,7 @@ import Popover from '../components/common/Popover';
 import RequiredMark from '../components/common/RequiredMark';
 import { DotsVerticalIcon, EyeIcon, EyeOffIcon, GripIcon, TrashIcon } from '../components/common/Icons';
 import CompactRowGroup from '../components/common/CompactRow';
+import StageRulesModal from '../components/settings/StageRulesModal';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { usePrimaryAction } from '../contexts/PrimaryActionContext';
 
@@ -119,6 +121,8 @@ function StageEditor({ pipeline, token, onChanged }: StageEditorProps) {
   const [probabilityDrafts, setProbabilityDrafts] = useState<Record<string, string>>({});
   const [draggedStageId, setDraggedStageId] = useState<string | null>(null);
   const [dragOverStageId, setDragOverStageId] = useState<string | null>(null);
+  // Clientes C1: the stage whose checklist / automations are being edited.
+  const [rulesStageId, setRulesStageId] = useState<string | null>(null);
 
   // Recomputed on every drag-over event otherwise (dragOverStageId updates continuously while
   // dragging) even though only pipeline.stages actually changes what this list should be —
@@ -268,6 +272,7 @@ function StageEditor({ pipeline, token, onChanged }: StageEditorProps) {
             <span style={{ width: 56, textAlign: 'center' }} title={t('pipelines.stageEditor.notifyTooltip')}>
               {t('pipelines.stageEditor.columnNotify')}
             </span>
+            <span style={{ width: 92, textAlign: 'center' }}>{t('pipelineRules.column')}</span>
           </div>
         )}
         <div className="flex flex-col">
@@ -333,6 +338,18 @@ function StageEditor({ pipeline, token, onChanged }: StageEditorProps) {
                   title={t('pipelines.stageEditor.notifyTooltip')}
                 />
               </span>
+              <span style={{ width: 92, display: 'flex', justifyContent: 'center' }}>
+                <button
+                  type="button"
+                  className="btn-secondary btn-sm"
+                  onClick={() => setRulesStageId(stage.id)}
+                  title={t('pipelineRules.buttonTitle')}
+                >
+                  {(stage.exitChecklist?.length ?? 0) + (stage.enterAutomations?.length ?? 0) > 0
+                    ? t('pipelineRules.buttonCount', { count: (stage.exitChecklist?.length ?? 0) + (stage.enterAutomations?.length ?? 0) })
+                    : t('pipelineRules.buttonEmpty')}
+                </button>
+              </span>
               <button
                 type="button"
                 className="icon-btn"
@@ -350,6 +367,19 @@ function StageEditor({ pipeline, token, onChanged }: StageEditorProps) {
           ))}
         </div>
       </CompactRowGroup>
+
+      {rulesStageId && sortedStages.some((s) => s.id === rulesStageId) && (
+        <StageRulesModal
+          token={token}
+          pipelineId={pipeline.id}
+          stage={sortedStages.find((s) => s.id === rulesStageId)!}
+          onClose={() => setRulesStageId(null)}
+          onSaved={() => {
+            setRulesStageId(null);
+            onChanged();
+          }}
+        />
+      )}
 
       {newStage && (
         <div
@@ -860,7 +890,7 @@ function PipelineAutomationCreateFields({
 
 export default function PipelinesSettingsPage({ token }: PipelinesSettingsPageProps) {
   const toast = useToast();
-  const { t } = useTranslation('settingsPages');
+  const { t, i18n } = useTranslation('settingsPages');
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(false);
@@ -875,6 +905,7 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
   const [reactivatingPipeline, setReactivatingPipeline] = useState<Pipeline | null>(null);
   const [reactivatingSaving, setReactivatingSaving] = useState(false);
   const [pipelineTab, setPipelineTab] = useState<'active' | 'archived'>('active');
+  const [creatingTemplate, setCreatingTemplate] = useState(false);
   const [sortField, setSortField] = useState<PipelineSortField | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   // Row-level "..." menu (Edit / Archive) — one shared Popover anchored to
@@ -950,6 +981,20 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
     }
   };
 
+  // Clientes C1: Nuevo negocio / Expansión / Renovaciones, named in the person's language.
+  const createFromTemplate = async (key: 'new_business' | 'expansion' | 'renewal') => {
+    setCreatingTemplate(true);
+    try {
+      const pipeline = await api.createPipelineFromTemplate(token, key, i18n.language.startsWith('es') ? 'es' : 'en');
+      toast.success(t('pipelineRules.templateCreated', { name: pipeline.name }));
+      await loadPipelines();
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      setCreatingTemplate(false);
+    }
+  };
+
   const openCreate = () => {
     setEditingPipelineId(null);
     setCreateName('');
@@ -1017,6 +1062,8 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
         order: pipelines.length,
         assignmentMode: createAssignmentMode,
         stalledThresholdDays: parsedStalled !== null && Number.isFinite(parsedStalled) ? parsedStalled : null,
+        // Clientes C1: a sensible start, editable afterwards — leads are new business.
+        purpose: createType === 'lead' ? 'new_business' : 'other',
       });
       const stagesToCreate = createStages;
       for (let i = 0; i < stagesToCreate.length; i++) {
@@ -1266,6 +1313,20 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
         </table>
       </div>
 
+      {pipelineTab === 'active' && (
+        <section className="card mt-4 flex flex-col gap-2">
+          <h3 className="card-title m-0">{t('pipelineRules.templatesTitle')}</h3>
+          <p className="m-0 text-sm text-ink-muted dark:text-dark-ink-muted">{t('pipelineRules.templatesHelp')}</p>
+          <div className="flex flex-wrap gap-2">
+            {(['new_business', 'expansion', 'renewal'] as const).map((key) => (
+              <button key={key} type="button" className="btn-secondary" disabled={creatingTemplate} onClick={() => createFromTemplate(key)}>
+                {t(`pipelineRules.templates.${key}`)}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
       <Popover
         open={pipelineRowMenuFor !== null}
         onClose={() => setPipelineRowMenuFor(null)}
@@ -1354,6 +1415,28 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
               <p className="text-sm text-ink-faint dark:text-dark-ink-faint" title={t('pipelines.typeTitle')}>
                 {t(`pipelines.typeLabel.${editingPipeline.type}`)}
               </p>
+            </div>
+            <div className="form-group">
+              <label htmlFor="edit-pipeline-purpose">{t('pipelineRules.purpose')}</label>
+              <select
+                id="edit-pipeline-purpose"
+                value={editingPipeline.purpose ?? 'new_business'}
+                onChange={async (e) => {
+                  try {
+                    await api.updatePipeline(token, editingPipeline.id, { purpose: e.target.value as PipelinePurpose });
+                    await loadPipelines();
+                  } catch (err) {
+                    toast.error((err as Error).message);
+                  }
+                }}
+              >
+                {(['new_business', 'expansion', 'renewal', 'other'] as const).map((p) => (
+                  <option key={p} value={p}>
+                    {t(`pipelineRules.purposes.${p}`)}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 mb-0 text-xs text-ink-faint dark:text-dark-ink-faint">{t('pipelineRules.purposeHelp')}</p>
             </div>
             <div className="form-group">
               <span>{t('pipelines.sections.automations')}</span>

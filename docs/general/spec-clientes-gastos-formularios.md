@@ -158,7 +158,8 @@ Inicio y fin reales se registran al cerrar cada unidad.
 | Mensajes del iframe falsificados | embed.js solo acepta mensajes del origen de Northstack, del iframe propio y del formulario propio | test de embed.js |
 | Lectura cruzada de respuestas | `/api/public/forms/*` e `/api/public/invites/*` quedan fuera de la excepción CORS abierta de `/api/public/*` (corregido en B7: al principio estaban dentro); los datos devueltos son solo el mensaje de gracias o la URL | src/app.ts |
 | Pendiente conocido | Un bot que carga la página una vez puede reusar el sello 24 h; lo frena el límite por IP. Si aparece spam real, sumar Turnstile (ya existe `src/lib/turnstile.ts`) | — |
-- [ ] C1 … C10 Clientes
+- [x] C1 Pipelines: propósito + plantillas + checklist + automatizaciones — 2026-11-02 (`Pipeline.purpose`, `PipelineStageDefinition.exitChecklist/enterAutomations`, `Opportunity.checklistState` → `docs/general/sql-clientes-c1-2026-11-02.sql`; las pipelines "account" existentes quedan como "otro". Checklist: solo bloquea avanzar (etapa posterior o Ganada), nunca volver ni Perdida; 409 `checklist_incomplete` con los ítems faltantes, también en la API privada. Automatizaciones al entrar: crear tarea al responsable, enviar encuesta a los contactos (regla de 60 días). Plantillas Nuevo negocio / Expansión / Renovaciones en el idioma de la persona. El aviso de estancada ya existía (`stalledThresholdDays` + cron) y las plantillas lo traen configurado)
+- [ ] C2 … C10 Clientes
 - [ ] D1 … D4 Cruces
 
 **Necesita de Alejandro antes de probar Gastos en staging:** la variable `EXPENSES_DATA_ENCRYPTION_KEY` (64 caracteres hex) cargada en Vercel → Preview (staging). Para producción, otra clave distinta, al promover.

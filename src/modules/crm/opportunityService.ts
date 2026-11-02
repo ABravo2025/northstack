@@ -7,6 +7,7 @@ import { sendOpportunityStageChangedEmail } from '../../lib/mailer.js';
 import i18n, { resolveEmailLocale } from '../../lib/i18n.js';
 import { recordActivity } from '../activity/activityLogService.js';
 import { opportunityActivityFieldConfig } from '../activity/fieldConfigs/opportunityFieldConfig.js';
+import { assertChecklistAllowsMove, runEnterAutomations } from './stageAutomationService.js';
 import type { Opportunity, Prisma } from '@prisma/client';
 
 export interface CreateOpportunityInput {
@@ -202,6 +203,7 @@ export async function createOpportunity(input: CreateOpportunityInput, changedBy
   if (stage?.outcome === 'won') {
     await maybeAdvanceCompanyToCustomer(input.tenantId, input.companyId);
   }
+  if (stage) await runEnterAutomations(input.tenantId, opportunity, stage, changedByUserId);
 
   if (changedByUserId) {
     await recordActivity({
@@ -297,6 +299,8 @@ export async function updateOpportunity(
       roundRobinPipelineId = input.pipelineId;
     }
   } else if (input.stageId !== undefined) {
+    // Clientes C1: a forward move needs the current stage's required checklist items ticked.
+    await assertChecklistAllowsMove(existing, input.stageId);
     data.stageId = input.stageId;
     resolvedStageId = input.stageId;
   }
@@ -318,6 +322,7 @@ export async function updateOpportunity(
     if (stage?.outcome === 'won') {
       await maybeAdvanceCompanyToCustomer(tenantId, updated.companyId);
     }
+    if (stage) await runEnterAutomations(tenantId, updated, stage, input.changedByUserId);
 
     await bestEffort(
       emitWebhookEvent({ tenantId, type: 'opportunity.stage_changed', entity: { type: 'opportunity', id }, data: updated }),

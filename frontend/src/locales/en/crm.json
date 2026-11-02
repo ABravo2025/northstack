@@ -571,5 +571,13 @@
       "uncollectible": "Uncollectible",
       "void": "Void"
     }
+  },
+  "stageChecklist": {
+    "title": "To move forward",
+    "left_one": "{{count}} required left",
+    "left_other": "{{count}} required left",
+    "ready": "ready to move forward",
+    "optional": "(optional)",
+    "blocked": "To move forward, complete this stage's checklist: {{items}}."
   }
 }

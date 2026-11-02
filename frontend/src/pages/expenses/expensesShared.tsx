@@ -104,7 +104,7 @@ export function ExpensesPage({
   children,
 }: {
   token: string;
-  section: 'summary' | 'movements' | 'fixed' | 'accounts';
+  section: 'summary' | 'movements' | 'fixed' | 'accounts' | 'import';
   actions?: ReactNode;
   children: (meta: ExpensesMeta, reloadMeta: () => void) => ReactNode;
 }) {

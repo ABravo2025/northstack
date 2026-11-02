@@ -1990,9 +1990,50 @@ export interface ExpenseAccount {
   id: string;
   name: string;
   type: ExpenseAccountType;
-  importProfile: Record<string, unknown> | null;
+  importProfile: (Partial<ExpenseImportProfile> & { label?: string }) | null;
   lastImportAt: string | null;
   isActive: boolean;
+}
+
+export type ExpenseImportStatus = 'expense' | 'credit' | 'internal' | 'duplicate' | 'invalid';
+
+export interface ExpenseImportRowInput {
+  date: string;
+  description: string;
+  amountCents: number;
+  direction: ExpenseDirection;
+  installment?: string | null;
+  forceImport?: boolean;
+}
+
+export interface ExpenseImportRowPlan {
+  index: number;
+  status: ExpenseImportStatus;
+  date: string;
+  description: string;
+  amountCents: number;
+  direction: ExpenseDirection;
+  installment: string | null;
+  categoryId: string | null;
+  duplicateOf: { id: string; date: string; description: string } | null;
+  confirms: { movementId: string; description: string; estimatedCents: number } | null;
+  reconciles: { fixedExpenseId: string; name: string; period: string } | null;
+}
+
+export interface ExpenseImportProfile {
+  convention: 'neg_debit' | 'neg_credit' | 'cols' | 'type_col';
+  numberFormat: 'ar' | 'us';
+  dateFormat: 'dmy' | 'mdy' | 'ymd';
+  columns: Partial<Record<'date' | 'description' | 'amount' | 'debit' | 'credit' | 'type' | 'installment', string>>;
+}
+
+export interface ExpenseImportResult {
+  imported: number;
+  confirmed: number;
+  reconciled: number;
+  internal: number;
+  duplicatesSkipped: number;
+  invalid: number;
 }
 
 export interface ExpenseCategory {

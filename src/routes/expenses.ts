@@ -29,6 +29,7 @@ import {
   updateFixed,
   updateMovement,
 } from '../modules/expenses/expenseService.js';
+import { commitImport, planImport, sanitizeImportProfile } from '../modules/expenses/expenseImportService.js';
 
 // Gastos / Expenses (spec-clientes-gastos-formularios.md, A2). Owner-only by default
 // (manage_expenses), Growth-only, and 503 until EXPENSES_DATA_ENCRYPTION_KEY is set.
@@ -286,6 +287,43 @@ expensesRouter.post('/api/expenses/fixed/:id/pay', async (req, res) => {
       amountCents,
     });
     return res.json(result);
+  } catch (error) {
+    return fail(res, error);
+  }
+});
+
+// --- CSV import (A4) ---
+// The browser parses the file; these receive normalized rows only. Preview and import run the same
+// plan, so the wizard shows exactly what will be saved.
+
+function importBody(body: Record<string, unknown> | undefined) {
+  const accountId = typeof body?.accountId === 'string' ? body.accountId : '';
+  const rows = Array.isArray(body?.rows) ? (body!.rows as unknown[]) : null;
+  if (!accountId) return { error: 'Choose the account the file is from' } as const;
+  if (!rows || rows.length === 0) return { error: 'The file has no rows to import' } as const;
+  return { accountId, rows } as const;
+}
+
+expensesRouter.post('/api/expenses/import/preview', async (req, res) => {
+  const user = await guard(req, res);
+  if (!user) return;
+  const parsed = importBody(req.body);
+  if ('error' in parsed) return res.status(400).json({ error: parsed.error });
+  try {
+    return res.json({ rows: await planImport(user.tenantId!, parsed.accountId, parsed.rows) });
+  } catch (error) {
+    return fail(res, error);
+  }
+});
+
+expensesRouter.post('/api/expenses/import', async (req, res) => {
+  const user = await guard(req, res);
+  if (!user) return;
+  const parsed = importBody(req.body);
+  if ('error' in parsed) return res.status(400).json({ error: parsed.error });
+  try {
+    const profile = req.body.saveProfile === false ? null : sanitizeImportProfile(req.body.profile);
+    return res.json(await commitImport(user.tenantId!, user.id, parsed.accountId, parsed.rows, profile));
   } catch (error) {
     return fail(res, error);
   }

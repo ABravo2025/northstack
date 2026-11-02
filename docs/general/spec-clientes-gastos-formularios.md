@@ -133,9 +133,9 @@ Inicio y fin reales se registran al cerrar cada unidad.
 - [x] A1 Schema + cifrado + plan + permiso — 2026-10-30 17:15 → 17:39 (bc28588)
 - [x] A2 Backend CRUD — 2026-11-01 ≈17:50 → 18:10
 - [x] A3 Cobros automáticos — 2026-11-01, junto con A2 (cron diario 13:00 UTC + corrida perezosa al abrir Gastos, idempotente)
-- [ ] A4 Importación CSV
-- [x] A5 Frontend hub y pantallas — 2026-11-01 ≈18:10 → 18:20 (se adelantó a A4 para verlo en vivo; "Importar CSV" deshabilitado hasta A4/A6)
-- [ ] A6 Asistente de importación
+- [x] A4 Importación CSV — 2026-11-02 ≈09:25 → 09:35 (parser en el navegador `frontend/src/lib/expenseCsv.ts`; `POST /api/expenses/import/preview` + `/import` con el mismo plan: duplicados, internas, confirma estimados, concilia manuales, reglas, perfil de la cuenta)
+- [x] A5 Frontend hub y pantallas — 2026-11-01 ≈18:10 → 18:20 (se adelantó a A4 para verlo en vivo; "Importar CSV" se habilitó con A4/A6)
+- [x] A6 Asistente de importación — 2026-11-02 ≈09:35 → 09:42 (`/expenses/import`, 4 pasos; también desde Movimientos y desde cada cuenta)
 - [ ] A7 Dashboards → Gastos
 - [ ] A8 Cierre Gastos
 - [ ] B1 … B7 Formularios y encuestas

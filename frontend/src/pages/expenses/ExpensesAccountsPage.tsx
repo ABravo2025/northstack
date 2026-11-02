@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { api, type ExpenseAccount, type ExpenseAccountType, type ExpensesMeta } from '../../api';
 import Modal from '../../components/common/Modal';
 import RequiredMark from '../../components/common/RequiredMark';
@@ -9,6 +10,7 @@ import { ExpensesPage, categoryLabel, shortDate } from './expensesShared';
 
 // Gastos → Cuentas y categorías (A5). An account's import format (sign convention, columns) is
 // saved by the CSV import wizard (A6) the first time; until then the card says so.
+// Each card opens the account editor; "Importar CSV" opens the wizard on that account.
 export default function ExpensesAccountsPage({ token }: { token: string }) {
   return (
     <ExpensesPage token={token} section="accounts">
@@ -22,6 +24,7 @@ const ACCOUNT_TYPES: ExpenseAccountType[] = ['credit_card', 'bank', 'cash', 'oth
 function AccountsBody({ token, meta, reloadMeta }: { token: string; meta: ExpensesMeta; reloadMeta: () => void }) {
   const { t, i18n } = useTranslation('expenses');
   const toast = useToast();
+  const navigate = useNavigate();
   const [editing, setEditing] = useState<ExpenseAccount | 'new' | null>(null);
   const [newCategory, setNewCategory] = useState<string | null>(null);
 
@@ -42,19 +45,43 @@ function AccountsBody({ token, meta, reloadMeta }: { token: string; meta: Expens
     <>
       <div className="ex-accounts">
         {meta.accounts.map((a) => (
-          <button key={a.id} type="button" className={`card ex-account ${a.isActive ? '' : 'opacity-60'}`} onClick={() => setEditing(a)}>
+          <div
+            key={a.id}
+            role="button"
+            tabIndex={0}
+            className={`card ex-account ${a.isActive ? '' : 'opacity-60'}`}
+            onClick={() => setEditing(a)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setEditing(a);
+              }
+            }}
+          >
             <span className="ex-account-type">
               {t(`accountType.${a.type}`)}
               {!a.isActive && ` · ${t('accounts.inactive')}`}
             </span>
             <strong className="text-base">{a.name}</strong>
             <span className="text-sm">
-              {t('accounts.importFormat')}: <strong>{a.importProfile ? String(a.importProfile.label ?? '—') : t('accounts.noProfile')}</strong>
+              {t('accounts.importFormat')}: <strong>{a.importProfile?.convention ? t(`convention.${a.importProfile.convention}`) : a.type === 'cash' ? t('accounts.manualOnly') : t('accounts.noProfile')}</strong>
             </span>
             <span className="ex-muted text-xs">
               {a.lastImportAt ? t('accounts.lastImport', { date: shortDate(a.lastImportAt.slice(0, 10), i18n.language) }) : t('accounts.neverImported')}
             </span>
-          </button>
+            {a.isActive && a.type !== 'cash' && (
+              <button
+                type="button"
+                className="btn-secondary btn-sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/expenses/import?account=${a.id}`);
+                }}
+              >
+                {t('movements.importCsv')}
+              </button>
+            )}
+          </div>
         ))}
         <button type="button" className="ex-account-add" onClick={() => setEditing('new')}>
           <span className="ghost-plus-box">+</span>

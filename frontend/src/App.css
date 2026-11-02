@@ -4142,6 +4142,44 @@ textarea.overview-field-input {
 .ex-account-type {
   @apply text-2xs font-semibold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint;
 }
+/* Gastos → Importar CSV (A6): the wizard's step strip, option pills, upload boxes, raw rows. */
+.ex-steps {
+  @apply m-0 flex list-none flex-wrap gap-x-5 gap-y-2 p-0 text-sm font-medium text-ink-faint dark:text-dark-ink-faint;
+}
+.ex-steps li {
+  @apply inline-flex items-center gap-2;
+}
+.ex-steps li.active {
+  @apply font-semibold text-accent dark:text-brand-blue-light;
+}
+.ex-steps li.done {
+  @apply text-ink-muted dark:text-dark-ink-muted;
+}
+.ex-step-n {
+  @apply inline-flex h-6 w-6 items-center justify-center rounded-full border border-line-strong text-xs dark:border-dark-line;
+}
+.ex-steps li.active .ex-step-n {
+  @apply border-accent bg-accent text-white dark:border-brand-blue-light dark:bg-brand-blue-light dark:text-dark-page;
+}
+.ex-option {
+  @apply cursor-pointer rounded-lg border border-line-strong bg-transparent px-3 py-1.5 text-sm text-ink transition-colors hover:border-accent dark:border-dark-line dark:text-dark-ink dark:hover:border-brand-blue-light;
+  font-family: inherit;
+}
+.ex-option.active {
+  @apply border-accent bg-accent/10 font-semibold text-accent dark:border-brand-blue-light dark:bg-brand-blue-light/15 dark:text-brand-blue-light;
+}
+.ex-drop {
+  @apply flex flex-col gap-2 rounded-xl border border-dashed border-line-strong p-4 dark:border-dark-line;
+}
+.ex-raw {
+  @apply flex flex-col gap-1 overflow-x-auto rounded-lg border border-line bg-surface-1 p-2.5 dark:border-dark-line dark:bg-dark-surface;
+}
+.ex-raw code {
+  @apply text-xs whitespace-pre text-ink dark:text-dark-ink;
+}
+.ex-sign {
+  @apply border-accent/40 bg-accent/5 dark:border-brand-blue-light/40 dark:bg-brand-blue-light/5;
+}
 .ex-account-add {
   @apply flex min-h-32 cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-line-strong bg-transparent text-sm font-medium text-ink-faint transition-colors hover:border-accent hover:text-accent dark:border-dark-line dark:text-dark-ink-faint dark:hover:border-brand-blue-light dark:hover:text-brand-blue-light;
   font-family: inherit;

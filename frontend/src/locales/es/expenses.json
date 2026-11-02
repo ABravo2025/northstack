@@ -5,20 +5,23 @@
     "summary": "Resumen",
     "movements": "Movimientos",
     "fixed": "Gastos fijos",
-    "accounts": "Cuentas y categorías"
+    "accounts": "Cuentas y categorías",
+    "import": "Importar CSV"
   },
   "encrypted": "Todo cifrado (AES-256-GCM)",
   "titles": {
     "summary": "Resumen",
     "movements": "Movimientos",
     "fixed": "Gastos fijos",
-    "accounts": "Cuentas y categorías"
+    "accounts": "Cuentas y categorías",
+    "import": "Importar CSV"
   },
   "subtitles": {
     "summary": "Cuánto gastó la empresa en el mes, qué falta pagar y en qué se va la plata.",
     "movements": "Todo lo que entró y salió de tus cuentas y tarjetas. Las transferencias internas no suman como gasto.",
     "fixed": "Lo que se paga todos los meses. Débito automático y tarjeta se registran solos en su fecha de cobro.",
-    "accounts": "Tus tarjetas, cuentas bancarias y caja chica, y las categorías con las que ordenás los gastos."
+    "accounts": "Tus tarjetas, cuentas bancarias y caja chica, y las categorías con las que ordenás los gastos.",
+    "import": "Subí el resumen de una tarjeta o los movimientos del banco. Revisás todo antes de guardar."
   },
   "month": {
     "previous": "Mes anterior",
@@ -113,7 +116,6 @@
     "type": "Tipo",
     "allTypes": "Todos",
     "importCsv": "Importar CSV",
-    "importSoon": "La importación de CSV llega en la próxima entrega.",
     "columns": {
       "date": "Fecha",
       "description": "Descripción",
@@ -223,7 +225,8 @@
     "categoryCreated": "Categoría agregada.",
     "archived": "Archivada",
     "archive": "Archivar",
-    "restore": "Restaurar"
+    "restore": "Restaurar",
+    "manualOnly": "se carga a mano"
   },
   "accountModal": {
     "newTitle": "Nueva cuenta",
@@ -239,5 +242,118 @@
     "cancel": "Cancelar",
     "created": "Cuenta agregada.",
     "updated": "Cuenta actualizada."
+  },
+  "convention": {
+    "neg_debit": "El “−” es un gasto",
+    "neg_credit": "El “−” es un pago o acreditación",
+    "cols": "Columnas Débito / Crédito",
+    "type_col": "Columna de tipo (D / C)"
+  },
+  "import": {
+    "stepsLabel": "Pasos de la importación",
+    "steps": {
+      "file": "Archivo",
+      "columns": "Columnas",
+      "review": "Signo y revisión",
+      "confirm": "Confirmar"
+    },
+    "whichAccount": "¿De qué cuenta es el archivo?",
+    "cashHint": "Los gastos en efectivo normalmente se cargan a mano, pero podés importar una planilla igual.",
+    "savedFormat": "Formato guardado de esta cuenta: {{format}}. Se usa directo.",
+    "firstImport": "Primera importación de esta cuenta: detectamos el formato y lo guardamos para la próxima.",
+    "uploadTitle": "Subir el CSV",
+    "uploadBody": "Se lee solo en este navegador. El archivo no se envía ni se guarda en ningún lado.",
+    "chooseFile": "Elegir archivo",
+    "pasteTitle": "O pegá el contenido del CSV",
+    "pastePlaceholder": "Fecha;Descripción;Importe",
+    "usePaste": "Usar el texto pegado",
+    "pastedName": "texto pegado",
+    "noRows": "No pudimos leer filas en ese archivo. Revisá que tenga encabezados y al menos un movimiento.",
+    "tooManyRows": "El archivo tiene más de {{max}} filas. Dividilo en partes (por ejemplo, un mes por archivo).",
+    "fileInfo_one": "Archivo: {{name}} · {{count}} fila · columnas detectadas automáticamente, corregí lo que haga falta.",
+    "fileInfo_other": "Archivo: {{name}} · {{count}} filas · columnas detectadas automáticamente, corregí lo que haga falta.",
+    "columns": {
+      "date": "Fecha",
+      "description": "Descripción",
+      "amount": "Importe",
+      "debit": "Débito",
+      "credit": "Crédito",
+      "type": "Tipo (D / C)",
+      "installment": "Cuotas"
+    },
+    "optional": "opcional",
+    "noColumn": "— No está en el archivo —",
+    "columnN": "Columna {{n}}",
+    "numberFormat": "Formato de números",
+    "dateFormat": "Formato de fecha",
+    "dateFormats": {
+      "dmy": "Día/mes/año",
+      "mdy": "Mes/día/año",
+      "ymd": "Año-mes-día"
+    },
+    "rawRows": "Primeras filas tal como vienen",
+    "back": "Atrás",
+    "continue": "Continuar",
+    "signTitle": "¿Qué significa el “−” en este archivo?",
+    "and": " y ",
+    "reason": {
+      "columns": "El archivo trae dos columnas separadas, Débito y Crédito, sin signos. Tomamos cada una por su nombre.",
+      "typeColumn": "El archivo trae una columna de tipo (D/C): la usamos para saber si es gasto o acreditación.",
+      "saved": "Usamos el formato guardado de esta cuenta.",
+      "negCredit": "El “−” aparece en {{examples}}: son pagos o bonificaciones. En este archivo el “−” significa acreditación, no gasto.",
+      "negDebit": "El “−” aparece en {{examples}}: son débitos, comisiones o impuestos. En este archivo el “−” significa gasto.",
+      "fallbackCard": "No encontramos palabras clave para decidir; usamos lo habitual en una tarjeta. Revisá la vista previa.",
+      "fallbackBank": "No encontramos palabras clave para decidir; usamos lo habitual en una cuenta bancaria. Revisá la vista previa."
+    },
+    "signNote": "Nunca guardamos el signo: cada movimiento se guarda como monto positivo más dirección (débito o crédito), así da igual cómo exporte cada banco.",
+    "kpi": {
+      "expenses": "Gastos",
+      "credits": "Acreditaciones",
+      "rows_one": "{{count}} movimiento",
+      "rows_other": "{{count}} movimientos",
+      "internal": "Transferencias internas",
+      "internalHint": "se guardan, no suman como gasto",
+      "duplicates": "Duplicados",
+      "duplicatesHint": "se omiten",
+      "reconciled": "Concilian con fijos",
+      "reconciledHint": "confirman débitos o marcan pagados"
+    },
+    "categoryOrNote": "Categoría / nota",
+    "fix": "Corregir",
+    "installment": "Cuota {{value}}",
+    "status": {
+      "expense": "Gasto",
+      "credit": "Acreditación",
+      "internal": "Transferencia interna",
+      "duplicate": "Duplicado",
+      "invalid": "No se pudo leer"
+    },
+    "note": {
+      "duplicate": "Ya existe: {{description}} ({{date}})",
+      "confirms": "Confirma el cobro automático de “{{name}}”",
+      "confirmsChanged": "Confirma el cobro automático de “{{name}}” · se estimó {{estimated}}, queda el real",
+      "reconciles": "Paga el gasto fijo “{{name}}”",
+      "internal": "Pago de tarjeta o transferencia propia: ya cuenta en la otra cuenta",
+      "invalid": "Falta la fecha, la descripción o el importe"
+    },
+    "flip": "Invertir signo",
+    "importAnyway": "Importar igual",
+    "skip": "Omitir",
+    "reviewed": "Revisado, continuar",
+    "confirmTitle": "Confirmar importación en {{account}}",
+    "confirmAmounts": "{{expenses}} gastos por {{expensesAmount}} · {{credits}} acreditaciones por {{creditsAmount}}",
+    "confirmOthers": "{{internal}} transferencias internas (se guardan, no suman) · {{duplicates}} duplicados omitidos · {{reconciled}} gastos fijos conciliados",
+    "confirmInvalid_one": "{{count}} fila que no se pudo leer se omite",
+    "confirmInvalid_other": "{{count}} filas que no se pudieron leer se omiten",
+    "saveProfile": "Guardar este formato para {{account}} (la próxima vez se importa directo)",
+    "fileDiscarded": "Los movimientos se guardan cifrados. El archivo se descarta.",
+    "importing": "Importando…",
+    "doImport": "Importar movimientos",
+    "done_one": "Se importó {{count}} movimiento",
+    "done_other": "Se importaron {{count}} movimientos",
+    "doneConfirmed_one": "{{count}} cobro automático confirmado",
+    "doneConfirmed_other": "{{count}} cobros automáticos confirmados",
+    "doneReconciled_one": "{{count}} gasto fijo conciliado",
+    "doneReconciled_other": "{{count}} gastos fijos conciliados"
   }
 }

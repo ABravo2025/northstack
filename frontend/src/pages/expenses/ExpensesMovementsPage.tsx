@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { api, type ExpenseDirection, type ExpenseKind, type ExpenseMovement, type ExpensesMeta } from '../../api';
 import Modal from '../../components/common/Modal';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
@@ -11,7 +12,7 @@ import { useToast } from '../../components/common/ToastProvider';
 import { ExpensesPage, MonthStepper, categoryLabel, currentPeriod, monthName, shortDate, useMoney } from './expensesShared';
 
 // Gastos → Movimientos (A5). Changing an expense's category teaches a rule (backend), so the
-// toast says how many similar ones it fixed too. CSV import (A6) is the next release.
+// toast says how many similar ones it fixed too. "Importar CSV" opens the wizard (A6).
 export default function ExpensesMovementsPage({ token }: { token: string }) {
   return (
     <ExpensesPage token={token} section="movements">
@@ -29,6 +30,7 @@ const KIND_CHIP: Record<ExpenseKind, string> = {
 function MovementsBody({ token, meta, reloadMeta }: { token: string; meta: ExpensesMeta; reloadMeta: () => void }) {
   const { t, i18n } = useTranslation('expenses');
   const toast = useToast();
+  const navigate = useNavigate();
   const money = useMoney(meta.currency);
   const [period, setPeriod] = useState(currentPeriod(meta.today));
   const [rows, setRows] = useState<ExpenseMovement[] | null>(null);
@@ -118,7 +120,11 @@ function MovementsBody({ token, meta, reloadMeta }: { token: string; meta: Expen
             <option value="internal">{t('kind.internal')}</option>
           </select>
         </label>
-        <button type="button" className="btn-secondary" disabled title={t('movements.importSoon')}>
+        <button
+          type="button"
+          className="btn-secondary"
+          onClick={() => navigate(`/expenses/import${accountId ? `?account=${accountId}` : ''}`)}
+        >
           <UploadIcon className="h-4 w-4" />
           {t('movements.importCsv')}
         </button>

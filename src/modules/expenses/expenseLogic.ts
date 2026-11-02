@@ -137,3 +137,38 @@ export function parseAmountToCents(input: unknown): number | null {
   const cents = Math.round(value * 100);
   return Number.isSafeInteger(cents) ? cents : null;
 }
+
+// --- CSV import (A4) ------------------------------------------------------------------------------
+
+// A card payment or a transfer between the company's own accounts: stored, never counted as
+// spending, so paying the card from the bank doesn't count the same purchases twice.
+const INTERNAL_TRANSFER = /SU PAGO|PAGO TARJETA|PAGO RECIBIDO|PAGO (DE )?(VISA|MASTER|AMEX)|TRANSF(ERENCIA)? ENTRE CUENTAS|CARD PAYMENT|PAYMENT THANK YOU|AUTOPAY PAYMENT/i;
+
+export function isInternalTransfer(description: string): boolean {
+  return INTERNAL_TRANSFER.test(description);
+}
+
+export function daysBetween(a: string, b: string): number {
+  return Math.abs(Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / 86_400_000;
+}
+
+// Matching windows from the spec: a duplicate is the same account and amount within 3 days; a real
+// charge confirms an estimated one within 15% and 5 days; it pays a manual fixed expense within 2%.
+export const DUPLICATE_DAYS = 3;
+export const CONFIRM_DAYS = 5;
+export const CONFIRM_TOLERANCE = 0.15;
+export const RECONCILE_TOLERANCE = 0.02;
+
+export function withinTolerance(actual: number, expected: number, tolerance: number): boolean {
+  return Math.abs(actual - expected) <= expected * tolerance;
+}
+
+// "3/12", "03 / 12", "Cuota 3 de 12" → "03/12"; anything else → null.
+export function normalizeInstallment(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const m = value.match(/(\d{1,2})\s*(?:\/|de|of)\s*(\d{1,2})/i);
+  if (!m) return null;
+  const [n, total] = [Number(m[1]), Number(m[2])];
+  if (n < 1 || total < 1 || n > total) return null;
+  return `${String(n).padStart(2, '0')}/${String(total).padStart(2, '0')}`;
+}

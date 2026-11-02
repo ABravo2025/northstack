@@ -5,20 +5,23 @@
     "summary": "Summary",
     "movements": "Transactions",
     "fixed": "Fixed expenses",
-    "accounts": "Accounts & categories"
+    "accounts": "Accounts & categories",
+    "import": "Import CSV"
   },
   "encrypted": "Fully encrypted (AES-256-GCM)",
   "titles": {
     "summary": "Summary",
     "movements": "Transactions",
     "fixed": "Fixed expenses",
-    "accounts": "Accounts & categories"
+    "accounts": "Accounts & categories",
+    "import": "Import CSV"
   },
   "subtitles": {
     "summary": "What the company spent this month, what's still to pay and where the money goes.",
     "movements": "Everything that came in and went out of your accounts and cards. Internal transfers don't count as spending.",
     "fixed": "What gets paid every month. Auto debit and card charges book themselves on their charge day.",
-    "accounts": "Your cards, bank accounts and petty cash, and the categories you sort spending into."
+    "accounts": "Your cards, bank accounts and petty cash, and the categories you sort spending into.",
+    "import": "Upload a card statement or your bank's transactions. You review everything before it's saved."
   },
   "month": {
     "previous": "Previous month",
@@ -113,7 +116,6 @@
     "type": "Type",
     "allTypes": "All",
     "importCsv": "Import CSV",
-    "importSoon": "CSV import comes in the next release.",
     "columns": {
       "date": "Date",
       "description": "Description",
@@ -223,7 +225,8 @@
     "categoryCreated": "Category added.",
     "archived": "Archived",
     "archive": "Archive",
-    "restore": "Restore"
+    "restore": "Restore",
+    "manualOnly": "entered by hand"
   },
   "accountModal": {
     "newTitle": "New account",
@@ -239,5 +242,118 @@
     "cancel": "Cancel",
     "created": "Account added.",
     "updated": "Account updated."
+  },
+  "convention": {
+    "neg_debit": "“−” is an expense",
+    "neg_credit": "“−” is a payment or credit",
+    "cols": "Debit / Credit columns",
+    "type_col": "Type column (D / C)"
+  },
+  "import": {
+    "stepsLabel": "Import steps",
+    "steps": {
+      "file": "File",
+      "columns": "Columns",
+      "review": "Sign & review",
+      "confirm": "Confirm"
+    },
+    "whichAccount": "Which account is the file from?",
+    "cashHint": "Cash expenses are usually entered by hand, but you can still import a spreadsheet.",
+    "savedFormat": "This account's saved format: {{format}}. It's used right away.",
+    "firstImport": "First import for this account: we detect the format and save it for next time.",
+    "uploadTitle": "Upload the CSV",
+    "uploadBody": "It's read only in this browser. The file is never sent or stored anywhere.",
+    "chooseFile": "Choose file",
+    "pasteTitle": "Or paste the CSV contents",
+    "pastePlaceholder": "Date,Description,Amount",
+    "usePaste": "Use pasted text",
+    "pastedName": "pasted text",
+    "noRows": "We couldn't read any rows in that file. Check it has headers and at least one transaction.",
+    "tooManyRows": "The file has more than {{max}} rows. Split it up (for example, one month per file).",
+    "fileInfo_one": "File: {{name}} · {{count}} row · columns detected automatically, fix anything that's off.",
+    "fileInfo_other": "File: {{name}} · {{count}} rows · columns detected automatically, fix anything that's off.",
+    "columns": {
+      "date": "Date",
+      "description": "Description",
+      "amount": "Amount",
+      "debit": "Debit",
+      "credit": "Credit",
+      "type": "Type (D / C)",
+      "installment": "Installments"
+    },
+    "optional": "optional",
+    "noColumn": "— Not in the file —",
+    "columnN": "Column {{n}}",
+    "numberFormat": "Number format",
+    "dateFormat": "Date format",
+    "dateFormats": {
+      "dmy": "Day/month/year",
+      "mdy": "Month/day/year",
+      "ymd": "Year-month-day"
+    },
+    "rawRows": "First rows as they come",
+    "back": "Back",
+    "continue": "Continue",
+    "signTitle": "What does “−” mean in this file?",
+    "and": " and ",
+    "reason": {
+      "columns": "The file has two separate columns, Debit and Credit, with no signs. We read each by its name.",
+      "typeColumn": "The file has a type column (D/C): we use it to tell expenses from credits.",
+      "saved": "We're using this account's saved format.",
+      "negCredit": "“−” appears on {{examples}}: payments or bonuses. In this file “−” means a credit, not an expense.",
+      "negDebit": "“−” appears on {{examples}}: debits, fees or taxes. In this file “−” means an expense.",
+      "fallbackCard": "No keywords to decide from; we used what's usual for a card. Check the preview.",
+      "fallbackBank": "No keywords to decide from; we used what's usual for a bank account. Check the preview."
+    },
+    "signNote": "We never store the sign: every transaction is saved as a positive amount plus a direction (debit or credit), so it doesn't matter how each bank exports it.",
+    "kpi": {
+      "expenses": "Expenses",
+      "credits": "Credits",
+      "rows_one": "{{count}} transaction",
+      "rows_other": "{{count}} transactions",
+      "internal": "Internal transfers",
+      "internalHint": "saved, not counted as spending",
+      "duplicates": "Duplicates",
+      "duplicatesHint": "skipped",
+      "reconciled": "Match fixed expenses",
+      "reconciledHint": "confirm debits or mark paid"
+    },
+    "categoryOrNote": "Category / note",
+    "fix": "Fix",
+    "installment": "Installment {{value}}",
+    "status": {
+      "expense": "Expense",
+      "credit": "Credit",
+      "internal": "Internal transfer",
+      "duplicate": "Duplicate",
+      "invalid": "Couldn't read"
+    },
+    "note": {
+      "duplicate": "Already saved: {{description}} ({{date}})",
+      "confirms": "Confirms the automatic charge “{{name}}”",
+      "confirmsChanged": "Confirms the automatic charge “{{name}}” · estimated {{estimated}}, the real amount is kept",
+      "reconciles": "Pays the fixed expense “{{name}}”",
+      "internal": "Card payment or own transfer: already counted on the other account",
+      "invalid": "Missing date, description or amount"
+    },
+    "flip": "Flip sign",
+    "importAnyway": "Import anyway",
+    "skip": "Skip",
+    "reviewed": "Reviewed, continue",
+    "confirmTitle": "Confirm import into {{account}}",
+    "confirmAmounts": "{{expenses}} expenses for {{expensesAmount}} · {{credits}} credits for {{creditsAmount}}",
+    "confirmOthers": "{{internal}} internal transfers (saved, not counted) · {{duplicates}} duplicates skipped · {{reconciled}} fixed expenses matched",
+    "confirmInvalid_one": "{{count}} unreadable row is skipped",
+    "confirmInvalid_other": "{{count}} unreadable rows are skipped",
+    "saveProfile": "Save this format for {{account}} (next time it imports right away)",
+    "fileDiscarded": "Transactions are saved encrypted. The file is discarded.",
+    "importing": "Importing…",
+    "doImport": "Import transactions",
+    "done_one": "{{count}} transaction imported",
+    "done_other": "{{count}} transactions imported",
+    "doneConfirmed_one": "{{count}} automatic charge confirmed",
+    "doneConfirmed_other": "{{count}} automatic charges confirmed",
+    "doneReconciled_one": "{{count}} fixed expense matched",
+    "doneReconciled_other": "{{count}} fixed expenses matched"
   }
 }

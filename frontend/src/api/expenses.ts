@@ -4,6 +4,10 @@ import type {
   ExpenseAccountType,
   ExpenseCategory,
   ExpenseDirection,
+  ExpenseImportProfile,
+  ExpenseImportResult,
+  ExpenseImportRowInput,
+  ExpenseImportRowPlan,
   ExpenseKind,
   ExpenseMovement,
   ExpensesMeta,
@@ -99,4 +103,13 @@ export const expensesApi = {
 
   payFixedExpense: (token: string, id: string, input: { period: string; date?: string; amount?: string }) =>
     call<FixedExpense>(token, `/api/expenses/fixed/${id}/pay`, { method: 'POST', body: input }),
+
+  // CSV import (A4/A6): rows are parsed and normalized in the browser; the file never leaves it.
+  previewExpenseImport: (token: string, accountId: string, rows: ExpenseImportRowInput[]) =>
+    call<{ rows: ExpenseImportRowPlan[] }>(token, '/api/expenses/import/preview', { method: 'POST', body: { accountId, rows } }),
+
+  importExpenses: (
+    token: string,
+    input: { accountId: string; rows: ExpenseImportRowInput[]; profile: ExpenseImportProfile; saveProfile: boolean },
+  ) => call<ExpenseImportResult>(token, '/api/expenses/import', { method: 'POST', body: input }),
 };

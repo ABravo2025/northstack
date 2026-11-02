@@ -10,6 +10,7 @@
     { "source": "/.well-known/openid-configuration", "destination": "/api" },
     { "source": "/api/(.*)", "destination": "/api" },
     { "source": "/health", "destination": "/api" },
+    { "source": "/f/(.*)", "destination": "/api" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [

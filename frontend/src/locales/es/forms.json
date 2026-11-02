@@ -147,7 +147,6 @@
     "deleted": "Eliminado",
     "legacyNotice": "Este formulario se creó con el editor anterior y sigue funcionando en su link de siempre. Para pasarlo a este editor, armá las preguntas y guardá: desde ahí funciona con el módulo y la acción que elijas.",
     "shareTitle": "Link y código para tu web",
-    "shareSoon": "El link público, el código para embeber y los dominios permitidos llegan en la próxima entrega.",
     "personalTitle": "Cómo llega",
     "personalBody": "Cada persona recibe un link personal por email, con la plantilla de Northstack. Por eso no hace falta preguntarle quién es. El envío llega en la próxima entrega.",
     "previewTitle": "Vista previa",
@@ -160,7 +159,26 @@
     "csatLow": "1 = muy insatisfecho",
     "csatHigh": "5 = muy satisfecho",
     "yes": "Sí",
-    "no": "No"
+    "no": "No",
+    "publishToShare": "Publicalo para obtener la URL pública y el código para tu web. Mientras sea borrador, el link no responde.",
+    "publicUrl": "URL pública",
+    "publicUrlHint": "Sirve para mandar por WhatsApp, email o redes, o para poner en un botón de tu web.",
+    "copy": "Copiar",
+    "copied": "Copiado",
+    "copyFailed": "No se pudo copiar. Seleccionalo y copialo a mano.",
+    "embedStyle": "Cómo se ve en tu web",
+    "buttonLabel": "Texto del botón",
+    "defaultButton": "Contactanos",
+    "copyCode": "Copiar código",
+    "domains": "Dominios donde se puede embeber",
+    "domainsHint": "Vacío = cualquier web. Con dominios, nadie puede poner tu formulario en otro sitio.",
+    "afterSubmit": "Después de enviar",
+    "afterMessage": "Mostrar un mensaje de gracias",
+    "afterRedirect": "Llevar a una página de mi web",
+    "thanksText": "Mensaje de gracias",
+    "thanksPlaceholder": "¡Gracias! Recibimos tu respuesta.",
+    "redirectUrl": "URL de destino (https)",
+    "publicSafety": "Muestra el logo de la empresa (Configuración › Perfil de la empresa). Tiene anti-spam, límite de envíos por IP y respuestas cifradas. Las campañas con UTM quedan como origen del lead."
   },
   "questionType": {
     "short_text": "Texto corto",
@@ -282,5 +300,15 @@
     "question": "Pregunta",
     "optionA": "Opción A",
     "optionB": "Opción B"
+  },
+  "embed": {
+    "inline": "Dentro de la página",
+    "button": "Botón flotante",
+    "popup": "Ventana al hacer clic"
+  },
+  "embedHint": {
+    "inline": "El formulario aparece donde pegues el código y se ajusta solo de alto.",
+    "button": "Un botón fijo abajo a la derecha abre el formulario en una ventana.",
+    "popup": "Un botón donde pegues el código abre el formulario en una ventana."
   }
 }

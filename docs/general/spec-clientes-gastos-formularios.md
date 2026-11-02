@@ -141,7 +141,21 @@ Inicio y fin reales se registran al cerrar cada unidad.
 - [x] B1 Schema — 2026-11-02 ≈09:45 → 09:55 (Form + kind/module/action/fields v2/status/allowedDomains/afterSubmit/embedSettings/surveySettings, entityType opcional; FormResponse cifrada con `FORMS_DATA_ENCRYPTION_KEY`; FormInvite con hash del token; flag `formsEnabled` Growth + override Admin; los forms existentes migran a module/action según su entityType. Aplicado a la DB de staging con migrate diff + db execute; **en producción hay que correr el mismo SQL al promover**. Gestión con el permiso existente `manage_custom_fields`, el mismo que usan hoy los formularios públicos)
 - [x] B2 Backend builder + acciones — 2026-11-02 ≈09:58 → 10:15 (`/api/forms` CRUD + meta + respuestas; acciones crear lead (+oportunidad, UTM → origen), actualizar contacto, agregar contacto a su empresa, actualizar legajo, guardar en legajo, crear tarea de proyecto, solo guardar; ticket espera C7; mapeo validado contra el tenant; columna nueva `actionConfig` → `docs/general/sql-forms-b2-2026-11-02.sql`)
 - [x] B5 Frontend — 2026-11-02 ≈10:20 → 10:45 (se adelantó a B3/B4 para verlo en vivo; área propia `/forms` con sidebar Todos / Respuestas; lista con filtros tipo + módulo; editor con módulo, acción, pipeline / proyecto+responsable, encuesta (métrica, disparador, health, anónima), preguntas con "va a" y vista previa; Respuestas con KPI NPS/CSAT y modal con preguntas, a qué campo se copió y botón al registro; EN/ES. La tarjeta de link/embed y el envío personal se completan con B3/B4)
-- [ ] B3 Página pública + embed.js · B4 Links personales · B6 Dashboard · B7 Cierre
+- [x] B3 Página pública + embed.js — 2026-11-02 ≈10:50 → 11:20 (`/f/<empresa>/<formulario>` renderizada en el servidor con CSP propia; `/f/embed.js` con 3 estilos; `POST /api/public/forms/...`; dominios permitidos; mensaje o redirección; UTM → origen del lead; aviso por mail a dueño/admins por cada lead nuevo; tarjeta "Link y código" en el editor)
+- [ ] B4 Links personales · B6 Dashboard · B7 Cierre
+
+### Revisión de seguridad B3 (2026-11-02)
+
+| Riesgo | Mitigación | Verificado |
+|---|---|---|
+| XSS con textos de la empresa (nombre, preguntas, opciones, UTM) | Todo pasa por `escapeHtml`; la config del script va como JSON con `<`, U+2028/2029 escapados; CSP `script-src`/`style-src` solo con nonce, sin `unsafe-inline` | tests/publicFormPage.test.ts |
+| Clickjacking / formulario copiado en otro sitio | `frame-ancestors` por formulario con los dominios permitidos (solo hostnames, saneados → no hay inyección en la CSP); vacío = cualquier sitio https (decisión del prototipo) | tests/formsPublicRoute.test.ts |
+| Spam / bots | Honeypot (responde "ok" sin guardar), sello firmado HMAC de render (mínimo 3 s, máximo 24 h, atado al formulario), límite 10 envíos / 10 min por IP (Upstash) | tests/formsPublicRoute.test.ts |
+| Escritura de datos desde internet | Solo formularios publicados, del editor nuevo y con acción pública (crear lead / tarea / solo guardar); se escriben solo los campos mapeados; un contacto existente se vincula sin pisarlo; respuestas cifradas | tests/formResponseService.test.ts |
+| Redirección abierta | La URL de destino la configura la empresa y debe ser `https://`; embed.js solo sigue `https://` | código + test de embed.js |
+| Mensajes del iframe falsificados | embed.js solo acepta mensajes del origen de Northstack, del iframe propio y del formulario propio | test de embed.js |
+| Lectura cruzada de respuestas | El POST no envía CORS: otro sitio no puede leer la respuesta; los datos devueltos son solo el mensaje de gracias o la URL | — |
+| Pendiente conocido | Un bot que carga la página una vez puede reusar el sello 24 h; lo frena el límite por IP. Si aparece spam real, sumar Turnstile (ya existe `src/lib/turnstile.ts`) | — |
 - [ ] C1 … C10 Clientes
 - [ ] D1 … D4 Cruces
 

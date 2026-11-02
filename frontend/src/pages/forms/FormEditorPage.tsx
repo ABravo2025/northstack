@@ -48,6 +48,105 @@ const TRIGGERS: Record<string, string[]> = {
 };
 const PUBLIC_MODULES: FormModule[] = ['leads', 'support', 'projects', 'none'];
 
+// Public forms (B3): the link, the embed code in its three styles, where it may be embedded and what
+// happens after sending. The URL only answers once the form is published.
+function ShareCard({
+  draft,
+  set,
+  existing,
+  tenantSlug,
+}: {
+  draft: Draft;
+  set: (patch: Partial<Draft>) => void;
+  existing: FormDefinition | null;
+  tenantSlug: string | null;
+}) {
+  const { t } = useTranslation('forms');
+  const toast = useToast();
+  const live = existing?.status === 'published' && !existing.legacy && tenantSlug;
+  const url = live ? `${window.location.origin}/f/${tenantSlug}/${existing!.slug}` : '';
+  const key = live ? `${tenantSlug}/${existing!.slug}` : '';
+  const label = draft.buttonLabel.trim() || draft.name.trim() || t('editor.defaultButton');
+  const code =
+    `<script src="${window.location.origin}/f/embed.js" data-form="${key}"` +
+    (draft.embedStyle === 'inline' ? '' : ` data-style="${draft.embedStyle}" data-label="${label.replace(/"/g, '&quot;')}"`) +
+    ' async></script>';
+  const copy = (text: string) =>
+    navigator.clipboard.writeText(text).then(
+      () => toast.success(t('editor.copied')),
+      () => toast.error(t('editor.copyFailed')),
+    );
+
+  return (
+    <section className="card ex-card">
+      <h3 className="card-title m-0">{t('editor.shareTitle')}</h3>
+      {!live ? (
+        <p className="ex-muted m-0 text-sm">{t('editor.publishToShare')}</p>
+      ) : (
+        <>
+          <div className="ex-field">
+            {t('editor.publicUrl')}
+            <div className="flex gap-2">
+              <input readOnly value={url} className="min-w-0 flex-1 font-mono text-xs" onFocus={(e) => e.target.select()} />
+              <button type="button" className="btn-secondary btn-sm" onClick={() => copy(url)}>
+                {t('editor.copy')}
+              </button>
+            </div>
+            <span className="ex-hint font-normal">{t('editor.publicUrlHint')}</span>
+          </div>
+          <div className="ex-field">
+            {t('editor.embedStyle')}
+            <div className="flex flex-wrap gap-1.5">
+              {(['inline', 'button', 'popup'] as const).map((s) => (
+                <button key={s} type="button" className={`ex-option ${draft.embedStyle === s ? 'active' : ''}`} onClick={() => set({ embedStyle: s })}>
+                  {t(`embed.${s}`)}
+                </button>
+              ))}
+            </div>
+            <span className="ex-hint font-normal">{t(`embedHint.${draft.embedStyle}`)}</span>
+          </div>
+          {draft.embedStyle !== 'inline' && (
+            <label className="ex-field">
+              {t('editor.buttonLabel')}
+              <input value={draft.buttonLabel} maxLength={40} placeholder={draft.name} onChange={(e) => set({ buttonLabel: e.target.value })} />
+            </label>
+          )}
+          <div className="ex-raw">
+            <code className="!whitespace-pre-wrap break-all">{code}</code>
+          </div>
+          <button type="button" className="btn-secondary btn-sm self-start" onClick={() => copy(code)}>
+            {t('editor.copyCode')}
+          </button>
+        </>
+      )}
+      <label className="ex-field">
+        {t('editor.domains')}
+        <input value={draft.domains} placeholder="acme.com, www.acme.com" onChange={(e) => set({ domains: e.target.value })} />
+        <span className="ex-hint font-normal">{t('editor.domainsHint')}</span>
+      </label>
+      <label className="ex-field">
+        {t('editor.afterSubmit')}
+        <select value={draft.afterMode} onChange={(e) => set({ afterMode: e.target.value as Draft['afterMode'] })}>
+          <option value="message">{t('editor.afterMessage')}</option>
+          <option value="redirect">{t('editor.afterRedirect')}</option>
+        </select>
+      </label>
+      {draft.afterMode === 'message' ? (
+        <label className="ex-field">
+          {t('editor.thanksText')}
+          <textarea rows={2} maxLength={1000} value={draft.afterMessage} placeholder={t('editor.thanksPlaceholder')} onChange={(e) => set({ afterMessage: e.target.value })} />
+        </label>
+      ) : (
+        <label className="ex-field">
+          {t('editor.redirectUrl')}
+          <input type="url" value={draft.redirectUrl} placeholder="https://acme.com/gracias" onChange={(e) => set({ redirectUrl: e.target.value })} />
+        </label>
+      )}
+      <span className="ex-hint">{t('editor.publicSafety')}</span>
+    </section>
+  );
+}
+
 const newId = () => `q${Math.random().toString(36).slice(2, 8)}`;
 
 function actionsFor(kind: FormKind, module: FormModule): FormAction[] {
@@ -80,6 +179,12 @@ type Draft = Required<Pick<FormInput, 'name' | 'kind' | 'module' | 'action' | 'f
   pipelineId: string | null;
   actionConfig: { projectId?: string; phaseId?: string; assigneeId?: string };
   surveySettings: SurveySettings;
+  domains: string;
+  afterMode: 'message' | 'redirect';
+  afterMessage: string;
+  redirectUrl: string;
+  embedStyle: 'inline' | 'button' | 'popup';
+  buttonLabel: string;
 };
 
 export default function FormEditorPage({ token }: { token: string }) {
@@ -142,6 +247,12 @@ function Editor({
       pipelineId: existing?.pipelineId ?? null,
       actionConfig: existing?.actionConfig ?? {},
       surveySettings: existing?.surveySettings ?? { metric: 'nps', trigger: 'manual', anonymous: module === 'employees', countsTowardHealth: true },
+      domains: (existing?.allowedDomains ?? []).join(', '),
+      afterMode: existing?.afterSubmit?.mode ?? 'message',
+      afterMessage: existing?.afterSubmit?.message ?? '',
+      redirectUrl: existing?.afterSubmit?.redirectUrl ?? '',
+      embedStyle: existing?.embedSettings?.style ?? 'inline',
+      buttonLabel: existing?.embedSettings?.buttonLabel ?? '',
     };
   });
   const [saving, setSaving] = useState(false);
@@ -218,6 +329,10 @@ function Editor({
       pipelineId: draft.action === 'create_lead' ? draft.pipelineId : null,
       actionConfig: draft.action === 'create_task' ? draft.actionConfig : null,
       surveySettings: kind === 'survey' ? draft.surveySettings : null,
+      allowedDomains: draft.domains.split(/[\s,]+/).filter(Boolean),
+      afterSubmit:
+        draft.afterMode === 'redirect' ? { mode: 'redirect', redirectUrl: draft.redirectUrl.trim() } : { mode: 'message', message: draft.afterMessage.trim() },
+      embedSettings: { style: draft.embedStyle, buttonLabel: draft.buttonLabel.trim() },
       ...(nextStatus ? { status: nextStatus } : {}),
     };
     try {
@@ -494,10 +609,14 @@ function Editor({
             </div>
           </section>
 
-          <section className="card ex-card">
-            <h3 className="card-title m-0">{isPersonal ? t('editor.personalTitle') : t('editor.shareTitle')}</h3>
-            <p className="ex-muted m-0 text-sm">{isPersonal ? t('editor.personalBody') : t('editor.shareSoon')}</p>
-          </section>
+          {isPersonal ? (
+            <section className="card ex-card">
+              <h3 className="card-title m-0">{t('editor.personalTitle')}</h3>
+              <p className="ex-muted m-0 text-sm">{t('editor.personalBody')}</p>
+            </section>
+          ) : (
+            <ShareCard draft={draft} set={set} existing={existing} tenantSlug={meta.tenantSlug} />
+          )}
         </div>
 
         <aside className="card fm-preview">

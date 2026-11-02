@@ -2632,7 +2632,7 @@ model Form {
   fields         Json?
   // Existing forms stay published so nothing that already works stops answering.
   status         FormStatus     @default(published)
-  // Hostnames allowed to embed the form (CSP frame-ancestors). Empty = embedding off.
+  // Hostnames allowed to embed the form (CSP frame-ancestors). Empty = any https site (prototype).
   allowedDomains String[]       @default([])
   // { mode: "message" | "redirect", message?, redirectUrl? }
   afterSubmit    Json?

@@ -147,7 +147,6 @@
     "deleted": "Deleted",
     "legacyNotice": "This form was built with the previous editor and keeps working at its usual link. To move it to this editor, build the questions and save: from then on it works with the module and action you choose.",
     "shareTitle": "Link and code for your website",
-    "shareSoon": "The public link, the embed code and allowed domains come in the next release.",
     "personalTitle": "How it's delivered",
     "personalBody": "Each person gets a personal link by email, with Northstack's template. That's why there's no need to ask who they are. Sending comes in the next release.",
     "previewTitle": "Preview",
@@ -160,7 +159,26 @@
     "csatLow": "1 = very dissatisfied",
     "csatHigh": "5 = very satisfied",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "publishToShare": "Publish it to get the public URL and the code for your website. While it's a draft, the link doesn't answer.",
+    "publicUrl": "Public URL",
+    "publicUrlHint": "Share it on WhatsApp, email or social media, or put it behind a button on your website.",
+    "copy": "Copy",
+    "copied": "Copied",
+    "copyFailed": "Couldn't copy. Select it and copy it by hand.",
+    "embedStyle": "How it looks on your website",
+    "buttonLabel": "Button text",
+    "defaultButton": "Contact us",
+    "copyCode": "Copy code",
+    "domains": "Domains where it can be embedded",
+    "domainsHint": "Empty = any website. With domains, nobody can put your form on another site.",
+    "afterSubmit": "After sending",
+    "afterMessage": "Show a thank-you message",
+    "afterRedirect": "Go to a page on my website",
+    "thanksText": "Thank-you message",
+    "thanksPlaceholder": "Thanks! We got your response.",
+    "redirectUrl": "Destination URL (https)",
+    "publicSafety": "Shows the company logo (Settings › Company profile). Spam protection, a per-IP submission limit and encrypted responses. Campaigns with UTM become the lead's source."
   },
   "questionType": {
     "short_text": "Short text",
@@ -282,5 +300,15 @@
     "question": "Question",
     "optionA": "Option A",
     "optionB": "Option B"
+  },
+  "embed": {
+    "inline": "Inside the page",
+    "button": "Floating button",
+    "popup": "Window on click"
+  },
+  "embedHint": {
+    "inline": "The form appears where you paste the code and adjusts its height on its own.",
+    "button": "A fixed button at the bottom right opens the form in a window.",
+    "popup": "A button where you paste the code opens the form in a window."
   }
 }

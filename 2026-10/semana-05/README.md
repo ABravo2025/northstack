@@ -14,8 +14,8 @@ Imágenes 1080×1350 generadas con `tools/cards/cards.mjs`.
 
 ## Video RR.HH.
 
-`video/northstack-rrhh-{es,en}-{1x1,16x9}.mp4`: 38 s, sin voz, textos en pantalla. Música propia, generada
-con `tools/video/music4.py` (funk-pop a 132 BPM, sin licencias). Para LinkedIn usar el 1:1; el 16:9 sirve
+`video/northstack-rrhh-{es,en}-{1x1,16x9}.mp4`: 38 s, sin sonido (decisión de Alejandro, 05/11: ni la música
+sintetizada ni las de biblioteca convencieron), textos en pantalla. Para LinkedIn usar el 1:1; el 16:9 sirve
 para la web, YouTube o presentaciones. Se grabó la app real (versión de producción) contra staging, con la
 empresa de demostración "Acme Latam".
 

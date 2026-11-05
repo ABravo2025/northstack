@@ -2,7 +2,7 @@
 **Publish:** Friday Oct 30, 8–10 am · **Where:** Northstack company page only (Alejandro's profile posts the Spanish version) ·
 **Pillar:** product · **Visual:** `video/northstack-rrhh-en-1x1.mp4` (upload it with the video button, not as a link)
 
-> 38-second video, no voice-over: all the text is on screen, so it works when LinkedIn autoplays it muted.
+> 38-second silent video: the on-screen text tells the whole story.
 
 ---
 

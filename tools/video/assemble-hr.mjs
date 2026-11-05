@@ -1,6 +1,6 @@
 // node assemble-hr.mjs es square → ../../2026-10/semana-05/video/northstack-rrhh-<lang>-<1x1|16x9>.mp4
 // Frames (CDP screencast, variable rate) → one clip per segment at 30 fps → cross-faded together →
-// energetic funk-pop music (music4.py) cut to the exact length.
+// no soundtrack: Alejandro chose a silent video (2026-11-05), the on-screen text carries it.
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -8,7 +8,7 @@ const [lang, format] = process.argv.slice(2);
 const FF = path.join(process.env.PW_DIR, 'node_modules/ffmpeg-static/ffmpeg.exe');
 const dir = path.resolve(`frames-hr-${lang}-${format}`);
 const { frames, segs, size } = JSON.parse(fs.readFileSync(`${dir}/timeline.json`, 'utf8'));
-const FADE = 0.35; // quicker cuts for the faster music
+const FADE = 0.35;
 const W = size[0] - (size[0] % 2), H = size[1] - (size[1] % 2);
 const tmp = path.resolve(`tmp-hr-${lang}-${format}`);
 fs.rmSync(tmp, { recursive: true, force: true }); fs.mkdirSync(tmp);
@@ -40,13 +40,12 @@ clips.slice(1).forEach((c, k) => {
   last = label;
 });
 const total = clips.reduce((t, c) => t + c.dur, 0) - FADE * (clips.length - 1);
-execFileSync('python', ['music4.py', `${tmp}/music.wav`, total.toFixed(2)], { stdio: 'inherit' });
 const outDir = path.resolve('../../2026-10/semana-05/video');
 fs.mkdirSync(outDir, { recursive: true });
 const out = path.join(outDir, `northstack-rrhh-${lang}-${format === 'square' ? '1x1' : '16x9'}.mp4`);
-const args = ['-y', '-loglevel', 'error', ...clips.flatMap((c) => ['-i', c.file]), '-i', `${tmp}/music.wav`,
-  '-filter_complex', `${filter}${last}format=yuv420p[v]`, '-map', '[v]', '-map', `${clips.length}:a`,
-  '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-r', '30', '-c:a', 'aac', '-b:a', '192k', '-shortest', '-movflags', '+faststart', out];
+const args = ['-y', '-loglevel', 'error', ...clips.flatMap((c) => ['-i', c.file])
+  '-filter_complex', `${filter}${last}format=yuv420p[v]`, '-map', '[v]',
+  '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-r', '30', '-an', '-movflags', '+faststart', out];
 execFileSync(FF, args, { stdio: 'inherit' });
 execFileSync(FF, ['-y', '-loglevel', 'error', '-i', out, '-vf', `fps=1/2.5,scale=${format === 'square' ? 300 : 400}:-1,tile=5x5`, '-frames:v', '1', `sheet-hr-${lang}-${format}.png`]);
 console.log('wrote', out, total.toFixed(1) + 's', clips.length, 'clips');

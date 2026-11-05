@@ -2,7 +2,7 @@
 **Publicar:** viernes 30/10, 8–10 h · **Dónde:** perfil de Alejandro (solo en español; la página de Northstack lo comparte) ·
 **Pilar:** producto · **Visual:** `video/northstack-rrhh-es-1x1.mp4` (subirlo con el botón de video, no como enlace)
 
-> Video de 38 s, sin voz: los textos están en pantalla, así que se entiende aunque LinkedIn lo reproduzca sin sonido.
+> Video de 38 s, sin sonido: todo se cuenta con los textos en pantalla.
 
 ---
 

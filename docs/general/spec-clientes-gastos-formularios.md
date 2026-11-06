@@ -126,6 +126,67 @@
 
 ---
 
+## 5b. Fase E — Ajustes de la revisión + ciclo de vida completo (pedido 2026-11-06)
+
+Salió de la primera revisión de Alejandro en staging. Rehace partes de la fase C y suma contratos
+y estado de la empresa. Mismas reglas de la sección 0.
+
+**Decisiones ya tomadas (2026-11-06):**
+- **Leads = Contactos.** El lead deja de ser un modelo propio: es un Contacto con estado "Lead".
+  Una sola ficha por persona; la bandeja de Leads pasa a ser una vista filtrada.
+- **Tickets en Tareas.** Los tickets de clientes viven en Tareas (tipo "Ticket", prioridad que
+  calcula el vencimiento por SLA, empresa asociada, siguen sumando a la salud). Se pierde la
+  numeración por empresa.
+- **Formato.** Todas las pantallas nuevas pasan a los componentes de la app (buscador con lupa
+  `toolbar-search`, `MultiSelectDropdown`, `page-toolbar`, tipografía y tamaños de Empresas/Tareas).
+  Hoy usan inputs y selects sueltos con el estilo del navegador (~11 pantallas con `ex-filters`).
+- **Oportunidad automática** para cada lead y cada renovación (se activa/desactiva en
+  Configuración → Pipelines).
+- **No renovación** registrada: motivo, baja de productos, empresa "Ex-cliente".
+- **Estado de la empresa** calculado solo, con contadores de contratos y renovaciones.
+- **Contratos con clientes:** a mano, subidos, y sincronizados con PandaDoc / DocuSign.
+
+**Por confirmar con Alejandro:**
+1. ¿La oportunidad del lead se crea apenas entra o recién al calificarlo? (por defecto: apenas entra)
+2. ¿PandaDoc y DocuSign los dos, o uno primero? (por defecto: PandaDoc primero)
+
+### Estado de la empresa (E5)
+
+Se calcula solo (nunca a mano), se guarda en `Company.lifecycleStatus` para filtrar, y cada cambio
+queda en un historial (`CompanyStatusChange`) para medir altas, bajas y recuperados en el tiempo.
+Se recalcula en cada evento (producto alta/baja, contrato firmado/vencido/cancelado, oportunidad
+ganada/perdida) y en un cron diario para lo que vence por fecha.
+
+| Estado | Cuándo |
+|---|---|
+| **Prospecto** | Nunca tuvo un producto ni contrato activo; tiene un lead o una oportunidad abierta |
+| **Activo** | Tiene al menos un producto o contrato vigente |
+| **En renovación** | Activo, y un contrato/producto vence dentro del preaviso o hay una renovación abierta |
+| **Ex-cliente** | Tuvo productos/contratos y hoy no le queda ninguno vigente (con el motivo de la baja) |
+
+La salud (Saludable / En riesgo / Crítico) sigue siendo un indicador aparte, no un estado.
+Cada producto y contrato guarda su **origen**: nuevo / renovación / expansión (según el propósito
+de la pipeline de la oportunidad ganada). En la empresa: contratos vigentes, productos activos,
+cantidad de renovaciones, renovaciones abiertas, ingreso mensual, cliente desde, próxima renovación.
+Columnas y filtros en la lista de Empresas, badge en la ficha, y en Dashboards → Clientes:
+clientes por estado y movimientos del período (nuevos, renovados, perdidos, recuperados).
+
+### Unidades
+
+| # | Unidad |
+|---|---|
+| E1 | **Formato:** todas las pantallas nuevas (Leads, Gastos, Formularios, Tickets, Expansión, dashboards nuevos, modales) con los componentes y tamaños de la app; revisión una por una contra Empresas y Tareas, en claro y oscuro, desktop y mobile. |
+| E2 | **Leads como Contactos:** `Contact.lifecycle` (lead / contacto) + los datos de calificación y toques en el contacto; migración de los `Lead` existentes en staging; la bandeja `/leads` filtra contactos; Convertir solo cambia el estado y crea empresa + oportunidad. Saca el hack `Company.isPlaceholder`. |
+| E3 | **Tickets en Tareas:** tipo "Ticket" en Task, prioridad → vencimiento por SLA, filtro propio, pestaña Tickets de la ficha lee tareas; migración de los `ClientTicket` de staging; formularios de Soporte y disparador de encuesta "al cerrar un ticket" pasan a tareas. |
+| E4 | **Oportunidad automática:** lead nuevo → oportunidad en Nuevo negocio (etapas Nuevo → Contactado → Calificado, cadencia y calificación en la tarjeta); producto/contrato con renovación → oportunidad en Renovaciones X días antes (90 por defecto, configurable); cron diario + al crear. |
+| E5 | **Estado de la empresa + no renovación:** estados de arriba + historial; renovación perdida pide motivo (lista editable), da de baja los productos en la fecha de renovación, renovación parcial (qué sigue y qué no), tarea opcional de recupero a X meses; ganar una renovación extiende fechas y suma al contador. Dashboards → Clientes con estados y movimientos. |
+| E6 | **Contratos (a mano y subidos):** modelo `ClientContract` vinculado a empresa + oportunidad + productos; estado (borrador / enviado / firmado / vencido / cancelado), inicio, fin, renovación automática, monto, días de preaviso; plantilla con variables → PDF; o PDF subido (cifrado). Pestaña Contratos en la ficha y panel en la oportunidad. La fecha de fin alimenta E4 y E5. |
+| E7 | **PandaDoc:** conexión en Integraciones (OAuth), enviar a firmar desde la oportunidad, webhook de estado → firmado pasa la oportunidad a Ganada. Necesita cuenta de desarrollador y credenciales de Alejandro; en staging, el bypass de Vercel para el webhook. Suma PandaDoc a la Política de Privacidad. |
+| E8 | **DocuSign:** igual que E7. DocuSign revisa la integración ("go-live") antes de usarla con clientes reales. |
+| E9 | **Cierre:** Política/Términos (contratos, firma, proveedores nuevos), Help Center, anuncio, docs — en el mismo cierre único. |
+
+---
+
 ## 6. Checklist de ejecución
 
 Inicio y fin reales se registran al cerrar cada unidad.
@@ -176,3 +237,5 @@ Inicio y fin reales se registran al cerrar cada unidad.
 - [x] Arreglo de anonimato (revisión de cierre, 2026-11-02): en encuestas anónimas el link personal ya no guarda `responseId`, y la hora de respuesta queda solo al día en el link y en la respuesta (no se pueden cruzar por hora); la lista de envíos muestra "enviada" para todos (solo el total de respondidas); y la lista de respuestas y el modal ocultan las respuestas sueltas mientras haya menos que el mínimo (3+), igual que el dashboard. Sin cambios de base de datos.
 
 **Necesita de Alejandro antes de probar Gastos en staging:** la variable `EXPENSES_DATA_ENCRYPTION_KEY` (64 caracteres hex) cargada en Vercel → Preview (staging). Para producción, otra clave distinta, al promover.
+
+**Fase E (2026-11-06):** E1-E9 pendientes, ver sección 5b.

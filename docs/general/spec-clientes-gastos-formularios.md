@@ -146,9 +146,13 @@ y estado de la empresa. Mismas reglas de la sección 0.
 - **Estado de la empresa** calculado solo, con contadores de contratos y renovaciones.
 - **Contratos con clientes:** a mano, subidos, y sincronizados con PandaDoc / DocuSign.
 
-**Por confirmar con Alejandro:**
-1. ¿La oportunidad del lead se crea apenas entra o recién al calificarlo? (por defecto: apenas entra)
-2. ¿PandaDoc y DocuSign los dos, o uno primero? (por defecto: PandaDoc primero)
+**Confirmado 2026-11-06:**
+1. La oportunidad del lead se crea **apenas se crea el lead**.
+2. **Los estados de la empresa son editables:** la lista se configura (renombrar, agregar, color,
+   orden) y cada estado se mapea a uno de los 4 de abajo para que la lógica automática siga
+   funcionando. En cada empresa se puede cambiar el estado a mano; queda fijo hasta que se vuelva
+   a "automático".
+3. PandaDoc primero; Alejandro está juntando la info de la cuenta (ver E7).
 
 ### Estado de la empresa (E5)
 

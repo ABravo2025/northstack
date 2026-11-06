@@ -56,6 +56,7 @@ import { mcpIntegrationRouter } from './routes/mcpIntegration.js';
 import { mcpOAuthRouter } from './routes/mcpOAuth.js';
 import { externalApiRouter } from './routes/externalApi.js';
 import { referralsRouter } from './routes/referrals.js';
+import { cspReportRouter } from './routes/cspReport.js';
 
 dotenv.config();
 
@@ -126,6 +127,8 @@ app.use('/api/webhooks/dodopayments', express.raw({ type: '*/*', limit: '2mb' })
 app.use('/api/webhooks/mercadopago', express.raw({ type: '*/*', limit: '2mb' }));
 // Referral payouts carry the transfer receipt (≤2 MB file, base64 in JSON) — Vercel caps bodies at 4.5 MB.
 app.use(/^\/api\/platform\/admin\/referrals\/[^/]+\/payouts$/, express.json({ limit: '4mb' }));
+// Browsers post CSP violation reports as application/csp-report or application/reports+json.
+app.use('/api/csp-report', express.json({ type: ['application/csp-report', 'application/reports+json', 'application/json'], limit: '16kb' }));
 app.use(express.json({ limit: '2mb' })); // default 100kb is too small for a CSV import body
 // OAuth token/revocation requests are application/x-www-form-urlencoded by spec (RFC 6749 §4.1.3).
 app.use(['/api/oauth/token', '/api/oauth/revoke'], express.urlencoded({ extended: false, limit: '16kb' }));
@@ -139,6 +142,7 @@ app.get('/health', (_req, res) => {
 // so async rejections here are caught the same way they were when this was
 // all one file. Every router is mounted with no prefix — each route inside
 // already carries its full path (e.g. '/api/hr/employees/:employeeId').
+app.use(cspReportRouter);
 app.use(authRouter);
 app.use(payslipsRouter);
 app.use(twoStepRouter);

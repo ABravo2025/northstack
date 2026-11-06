@@ -24,6 +24,9 @@ jobs:
         with:
           node-version: '22'
       - run: npm ci
+      # High/critical CVEs in production dependencies block the deploy (scripts/audit-gate.mjs).
+      - run: node scripts/audit-gate.mjs
+      - run: node scripts/audit-gate.mjs frontend
       - run: npm run build
       - run: npm test
 
